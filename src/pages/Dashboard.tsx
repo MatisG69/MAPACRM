@@ -16,7 +16,7 @@ import { StatCard } from '../components/ui/StatCard';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { Badge } from '../components/ui/Badge';
 import { DonutChart } from '../components/charts/DonutChart';
-import { BarChartCard } from '../components/charts/BarChart';
+import { RevenueDesk } from '../components/revenue/RevenueDesk';
 import { Header } from '../components/layout/Header';
 import { Client, Project, Task, Interaction, Invoice } from '../lib/types';
 import { formatCurrency, formatRelativeDate, formatDate, isOverdue, daysUntil } from '../lib/utils';
@@ -90,16 +90,18 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
       const d = new Date(currentYear, currentMonth - 5 + i, 1);
       return { month: d.getMonth(), year: d.getFullYear(), label: MONTHS_FR[d.getMonth()] };
     });
-    return last6.map(({ month, year, label }) => ({
-      label,
-      value: invoices
-        .filter((i) => i.status === 'paid')
-        .filter((i) => {
-          const d = new Date(i.paid_date || i.created_at);
-          return d.getMonth() === month && d.getFullYear() === year;
-        })
-        .reduce((s, i) => s + i.amount, 0),
-    }));
+    return last6.map(({ month, year, label }) => {
+      const paidInMonth = invoices.filter((i) => {
+        if (i.status !== 'paid') return false;
+        const d = new Date(i.paid_date || i.created_at);
+        return d.getMonth() === month && d.getFullYear() === year;
+      });
+      return {
+        label,
+        value: paidInMonth.reduce((s, i) => s + i.amount, 0),
+        invoiceCount: paidInMonth.length,
+      };
+    });
   }, [invoices, currentMonth, currentYear]);
 
   const recentProjects = projects.slice(0, 4);
@@ -168,7 +170,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
           <StatCard
             label="CA ce mois"
             value={formatCurrency(stats.revenueThisMonth)}
-            icon={<TrendingUp size={20} className="text-ws-accent" strokeWidth={2} />}
+            icon={<TrendingUp size={20} className="text-ws-accent-soft" strokeWidth={2} />}
             iconBg="bg-ws-accent-dim"
             trendLabel={`${formatCurrency(stats.pendingRevenue)} en attente`}
           />
@@ -176,11 +178,11 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <BarChartCard
-              title="Chiffre d'affaires — 6 derniers mois"
-              data={revenueByMonth}
-              color="#af7037"
-              formatValue={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)}
+            <RevenueDesk
+              monthlyRows={revenueByMonth}
+              invoices={invoices}
+              title="Chiffre d'affaires encaissé"
+              subtitle="Série mensuelle, variation mois sur mois, répartition et journal des règlements — lecture type desk financier."
             />
           </div>
           <div className="ws-card rounded-2xl p-5 relative z-[1]">

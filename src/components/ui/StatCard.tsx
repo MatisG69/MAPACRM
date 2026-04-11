@@ -8,9 +8,10 @@ interface StatCardProps {
   trend?: number;
   trendLabel?: string;
   onClick?: () => void;
+  className?: string;
 }
 
-export function StatCard({ label, value, icon, iconBg, trend, trendLabel, onClick }: StatCardProps) {
+export function StatCard({ label, value, icon, iconBg, trend, trendLabel, onClick, className = '' }: StatCardProps) {
   return (
     <div
       onClick={onClick}
@@ -30,7 +31,7 @@ export function StatCard({ label, value, icon, iconBg, trend, trendLabel, onClic
         onClick
           ? 'cursor-pointer hover:border-ws-accent/40 hover:shadow-glow transition-all duration-200 group touch-manipulation active:scale-[0.99]'
           : ''
-      }`}
+      } ${className}`}
     >
       <div className="flex items-start justify-between mb-4">
         <div

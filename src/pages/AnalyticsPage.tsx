@@ -3,8 +3,7 @@ import { Users, FolderKanban, Euro, Target } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { StatCard } from '../components/ui/StatCard';
 import { DonutChart } from '../components/charts/DonutChart';
-import { BarChartCard } from '../components/charts/BarChart';
-import { LineChart } from '../components/charts/LineChart';
+import { RevenueDesk } from '../components/revenue/RevenueDesk';
 import { Client, Invoice, Project } from '../lib/types';
 import { formatCurrency } from '../lib/utils';
 
@@ -39,19 +38,19 @@ export function AnalyticsPage({ clients, projects, invoices }: AnalyticsPageProp
       const d = new Date(currentYear, currentMonth - 5 + i, 1);
       return { month: d.getMonth(), year: d.getFullYear(), label: MONTHS_FR[d.getMonth()] };
     });
-    return last6.map(({ month, year, label }) => ({
-      label,
-      value: invoices
-        .filter((i) => i.status === 'paid')
-        .filter((inv) => {
-          const d = new Date(inv.paid_date || inv.created_at);
-          return d.getMonth() === month && d.getFullYear() === year;
-        })
-        .reduce((s, i) => s + i.amount, 0),
-    }));
+    return last6.map(({ month, year, label }) => {
+      const paidInMonth = invoices.filter((inv) => {
+        if (inv.status !== 'paid') return false;
+        const d = new Date(inv.paid_date || inv.created_at);
+        return d.getMonth() === month && d.getFullYear() === year;
+      });
+      return {
+        label,
+        value: paidInMonth.reduce((s, i) => s + i.amount, 0),
+        invoiceCount: paidInMonth.length,
+      };
+    });
   }, [invoices, currentMonth, currentYear]);
-
-  const lineData = revenueByMonth.map((x) => x.value);
   const pipelineValue = useMemo(
     () =>
       projects.filter((p) => p.status !== 'completed').reduce((s, p) => s + (p.budget || 0), 0),
@@ -97,22 +96,13 @@ export function AnalyticsPage({ clients, projects, invoices }: AnalyticsPageProp
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <BarChartCard
-              title="CA encaissé — 6 derniers mois"
-              data={revenueByMonth}
-              color="#34d399"
-              formatValue={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k €` : `${v} €`)}
+          <div className="lg:col-span-2">
+            <RevenueDesk
+              monthlyRows={revenueByMonth}
+              invoices={invoices}
+              title="Performance encaissements"
+              subtitle="Vue consolidée pour l’analyse — même logique qu’un écran de suivi des flux trésorerie."
             />
-            {lineData.some((v) => v > 0) && (
-              <div className="ws-card rounded-lg p-5">
-                <h3 className="ws-section-title mb-1">Courbe de tendance</h3>
-                <p className="text-[10px] font-mono text-ws-mist mb-4 uppercase tracking-wider">CA mensuel</p>
-                <div className="h-16">
-                  <LineChart data={lineData} color="#d4a853" height={56} />
-                </div>
-              </div>
-            )}
           </div>
           <div className="ws-card rounded-lg p-5">
             <h3 className="ws-section-title mb-1">Origine des leads</h3>

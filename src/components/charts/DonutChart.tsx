@@ -7,16 +7,28 @@ interface Segment {
 interface DonutChartProps {
   segments: Segment[];
   size?: number;
+  /** Texte central (ex. montant formaté). Défaut : total brut. */
+  formatCenter?: (total: number) => string;
+  /** Légende montants. Défaut : valeur brute. */
+  formatLegendValue?: (value: number) => string;
+  /** Sous-titre sous le centre (ex. « 6 MOIS »). */
+  centerCaption?: string;
+  trackColor?: string;
 }
 
-export function DonutChart({ segments, size = 140 }: DonutChartProps) {
+export function DonutChart({
+  segments,
+  size = 140,
+  formatCenter,
+  formatLegendValue,
+  centerCaption = 'TOTAL',
+  trackColor = '#262626',
+}: DonutChartProps) {
   const total = segments.reduce((s, d) => s + d.value, 0);
   const radius = size / 2 - 16;
   const cx = size / 2;
   const cy = size / 2;
   const circumference = 2 * Math.PI * radius;
-  const trackColor = '#262626';
-
   let cumulative = 0;
 
   const arcs = segments.map((seg) => {
@@ -50,25 +62,25 @@ export function DonutChart({ segments, size = 140 }: DonutChartProps) {
           ))}
           <text
             x={cx}
-            y={cy - 4}
+            y={cy - 2}
             textAnchor="middle"
-            fontSize={22}
+            fontSize={formatCenter ? 11 : 22}
             fontWeight="700"
             fill="#fafafa"
             fontFamily="JetBrains Mono, monospace"
           >
-            {total}
+            {formatCenter ? formatCenter(total) : total}
           </text>
           <text
             x={cx}
-            y={cy + 14}
+            y={cy + 12}
             textAnchor="middle"
             fontSize={9}
             fill="#737373"
             fontFamily="JetBrains Mono, monospace"
             letterSpacing="0.1em"
           >
-            TOTAL
+            {centerCaption}
           </text>
         </svg>
       </div>
@@ -80,7 +92,9 @@ export function DonutChart({ segments, size = 140 }: DonutChartProps) {
               <span className="text-[11px] text-ws-ink truncate uppercase tracking-wide">{arc.label}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 font-mono text-[11px]">
-              <span className="font-bold text-ws-paper tabular-nums">{arc.value}</span>
+              <span className="font-bold text-ws-paper tabular-nums">
+                {formatLegendValue ? formatLegendValue(arc.value) : arc.value}
+              </span>
               <span className="text-ws-mist tabular-nums">{Math.round(arc.pct * 100)}%</span>
             </div>
           </div>
