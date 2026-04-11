@@ -31,11 +31,11 @@ export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanel
     .filter((s) => s.value > 0);
 
   const cardClass = spacious
-    ? 'rounded-2xl border border-white/[0.08] bg-ws-deep/50 p-5 md:p-6'
-    : 'rounded-xl border border-white/[0.08] bg-ws-deep/40 p-4';
+    ? 'rounded-2xl border border-white/[0.08] bg-ws-deep/50 p-3 min-w-0 sm:p-5 md:p-6'
+    : 'rounded-xl border border-white/[0.08] bg-ws-deep/40 p-4 min-w-0';
 
   return (
-    <div className={`grid gap-4 lg:grid-cols-3 ${spacious ? 'xl:gap-5' : ''}`}>
+    <div className={`grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-3 ${spacious ? 'xl:gap-5' : ''}`}>
       <div className={cardClass}>
         <h3 className="ws-section-title mb-0.5">Répartition</h3>
         <p className="mb-3 text-[10px] font-mono uppercase tracking-wider text-ws-mist">
@@ -44,10 +44,10 @@ export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanel
         {donutSegments.length === 0 ? (
           <p className="py-8 text-center font-mono text-xs text-ws-mist">Aucun encaissement sur la période</p>
         ) : (
-          <div className="flex justify-center py-1">
+          <div className="flex w-full min-w-0 justify-center overflow-x-auto py-1 [-webkit-overflow-scrolling:touch]">
             <DonutChart
               segments={donutSegments}
-              size={spacious ? 158 : 132}
+              size={spacious ? 136 : 132}
               trackColor="#1a1614"
               centerCaption="6 MOIS"
               formatCenter={(t) => compactEUR(t)}
@@ -62,12 +62,14 @@ export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanel
         <p className="mb-3 text-[10px] font-mono uppercase tracking-wider text-ws-mist">
           Encaissements mensuels · EUR
         </p>
-        <BarChart
-          data={barData}
-          color="#af7037"
-          height={spacious ? 188 : 152}
-          formatValue={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${Math.round(v)}`)}
-        />
+        <div className="min-w-0 w-full overflow-x-auto [-webkit-overflow-scrolling:touch]">
+          <BarChart
+            data={barData}
+            color="#af7037"
+            height={spacious ? 168 : 152}
+            formatValue={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${Math.round(v)}`)}
+          />
+        </div>
       </div>
 
       <div className={cardClass}>
@@ -75,7 +77,9 @@ export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanel
         <p className="mb-3 text-[10px] font-mono uppercase tracking-wider text-ws-mist">
           Open → clôture mois préc. · Close → mois · mèches indicatives
         </p>
-        <CandlestickChart rows={monthlyRows} height={spacious ? 176 : 152} />
+        <div className="min-w-0 w-full">
+          <CandlestickChart rows={monthlyRows} height={spacious ? 160 : 152} />
+        </div>
       </div>
     </div>
   );

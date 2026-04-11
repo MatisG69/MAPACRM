@@ -69,7 +69,7 @@ function RevenueExpandedOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-ws-void/97 backdrop-blur-xl"
+      className="fixed inset-0 z-[100] flex min-h-0 max-h-[100dvh] flex-col bg-ws-void/97 pt-[env(safe-area-inset-top)] backdrop-blur-xl"
       role="dialog"
       aria-modal="true"
       aria-labelledby="revenue-expanded-title"
@@ -84,14 +84,17 @@ function RevenueExpandedOverlay({
         }}
       />
 
-      <header className="relative flex flex-shrink-0 items-center justify-between gap-4 border-b border-white/[0.08] px-4 py-4 md:px-8 md:py-5">
-        <div className="flex min-w-0 items-center gap-4">
-          <div className="hidden h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-ws-accent/35 bg-ws-accent-dim shadow-glow-sm sm:flex">
-            <Landmark className="h-6 w-6 text-ws-accent-soft" strokeWidth={2} />
+      <header className="relative flex flex-shrink-0 items-start justify-between gap-3 border-b border-white/[0.08] px-3 py-3 sm:items-center sm:gap-4 sm:px-4 sm:py-4 md:px-8 md:py-5">
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+          <div className="hidden h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-ws-accent/35 bg-ws-accent-dim shadow-glow-sm sm:flex md:h-12 md:w-12">
+            <Landmark className="h-5 w-5 text-ws-accent-soft md:h-6 md:w-6" strokeWidth={2} />
           </div>
-          <div className="min-w-0">
-            <p className="ws-section-title mb-1">Vue élargie</p>
-            <h2 id="revenue-expanded-title" className="truncate font-display text-xl font-bold text-ws-paper md:text-2xl">
+          <div className="min-w-0 flex-1 pr-1">
+            <p className="ws-section-title mb-0.5 sm:mb-1">Vue élargie</p>
+            <h2
+              id="revenue-expanded-title"
+              className="break-words font-display text-lg font-bold leading-tight text-ws-paper sm:text-xl md:text-2xl"
+            >
               {title}
             </h2>
           </div>
@@ -106,58 +109,68 @@ function RevenueExpandedOverlay({
         </button>
       </header>
 
-      <div className="relative flex-1 overflow-y-auto overscroll-contain px-4 py-6 md:px-8 md:py-10">
+      <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-4 sm:py-6 md:px-8 md:py-10 md:pb-10">
         {/* Hero chiffres */}
-        <div className="mb-10 grid gap-6 md:grid-cols-2">
-          <div className="relative overflow-hidden rounded-2xl border border-ws-accent/25 bg-gradient-to-br from-ws-accent-dim/40 via-ws-deep/80 to-ws-void p-6 md:p-8 shadow-glow">
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-ws-gold">Encaissement · mois en cours</p>
-            <p className="mt-3 font-mono text-3xl font-bold tabular-nums tracking-tight text-ws-paper sm:text-4xl md:text-5xl">
+        <div className="mb-6 grid gap-3 sm:mb-8 sm:gap-4 md:mb-10 md:grid-cols-2 md:gap-6">
+          <div className="relative overflow-hidden rounded-2xl border border-ws-accent/25 bg-gradient-to-br from-ws-accent-dim/40 via-ws-deep/80 to-ws-void p-4 shadow-glow sm:p-6 md:p-8">
+            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ws-gold sm:text-[11px] sm:tracking-[0.25em]">
+              Encaissement · mois en cours
+            </p>
+            <p className="mt-2 break-words font-mono text-2xl font-bold tabular-nums leading-tight tracking-tight text-ws-paper sm:mt-3 sm:text-3xl md:text-4xl lg:text-5xl">
               {formatCurrency(mtd)}
             </p>
-            <p className="mt-2 text-sm text-ws-ink">
+            <p className="mt-1.5 text-xs text-ws-ink sm:mt-2 sm:text-sm">
               {new Date(cy, cm, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
             </p>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-white/[0.1] bg-ws-panel/40 p-6 md:p-8 backdrop-blur-md">
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-ws-mist">Cumul annuel · YTD</p>
-            <p className="mt-3 font-mono text-3xl font-bold tabular-nums tracking-tight text-ws-gold sm:text-4xl md:text-5xl">
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.1] bg-ws-panel/40 p-4 backdrop-blur-md sm:p-6 md:p-8">
+            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ws-mist sm:text-[11px] sm:tracking-[0.25em]">
+              Cumul annuel · YTD
+            </p>
+            <p className="mt-2 break-words font-mono text-2xl font-bold tabular-nums leading-tight tracking-tight text-ws-gold sm:mt-3 sm:text-3xl md:text-4xl lg:text-5xl">
               {formatCurrency(ytd)}
             </p>
-            <p className="mt-2 text-sm text-ws-ink">Exercice {cy} — toutes factures payées à ce jour</p>
+            <p className="mt-1.5 text-xs leading-snug text-ws-ink sm:mt-2 sm:text-sm">
+              Exercice {cy} — factures payées à ce jour
+            </p>
           </div>
         </div>
 
-        <div className="mb-10 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <div className="mb-6 grid grid-cols-2 gap-2 sm:mb-8 sm:gap-3 md:mb-10 md:grid-cols-4 md:gap-4">
           {[
             { k: 'À encaisser', v: formatCurrency(pendingTotal), hint: 'Envoyées' },
             { k: 'En retard', v: formatCurrency(overdueTotal), hint: 'Échéance dépassée' },
-            { k: '6 mois (net)', v: formatCurrency(totalSixMonth), hint: 'Fenêtre glissante' },
-            { k: 'Factures payées', v: String(paidCount), hint: 'Total historique' },
+            { k: '6 mois', v: formatCurrency(totalSixMonth), hint: 'Glissant' },
+            { k: 'Factures', v: String(paidCount), hint: 'Payées' },
           ].map((cell) => (
             <div
               key={cell.k}
-              className="rounded-2xl border border-white/[0.08] bg-ws-deep/50 px-4 py-4 font-mono md:px-5 md:py-5"
+              className="min-w-0 rounded-xl border border-white/[0.08] bg-ws-deep/50 px-2.5 py-3 font-mono sm:rounded-2xl sm:px-4 sm:py-4 md:px-5 md:py-5"
             >
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ws-mist">{cell.k}</p>
-              <p className="mt-2 text-lg font-semibold tabular-nums text-ws-paper md:text-xl">{cell.v}</p>
-              <p className="mt-1 text-[10px] uppercase tracking-wide text-ws-ink">{cell.hint}</p>
+              <p className="text-[8px] font-bold uppercase tracking-wider text-ws-mist sm:text-[10px] sm:tracking-[0.18em]">
+                {cell.k}
+              </p>
+              <p className="mt-1.5 break-words text-sm font-semibold tabular-nums leading-tight text-ws-paper sm:mt-2 sm:text-lg md:text-xl">
+                {cell.v}
+              </p>
+              <p className="mt-0.5 text-[9px] uppercase tracking-wide text-ws-ink sm:mt-1 sm:text-[10px]">{cell.hint}</p>
             </div>
           ))}
         </div>
 
-        <div className="grid gap-8 xl:grid-cols-[1.2fr_1fr]">
-          <div className="space-y-6">
-            <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-ws-deep/30">
-              <p className="border-b border-white/[0.06] px-5 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ws-ink">
+        <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[1.15fr_1fr] xl:gap-8">
+          <div className="min-w-0 space-y-4 sm:space-y-6">
+            <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-ws-deep/30 sm:rounded-2xl">
+              <p className="border-b border-white/[0.06] px-3 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ws-ink sm:px-5 sm:py-3 sm:text-[10px] sm:tracking-[0.2em]">
                 Série mensuelle
               </p>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[320px] border-collapse text-left font-mono text-sm">
+              <div className="-mx-0 overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                <table className="w-full min-w-[260px] border-collapse text-left font-mono text-xs sm:min-w-[300px] sm:text-sm">
                   <thead>
-                    <tr className="border-b border-white/[0.08] bg-ws-deep/80 text-[10px] uppercase tracking-wider text-ws-mist">
-                      <th className="px-5 py-3.5 font-semibold">Période</th>
-                      <th className="px-5 py-3.5 text-right font-semibold">Net encaissé</th>
-                      <th className="px-5 py-3.5 text-right font-semibold">Δ m/m</th>
+                    <tr className="border-b border-white/[0.08] bg-ws-deep/80 text-[9px] uppercase tracking-wider text-ws-mist sm:text-[10px]">
+                      <th className="px-3 py-2.5 font-semibold sm:px-5 sm:py-3.5">Période</th>
+                      <th className="px-2 py-2.5 text-right font-semibold sm:px-5 sm:py-3.5">Net</th>
+                      <th className="px-3 py-2.5 text-right font-semibold sm:px-5 sm:py-3.5">Δ m/m</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -175,29 +188,29 @@ function RevenueExpandedOverlay({
                             isCurrentMonth ? 'bg-ws-accent-dim/20' : ''
                           }`}
                         >
-                          <td className="px-5 py-3.5">
+                          <td className="px-3 py-2.5 sm:px-5 sm:py-3.5">
                             <span className="font-semibold text-ws-paper">{row.label}</span>
                             {isCurrentMonth && (
-                              <span className="ml-2 rounded-full border border-ws-accent/40 bg-ws-accent-dim px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-ws-accent-soft">
+                              <span className="mt-1 block w-fit rounded-full border border-ws-accent/40 bg-ws-accent-dim px-1.5 py-px text-[8px] font-bold uppercase tracking-wider text-ws-accent-soft sm:ml-2 sm:mt-0 sm:inline-block">
                                 Courant
                               </span>
                             )}
                           </td>
-                          <td className="px-5 py-3.5 text-right text-base font-semibold tabular-nums text-ws-gold">
+                          <td className="max-w-[42%] px-2 py-2.5 text-right text-sm font-semibold tabular-nums leading-tight text-ws-gold sm:max-w-none sm:px-5 sm:py-3.5 sm:text-base">
                             {formatCurrency(row.value)}
                           </td>
-                          <td className="px-5 py-3.5 text-right tabular-nums">
+                          <td className="px-3 py-2.5 text-right tabular-nums sm:px-5 sm:py-3.5">
                             {delta === null ? (
                               <span className="text-ws-mist">—</span>
                             ) : flat ? (
                               <span className="text-ws-mist">0,0%</span>
                             ) : (
                               <span
-                                className={`inline-flex items-center justify-end gap-1 font-semibold ${
+                                className={`inline-flex items-center justify-end gap-0.5 text-sm font-semibold sm:gap-1 ${
                                   up ? 'text-ws-accent-soft' : 'text-ws-bear'
                                 }`}
                               >
-                                {up ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                                {up ? <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ArrowDownRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                                 {Math.abs(delta).toFixed(1)}%
                               </span>
                             )}
@@ -208,12 +221,19 @@ function RevenueExpandedOverlay({
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-ws-accent/25 bg-ws-accent-dim/15 font-semibold">
-                      <td className="px-5 py-3 uppercase tracking-wider text-ws-accent-soft">6 mois</td>
-                      <td className="px-5 py-3 text-right tabular-nums text-ws-paper">
+                      <td className="px-3 py-2.5 text-xs uppercase tracking-wider text-ws-accent-soft sm:px-5 sm:py-3 sm:text-sm">
+                        6 mois
+                      </td>
+                      <td className="px-2 py-2.5 text-right text-xs tabular-nums text-ws-paper sm:px-5 sm:py-3 sm:text-sm">
                         {formatCurrency(totalSixMonth)}
                       </td>
-                      <td className="px-5 py-3 text-right text-[10px] uppercase tracking-wider text-ws-mist">
-                        {paidCount} facture{paidCount > 1 ? 's' : ''} payée{paidCount > 1 ? 's' : ''}
+                      <td className="px-3 py-2.5 text-right align-top text-[9px] uppercase leading-snug text-ws-mist sm:px-5 sm:py-3 sm:text-[10px]">
+                        <span className="hidden sm:inline">
+                          {paidCount} facture{paidCount > 1 ? 's' : ''} payée{paidCount > 1 ? 's' : ''}
+                        </span>
+                        <span className="sm:hidden">
+                          {paidCount} payée{paidCount > 1 ? 's' : ''}
+                        </span>
                       </td>
                     </tr>
                   </tfoot>
@@ -224,24 +244,24 @@ function RevenueExpandedOverlay({
             <RevenueChartsPanel monthlyRows={monthlyRows} spacious />
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-ws-deep/30">
-            <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-3">
-              <Receipt className="h-4 w-4 text-ws-accent-soft" strokeWidth={2} />
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ws-ink">
+          <div className="min-w-0 overflow-hidden rounded-xl border border-white/[0.08] bg-ws-deep/30 sm:rounded-2xl">
+            <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2.5 sm:px-5 sm:py-3">
+              <Receipt className="h-3.5 w-3.5 flex-shrink-0 text-ws-accent-soft sm:h-4 sm:w-4" strokeWidth={2} />
+              <p className="min-w-0 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-ws-ink sm:text-[10px] sm:tracking-[0.2em]">
                 Derniers encaissements
               </p>
             </div>
-            <div className="max-h-[min(520px,50vh)] overflow-y-auto">
+            <div className="max-h-[min(340px,42dvh)] overflow-y-auto overflow-x-auto overscroll-contain sm:max-h-[min(480px,48vh)] md:max-h-[min(520px,50vh)] [-webkit-overflow-scrolling:touch]">
               {recentPaid.length === 0 ? (
-                <p className="px-5 py-12 text-center text-sm text-ws-mist">Aucun encaissement</p>
+                <p className="px-4 py-10 text-center text-xs text-ws-mist sm:px-5 sm:py-12 sm:text-sm">Aucun encaissement</p>
               ) : (
-                <table className="w-full border-collapse font-mono text-sm">
-                  <thead className="sticky top-0 z-[1] border-b border-white/[0.06] bg-ws-deep text-[10px] uppercase tracking-wider text-ws-mist">
+                <table className="w-full min-w-[280px] border-collapse font-mono text-xs sm:min-w-0 sm:text-sm">
+                  <thead className="sticky top-0 z-[1] border-b border-white/[0.06] bg-ws-deep text-[9px] uppercase tracking-wider text-ws-mist sm:text-[10px]">
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold">Date</th>
-                      <th className="px-3 py-3 text-left font-semibold">N°</th>
-                      <th className="min-w-0 px-3 py-3 text-left font-semibold">Contrepartie</th>
-                      <th className="px-4 py-3 text-right font-semibold">Montant</th>
+                      <th className="px-2 py-2.5 text-left font-semibold sm:px-4 sm:py-3">Date</th>
+                      <th className="px-2 py-2.5 text-left font-semibold sm:px-3 sm:py-3">N°</th>
+                      <th className="min-w-0 px-2 py-2.5 text-left font-semibold sm:px-3 sm:py-3">Client</th>
+                      <th className="px-2 py-2.5 text-right font-semibold sm:px-4 sm:py-3">Montant</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -250,14 +270,16 @@ function RevenueExpandedOverlay({
                         key={inv.id}
                         className="border-b border-white/[0.04] transition-colors hover:bg-ws-raised/35"
                       >
-                        <td className="whitespace-nowrap px-4 py-3 tabular-nums text-ws-ink">
+                        <td className="whitespace-nowrap px-2 py-2 tabular-nums text-ws-ink sm:px-4 sm:py-3">
                           {formatDate(inv.paid_date || inv.created_at)}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-ws-mist">{inv.invoice_number || '—'}</td>
-                        <td className="max-w-[200px] truncate px-3 py-3 text-ws-paper" title={inv.client?.name || ''}>
+                        <td className="max-w-[3.5rem] truncate px-2 py-2 text-ws-mist sm:max-w-none sm:px-3 sm:py-3">
+                          {inv.invoice_number || '—'}
+                        </td>
+                        <td className="max-w-[100px] truncate px-2 py-2 text-ws-paper sm:max-w-[200px] sm:px-3 sm:py-3" title={inv.client?.name || ''}>
                           {inv.client?.name || '—'}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right text-base font-semibold tabular-nums text-ws-gold">
+                        <td className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold tabular-nums text-ws-gold sm:px-4 sm:py-3 sm:text-base">
                           {formatCurrency(inv.amount)}
                         </td>
                       </tr>
@@ -269,7 +291,7 @@ function RevenueExpandedOverlay({
           </div>
         </div>
 
-        <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.15em] text-ws-mist">
+        <p className="mt-6 text-center font-mono text-[9px] uppercase tracking-[0.12em] text-ws-mist sm:mt-8 sm:text-[10px] sm:tracking-[0.15em]">
           <time dateTime={updatedIso}>Actualisé · {updatedLabel}</time>
         </p>
       </div>

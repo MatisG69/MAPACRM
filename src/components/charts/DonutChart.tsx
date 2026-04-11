@@ -40,7 +40,7 @@ export function DonutChart({
   });
 
   return (
-    <div className="flex items-center gap-6">
+    <div className="flex w-full min-w-0 flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
       <div className="flex-shrink-0">
         <svg width={size} height={size}>
           <circle cx={cx} cy={cy} r={radius} fill="none" stroke={trackColor} strokeWidth={18} />
@@ -84,7 +84,7 @@ export function DonutChart({
           </text>
         </svg>
       </div>
-      <div className="space-y-2 flex-1 min-w-0">
+      <div className="w-full min-w-0 flex-1 space-y-2 sm:w-auto">
         {arcs.map((arc, i) => (
           <div key={i} className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">

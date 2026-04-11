@@ -19,8 +19,8 @@ export function CandlestickChart({ rows, height = 160 }: CandlestickChartProps) 
     );
   }
 
-  const slot = 56;
-  const padX = 20;
+  const slot = 46;
+  const padX = 14;
   const padT = 14;
   const padB = 26;
   const w = padX * 2 + rows.length * slot;
@@ -70,7 +70,7 @@ export function CandlestickChart({ rows, height = 160 }: CandlestickChartProps) 
           const top = Math.min(yOpen, yClose);
           const bottom = Math.max(yOpen, yClose);
           const bodyH = Math.max(bottom - top, 2);
-          const bodyW = 11;
+          const bodyW = 9;
           const fill = c.bull ? BULL : BEAR;
           const stroke = c.bull ? '#af7037' : '#a84848';
 
