@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+  ::selection {
+    @apply bg-ws-accent/40 text-ws-void;
+  }
+}
+
+@layer components {
+  .input {
+    @apply w-full px-3 py-2.5 text-sm rounded-2xl bg-ws-panel/80 border border-ws-line text-ws-paper
+      placeholder:text-ws-mist/80 focus:outline-none focus:ring-2 focus:ring-ws-accent/35 focus:border-ws-accent/50
+      transition-all duration-200 font-sans;
+  }
+
+  .ws-card {
+    @apply rounded-[1.35rem] border border-white/[0.08] bg-ws-panel/55 backdrop-blur-xl;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 245, 230, 0.05),
+      0 20px 40px -24px rgba(0, 0, 0, 0.65);
+  }
+
+  .ws-card-hover {
+    @apply ws-card hover:border-ws-accent/30 hover:bg-ws-raised/70 hover:shadow-glow transition-all duration-300;
+  }
+
+  .ws-link {
+    @apply text-ws-gold text-xs font-semibold tracking-wide hover:text-ws-accent-soft transition-colors;
+  }
+
+  .ws-section-title {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-ws-ink;
+  }
+
+  .ws-table-header {
+    @apply text-[10px] font-semibold uppercase tracking-wider text-ws-mist border-b border-ws-line bg-ws-deep/40;
+  }
+
+  .form-label {
+    @apply block text-[10px] font-semibold uppercase tracking-wider text-ws-mist mb-1.5;
+  }
+
+  .form-error {
+    @apply bg-ws-bear-dim text-red-400 text-sm px-3 py-2 rounded-2xl border border-red-500/20;
+  }
+
+  .pill-filter {
+    @apply px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-all duration-200 border;
+  }
+
+  .pill-filter-active {
+    @apply bg-gradient-to-b from-ws-accent-soft to-ws-accent text-ws-void border-ws-accent/40 shadow-glow-sm;
+  }
+
+  .pill-filter-idle {
+    @apply bg-transparent text-ws-ink border-ws-accent-muted/40 hover:border-ws-accent/55 hover:text-ws-paper;
+  }
+
+  /* Carte type « premium » (mise en avant, style référence ambre) */
+  .ws-card-featured {
+    @apply rounded-[1.75rem] border border-white/10 backdrop-blur-md text-ws-paper overflow-hidden relative;
+    background-image: linear-gradient(
+      155deg,
+      rgba(139, 87, 42, 0.55) 0%,
+      rgba(74, 42, 24, 0.5) 48%,
+      rgba(26, 18, 12, 0.65) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 245, 230, 0.08),
+      0 24px 48px -20px rgba(0, 0, 0, 0.75);
+  }
+
+  .ws-card-featured::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.12;
+    background-image: radial-gradient(circle at 12% 18%, rgba(255, 245, 230, 0.35) 0%, transparent 42%),
+      radial-gradient(circle at 88% 82%, rgba(201, 138, 76, 0.25) 0%, transparent 40%);
+  }
+}
