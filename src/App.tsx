@@ -9,11 +9,13 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { TasksPage } from './pages/TasksPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
+import { CalendarPage } from './pages/CalendarPage';
 import { useClients } from './hooks/useClients';
 import { useProjects } from './hooks/useProjects';
 import { useTasks } from './hooks/useTasks';
 import { useInteractions } from './hooks/useInteractions';
 import { useInvoices } from './hooks/useInvoices';
+import { useCalendarEvents } from './hooks/useCalendarEvents';
 import { Page } from './lib/types';
 import { isSupabaseEnabled } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
@@ -28,6 +30,7 @@ function App() {
   const tasksHook = useTasks();
   const interactionsHook = useInteractions();
   const invoicesHook = useInvoices();
+  const calendarHook = useCalendarEvents();
 
   const navigate = useCallback((p: Page, id?: string) => {
     if (p === 'client-detail' && id) {
@@ -77,14 +80,16 @@ function App() {
     projectsHook.loading ||
     tasksHook.loading ||
     interactionsHook.loading ||
-    invoicesHook.loading;
+    invoicesHook.loading ||
+    calendarHook.loading;
 
   const dataError =
     clientsHook.error ||
     projectsHook.error ||
     tasksHook.error ||
     interactionsHook.error ||
-    invoicesHook.error;
+    invoicesHook.error ||
+    calendarHook.error;
 
   const localMode = !isSupabaseEnabled();
 
@@ -94,7 +99,7 @@ function App() {
       <MobileTabBar currentPage={page} onNavigate={(p) => navigate(p)} />
 
       {localMode && (
-        <div className="fixed top-0 left-0 right-0 md:left-[calc(1rem+14rem+1rem)] z-40 bg-ws-accent-dim border-b border-ws-accent/25 text-ws-paper text-[10px] sm:text-[11px] font-mono px-3 py-2 sm:px-4 text-center tracking-wide leading-snug pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <div className="fixed top-0 left-0 right-0 md:left-[calc(1rem+16rem+1rem)] z-40 bg-ws-accent-dim border-b border-ws-accent/25 text-ws-paper text-[10px] sm:text-[11px] font-mono px-3 py-2 sm:px-4 text-center tracking-wide leading-snug pt-[max(0.5rem,env(safe-area-inset-top))]">
           <span className="text-ws-accent-soft font-bold uppercase mr-2">Local</span>
           Données sur ce navigateur uniquement · Cloud :{' '}
           <code className="text-ws-accent-soft">VITE_SUPABASE_URL</code> +{' '}
@@ -103,7 +108,7 @@ function App() {
       )}
 
       <main
-        className={`ml-0 md:ml-[calc(1rem+14rem+1rem)] min-h-[100dvh] min-h-screen bg-ws-mystic bg-ws-vignette bg-ws-noise pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0 ${
+        className={`ml-0 md:ml-[calc(1rem+16rem+1rem)] min-h-[100dvh] min-h-screen bg-ws-mystic bg-ws-vignette bg-ws-noise pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0 ${
           localMode
             ? 'pt-[calc(2.75rem+env(safe-area-inset-top))] md:pt-9'
             : 'max-md:pt-[env(safe-area-inset-top)]'
@@ -188,6 +193,16 @@ function App() {
                 onUpdate={tasksHook.updateTask}
                 onDelete={tasksHook.deleteTask}
                 onNavigate={navigate}
+              />
+            )}
+            {page === 'calendar' && (
+              <CalendarPage
+                events={calendarHook.events}
+                clients={clientsHook.clients}
+                projects={projectsHook.projects}
+                onCreate={calendarHook.createEvent}
+                onUpdate={calendarHook.updateEvent}
+                onDelete={calendarHook.deleteEvent}
               />
             )}
             {page === 'analytics' && (

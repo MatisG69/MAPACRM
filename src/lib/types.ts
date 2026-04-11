@@ -78,6 +78,30 @@ export interface Invoice {
   project?: Pick<Project, 'id' | 'name'>;
 }
 
+export type CalendarRecurrence = 'none' | 'daily' | 'weekly' | 'monthly';
+
+/** Événement agenda — tout est saisi par l’utilisateur (titres, types, récurrences). */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  /** ISO 8601 */
+  start_at: string;
+  end_at: string | null;
+  all_day: boolean;
+  recurrence: CalendarRecurrence;
+  /** Date limite de la série (ISO date), si récurrence */
+  recurrence_until: string | null;
+  client_id: string | null;
+  project_id: string | null;
+  /** Couleur d’affichage (#hex), optionnelle */
+  color: string | null;
+  created_at: string;
+  updated_at: string;
+  client?: Pick<Client, 'id' | 'name' | 'avatar_color'>;
+  project?: Pick<Project, 'id' | 'name'>;
+}
+
 export type Page =
   | 'dashboard'
   | 'clients'
@@ -85,5 +109,6 @@ export type Page =
   | 'projects'
   | 'project-detail'
   | 'tasks'
+  | 'calendar'
   | 'analytics'
   | 'invoices';

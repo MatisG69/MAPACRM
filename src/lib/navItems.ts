@@ -3,6 +3,7 @@ import {
   Users,
   FolderKanban,
   CheckSquare,
+  CalendarDays,
   BarChart3,
   FileText,
   type LucideIcon,
@@ -21,6 +22,7 @@ export const MAIN_NAV_ITEMS: NavItemConfig[] = [
   { id: 'clients', label: 'Clients', shortLabel: 'Clients', icon: Users },
   { id: 'projects', label: 'Projets', shortLabel: 'Projets', icon: FolderKanban },
   { id: 'tasks', label: 'Tâches', shortLabel: 'Tâches', icon: CheckSquare },
+  { id: 'calendar', label: 'Calendrier', shortLabel: 'Agenda', icon: CalendarDays },
   { id: 'analytics', label: 'Analytique', shortLabel: 'Stats', icon: BarChart3 },
   { id: 'invoices', label: 'Facturation', shortLabel: 'Factures', icon: FileText },
 ];

@@ -1,4 +1,4 @@
-import type { Client, Project, Task, Interaction, Invoice } from './types';
+import type { Client, Project, Task, Interaction, Invoice, CalendarEvent } from './types';
 import { generateInvoiceNumber } from './utils';
 
 const STORAGE_KEY = 'mapa-crm-v1';
@@ -9,6 +9,7 @@ interface CRMData {
   tasks: Task[];
   interactions: Interaction[];
   invoices: Invoice[];
+  calendar_events: CalendarEvent[];
 }
 
 const empty = (): CRMData => ({
@@ -17,6 +18,7 @@ const empty = (): CRMData => ({
   tasks: [],
   interactions: [],
   invoices: [],
+  calendar_events: [],
 });
 
 function load(): CRMData {
@@ -30,6 +32,7 @@ function load(): CRMData {
       tasks: Array.isArray(p.tasks) ? p.tasks : [],
       interactions: Array.isArray(p.interactions) ? p.interactions : [],
       invoices: Array.isArray(p.invoices) ? p.invoices : [],
+      calendar_events: Array.isArray(p.calendar_events) ? p.calendar_events : [],
     };
   } catch {
     return empty();
@@ -70,6 +73,16 @@ function hydrateInteraction(data: CRMData, i: Interaction): Interaction {
   return {
     ...i,
     client: { id: c.id, name: c.name, avatar_color: c.avatar_color },
+  };
+}
+
+function hydrateCalendarEvent(data: CRMData, row: CalendarEvent): CalendarEvent {
+  const c = clientById(data, row.client_id);
+  const proj = projectSlice(data, row.project_id);
+  return {
+    ...row,
+    client: c ? { id: c.id, name: c.name, avatar_color: c.avatar_color } : undefined,
+    project: proj,
   };
 }
 
@@ -122,6 +135,9 @@ export function localDeleteClient(id: string): void {
     inv.client_id === id ? { ...inv, client_id: null, updated_at: now() } : inv
   );
   data.interactions = data.interactions.filter((i) => i.client_id !== id);
+  data.calendar_events = data.calendar_events.map((ev) =>
+    ev.client_id === id ? { ...ev, client_id: null, updated_at: now() } : ev
+  );
   save(data);
 }
 
@@ -169,6 +185,50 @@ export function localDeleteProject(id: string): void {
   data.invoices = data.invoices.map((inv) =>
     inv.project_id === id ? { ...inv, project_id: null, updated_at: now() } : inv
   );
+  data.calendar_events = data.calendar_events.map((ev) =>
+    ev.project_id === id ? { ...ev, project_id: null, updated_at: now() } : ev
+  );
+  save(data);
+}
+
+export function localListCalendarEvents(): CalendarEvent[] {
+  const data = load();
+  return [...data.calendar_events]
+    .map((e) => hydrateCalendarEvent(data, e))
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+}
+
+export function localCreateCalendarEvent(
+  values: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'client' | 'project'>
+): CalendarEvent {
+  const data = load();
+  const row: CalendarEvent = {
+    ...values,
+    id: newId(),
+    created_at: now(),
+    updated_at: now(),
+  };
+  data.calendar_events.push(row);
+  save(data);
+  return hydrateCalendarEvent(load(), row);
+}
+
+export function localUpdateCalendarEvent(id: string, values: Partial<CalendarEvent>): CalendarEvent {
+  const data = load();
+  const idx = data.calendar_events.findIndex((e) => e.id === id);
+  if (idx < 0) throw new Error('Événement introuvable');
+  const { client: _c, project: _p, ...rest } = values as Partial<
+    CalendarEvent & { client?: unknown; project?: unknown }
+  >;
+  const merged = { ...data.calendar_events[idx], ...rest, updated_at: now() };
+  data.calendar_events[idx] = merged;
+  save(data);
+  return hydrateCalendarEvent(load(), merged);
+}
+
+export function localDeleteCalendarEvent(id: string): void {
+  const data = load();
+  data.calendar_events = data.calendar_events.filter((e) => e.id !== id);
   save(data);
 }
 
