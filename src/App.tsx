@@ -26,6 +26,10 @@ import { useChecklistItems } from './hooks/useChecklistItems';
 import { Page } from './lib/types';
 import { isSupabaseEnabled } from './lib/supabase';
 import { seedChecklistForProject } from './lib/checklistSeed';
+import {
+  pipelineAmountAsBudget,
+  resolveProjectIdForPipelineBudget,
+} from './lib/opportunityBudgetSync';
 import { Loader2 } from 'lucide-react';
 
 function App() {
@@ -154,7 +158,7 @@ function App() {
   const localMode = !isSupabaseEnabled();
 
   return (
-    <div className="min-h-screen bg-ws-mystic font-sans text-ws-paper">
+    <div className="min-h-[100dvh] min-h-screen bg-black font-sans text-ws-paper">
       <Sidebar currentPage={page} onNavigate={(p) => navigate(p)} />
       <MobileTabBar currentPage={page} onNavigate={(p) => navigate(p)} />
 
@@ -168,14 +172,19 @@ function App() {
       )}
 
       <main
-        className={`ml-0 md:ml-[calc(1rem+16rem+1rem)] min-h-[100dvh] min-h-screen bg-ws-mystic bg-ws-vignette bg-ws-noise pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0 ${
-          localMode
-            ? 'pt-[calc(2.75rem+env(safe-area-inset-top))] md:pt-9'
-            : 'max-md:pt-[env(safe-area-inset-top)]'
-        }`}
+        className={`ml-0 md:ml-[calc(1rem+16rem+1rem)] md:mr-3 md:mt-3 md:mb-3 w-full max-w-[100vw] min-h-[100dvh] min-h-screen md:min-h-[calc(100dvh-1.5rem)] md:max-h-[calc(100dvh-1.5rem)]
+          overflow-x-hidden overflow-y-auto scrollbar-ws
+          bg-ws-mystic bg-ws-vignette bg-ws-noise
+          md:rounded-2xl md:border md:border-white/[0.07] md:shadow-[0_25px_80px_-12px_rgba(0,0,0,0.85)]
+          pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:pb-0
+          ${
+            localMode
+              ? 'pt-[calc(2.75rem+env(safe-area-inset-top))] md:pt-9'
+              : 'pt-[max(0.25rem,env(safe-area-inset-top))] md:pt-0'
+          }`}
       >
         {dataError && isSupabaseEnabled() && (
-          <div className="mx-8 mt-4 rounded-lg bg-ws-bear-dim text-ws-bear text-sm px-4 py-3 border border-ws-bear/30 font-mono">
+          <div className="mx-3 md:mx-8 mt-4 rounded-lg bg-ws-bear-dim text-ws-bear text-sm px-4 py-3 border border-ws-bear/30 font-mono">
             Erreur base de données : {dataError}. Vérifiez les tables Supabase ou le mode local sans variables
             d’environnement.
           </div>
@@ -259,8 +268,37 @@ function App() {
                 opportunities={opportunitiesHook.opportunities}
                 clients={clientsHook.clients}
                 projects={projectsHook.projects}
-                onCreate={opportunitiesHook.createOpportunity}
-                onUpdate={opportunitiesHook.updateOpportunity}
+                onCreate={async (data) => {
+                  const o = await opportunitiesHook.createOpportunity(data);
+                  const amt = pipelineAmountAsBudget(o.estimated_amount);
+                  let targetId =
+                    o.project_id || resolveProjectIdForPipelineBudget(o, projectsHook.projects);
+                  if (amt != null && targetId) {
+                    await projectsHook.updateProject(targetId, { budget: amt });
+                  }
+                  if (!o.project_id && targetId) {
+                    await opportunitiesHook.updateOpportunity(o.id, { project_id: targetId });
+                  }
+                  return o;
+                }}
+                onUpdate={async (id, data) => {
+                  const o = await opportunitiesHook.updateOpportunity(id, data);
+                  const amt = pipelineAmountAsBudget(o.estimated_amount);
+                  let targetId = o.project_id;
+                  if (
+                    !targetId &&
+                    !('project_id' in data && data.project_id === null)
+                  ) {
+                    targetId = resolveProjectIdForPipelineBudget(o, projectsHook.projects);
+                  }
+                  if (amt != null && targetId) {
+                    await projectsHook.updateProject(targetId, { budget: amt });
+                  }
+                  if (!o.project_id && targetId) {
+                    await opportunitiesHook.updateOpportunity(o.id, { project_id: targetId });
+                  }
+                  return o;
+                }}
                 onDelete={opportunitiesHook.deleteOpportunity}
               />
             )}

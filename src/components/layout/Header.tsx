@@ -14,7 +14,7 @@ function SearchField({ className = '' }: { className?: string }) {
         type="search"
         enterKeyHint="search"
         placeholder="Rechercher…"
-        className="pl-10 pr-4 py-2.5 rounded-2xl bg-ws-panel/80 border border-ws-line text-sm text-ws-paper placeholder:text-ws-mist/70 focus:outline-none focus:ring-2 focus:ring-ws-accent/30 focus:border-ws-accent/40 w-full min-h-[44px] md:min-h-0 touch-manipulation"
+        className="pl-10 pr-4 py-2.5 rounded-2xl bg-ws-panel/80 border border-ws-line text-sm max-md:text-base text-ws-paper placeholder:text-ws-mist/70 focus:outline-none focus:ring-2 focus:ring-ws-accent/30 focus:border-ws-accent/40 w-full min-h-[48px] md:min-h-0 touch-manipulation"
       />
     </div>
   );
@@ -22,7 +22,7 @@ function SearchField({ className = '' }: { className?: string }) {
 
 export function Header({ title, subtitle, actions }: HeaderProps) {
   return (
-    <div className="sticky top-0 z-20 bg-ws-deep/85 backdrop-blur-2xl border-b border-white/[0.06] px-4 py-4 md:px-8 md:py-5">
+    <div className="sticky top-0 z-20 bg-ws-deep/90 backdrop-blur-2xl border-b border-white/[0.06] px-4 py-3.5 md:px-8 md:py-5 supports-[backdrop-filter]:bg-ws-deep/80">
       <div className="hidden md:flex flex-row items-start justify-between gap-6">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5">

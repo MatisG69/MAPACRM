@@ -31,9 +31,9 @@ export function Button({
   };
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-[10px] uppercase tracking-wide',
-    md: 'px-4 py-2.5 text-xs',
-    lg: 'px-5 py-3 text-sm',
+    sm: 'px-3 py-2 text-[10px] uppercase tracking-wide max-md:min-h-[44px] max-md:py-2.5',
+    md: 'px-4 py-2.5 text-xs max-md:min-h-[48px] max-md:py-3 max-md:text-sm',
+    lg: 'px-5 py-3 text-sm max-md:min-h-[52px] max-md:py-3.5',
   };
 
   return (

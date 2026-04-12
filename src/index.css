@@ -42,7 +42,16 @@
 
 @layer base {
   html {
-    @apply scroll-smooth;
+    @apply scroll-smooth bg-black;
+  }
+  body {
+    @apply m-0 min-h-[100dvh] min-h-screen bg-black text-ws-paper overflow-x-hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  #root {
+    @apply min-h-[100dvh] min-h-screen bg-black;
   }
   ::selection {
     @apply bg-ws-accent/40 text-ws-void;
@@ -51,9 +60,10 @@
 
 @layer components {
   .input {
-    @apply w-full px-3 py-2.5 text-sm rounded-2xl bg-ws-panel/80 border border-ws-line text-ws-paper
+    @apply w-full px-3 py-2.5 rounded-2xl bg-ws-panel/80 border border-ws-line text-sm text-ws-paper
       placeholder:text-ws-mist/80 focus:outline-none focus:ring-2 focus:ring-ws-accent/35 focus:border-ws-accent/50
-      transition-all duration-200 font-sans;
+      transition-all duration-200 font-sans
+      max-md:min-h-[48px] max-md:text-base max-md:px-3.5;
   }
 
   .ws-card {

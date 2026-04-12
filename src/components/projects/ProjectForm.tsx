@@ -51,7 +51,7 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onCancel }
     site_url: initial?.site_url ?? null,
     description: initial?.description || '',
     status: initial?.status || 'planning',
-    budget: initial?.budget || null,
+    budget: initial?.budget ?? null,
     start_date: initial?.start_date || '',
     end_date: initial?.end_date || '',
     progress: initial?.progress || 0,

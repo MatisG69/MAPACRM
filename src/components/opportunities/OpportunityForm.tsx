@@ -106,13 +106,17 @@ export function OpportunityForm({ initial, clients, projects, onSubmit, onCancel
           value={form.project_id || ''}
           onChange={(e) => set('project_id', e.target.value || null)}
         >
-          <option value="">Aucun</option>
+          <option value="">Aucun — détection auto si possible</option>
           {filteredProjects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
         </select>
+        <p className="mt-1.5 text-[10px] font-mono text-ws-mist/90 leading-relaxed">
+          Si vous laissez vide : le budget est quand même appliqué au projet du client lorsqu’il n’y en a qu’un, ou
+          lorsque le nom du projet est identique au nom de l’opportunité.
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -154,6 +158,12 @@ export function OpportunityForm({ initial, clients, projects, onSubmit, onCancel
               set('estimated_amount', e.target.value === '' ? null : Number(e.target.value))
             }
           />
+          {form.estimated_amount != null && form.estimated_amount > 0 && (
+            <p className="mt-1.5 text-[10px] font-mono text-ws-accent-soft/90 leading-snug">
+              Le budget du projet concerné (lié, unique pour ce client, ou même nom que l’opportunité) sera aligné
+              sur ce montant à l’enregistrement.
+            </p>
+          )}
         </div>
         <div>
           <label className="form-label">Signature prévue</label>

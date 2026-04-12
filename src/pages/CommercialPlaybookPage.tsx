@@ -110,13 +110,13 @@ function OfferBlock({
 
 export function CommercialPlaybookPage() {
   return (
-    <div className="pb-12">
+    <div className="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-12">
       <Header
         title="Guide commercial MAPA"
         subtitle="Cadre opérationnel · offres · cibles · collaboration Matis & Jibril · édition 2026 v1.0"
       />
 
-      <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto">
+      <div className="px-4 sm:px-5 md:px-8 py-5 md:py-6 max-w-6xl mx-auto w-full min-w-0">
         <div
           className="flex gap-3 rounded-2xl border border-amber-500/25 bg-amber-950/20 px-4 py-3 mb-8 text-xs text-ws-paper/90"
           role="note"
