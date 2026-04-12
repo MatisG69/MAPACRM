@@ -160,7 +160,7 @@ function RevenueExpandedOverlay({
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[1.15fr_1fr] xl:gap-8">
-          <div className="min-w-0 space-y-4 sm:space-y-6">
+          <div className="@container min-w-0 space-y-4 sm:space-y-6">
             <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-ws-deep/30 sm:rounded-2xl">
               <p className="border-b border-white/[0.06] px-3 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ws-ink sm:px-5 sm:py-3 sm:text-[10px] sm:tracking-[0.2em]">
                 Série mensuelle
@@ -450,7 +450,7 @@ export function RevenueDesk({
         </div>
 
         <div className="relative grid gap-0 lg:grid-cols-[1fr_minmax(0,260px)] xl:grid-cols-[1fr_minmax(0,300px)] 2xl:grid-cols-[1fr_minmax(0,340px)] lg:divide-x lg:divide-white/[0.06]">
-          <div className="min-w-0 space-y-4 border-b border-white/[0.06] pb-4 lg:border-b-0 lg:pb-0">
+          <div className="@container min-w-0 space-y-4 border-b border-white/[0.06] pb-4 lg:border-b-0 lg:pb-0">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[280px] border-collapse text-left font-mono text-xs">
                 <thead>

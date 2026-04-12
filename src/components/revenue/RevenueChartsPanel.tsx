@@ -35,12 +35,15 @@ export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanel
     ? 'rounded-2xl border border-white/[0.08] bg-ws-deep/50 p-3 min-w-0 sm:p-5 md:p-6'
     : 'rounded-xl border border-white/[0.08] bg-ws-deep/40 p-4 min-w-0';
 
-  /** Vue desk (colonne étroite) : 2 cartes puis chandeliers pleine largeur jusqu’à xl ; vue agrandie : 3 colonnes dès lg. */
+  /**
+   * Vue desk : jamais 3 colonnes sur une ligne — elles vivent dans une colonne (~½ dashboard − encaissements), pas toute la fenêtre.
+   * Vue agrandie : 3 colonnes seulement si le conteneur @container est assez large (évite d’écraser sur tablette / laptop).
+   */
   const gridClass = spacious
-    ? 'grid min-w-0 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 xl:gap-5'
-    : 'grid min-w-0 gap-3 sm:gap-4 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-4';
+    ? 'grid min-w-0 gap-3 sm:gap-4 md:grid-cols-2 md:gap-4 @[880px]:grid-cols-3 xl:gap-5'
+    : 'grid min-w-0 gap-3 sm:gap-4 md:grid-cols-2 md:gap-4';
 
-  const candleColClass = spacious ? '' : 'md:col-span-2 xl:col-span-1';
+  const candleColClass = spacious ? 'md:col-span-2 @[880px]:col-span-1' : 'md:col-span-2';
 
   const donutSize = spacious ? 136 : 128;
   const barH = spacious ? 168 : 156;
