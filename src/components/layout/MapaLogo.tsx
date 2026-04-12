@@ -2,15 +2,18 @@ import logoUrl from '../../../img/logo.png';
 
 type MapaLogoProps = {
   className?: string;
-  /** Sidebar : logo lisible dans la colonne · header : plus compact */
-  variant?: 'sidebar' | 'header';
+  /**
+   * sidebarInline — à côté du texte MAPACRM (comme l’ancien carré « M »)
+   * header — bandeau mobile
+   */
+  variant?: 'sidebarInline' | 'header';
 };
 
-export function MapaLogo({ className = '', variant = 'sidebar' }: MapaLogoProps) {
+export function MapaLogo({ className = '', variant = 'sidebarInline' }: MapaLogoProps) {
   const sizeClass =
-    variant === 'sidebar'
-      ? 'h-10 w-auto max-w-[200px] sm:h-11'
-      : 'h-7 w-auto max-w-[140px] sm:h-8';
+    variant === 'sidebarInline'
+      ? 'h-11 w-auto max-w-[5.25rem] shrink-0'
+      : 'h-8 w-auto max-w-[5rem] sm:h-9 sm:max-w-[5.5rem] shrink-0';
 
   return (
     <img

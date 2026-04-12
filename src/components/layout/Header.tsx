@@ -52,8 +52,16 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
       </div>
 
       <div className="md:hidden flex flex-col gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <MapaLogo variant="header" className="flex-shrink-0" />
+        <div className="flex items-start gap-3 min-w-0">
+          <MapaLogo variant="header" />
+          <div className="min-w-0 pt-0.5">
+            <p className="font-display text-[14px] font-semibold tracking-tight text-ws-paper leading-none">
+              MAPACRM
+            </p>
+            <p className="mt-1 font-mono text-[8px] font-medium uppercase tracking-[0.18em] text-ws-mist/85">
+              Suite commerciale
+            </p>
+          </div>
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
