@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS clients (
   status text NOT NULL DEFAULT 'prospect' CHECK (status IN ('prospect', 'active', 'inactive')),
   source text,
   notes text,
+  satisfaction_rating integer CHECK (satisfaction_rating IS NULL OR (satisfaction_rating >= 1 AND satisfaction_rating <= 5)),
+  feedback text,
   avatar_color text DEFAULT '#2563EB',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

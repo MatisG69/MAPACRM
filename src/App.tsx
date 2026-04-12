@@ -14,6 +14,7 @@ import { CommercialPlaybookPage } from './pages/CommercialPlaybookPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { QuotesPage } from './pages/QuotesPage';
 import { RelancesPage } from './pages/RelancesPage';
+import { ContactsPage } from './pages/ContactsPage';
 import { useClients } from './hooks/useClients';
 import { useProjects } from './hooks/useProjects';
 import { useTasks } from './hooks/useTasks';
@@ -215,6 +216,15 @@ function App() {
                 onUpdate={clientsHook.updateClient}
                 onDelete={clientsHook.deleteClient}
                 onSelect={(id) => navigate('client-detail', id)}
+              />
+            )}
+            {page === 'contacts' && (
+              <ContactsPage
+                clients={clientsHook.clients}
+                interactions={interactionsHook.interactions}
+                projects={projectsHook.projects}
+                onUpdateClient={clientsHook.updateClient}
+                onNavigate={navigate}
               />
             )}
             {page === 'client-detail' && (

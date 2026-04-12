@@ -12,7 +12,7 @@ const SECTIONS: { label: string; pages: readonly Page[] }[] = [
   { label: 'Synthèse', pages: ['dashboard'] },
   {
     label: 'Portefeuille',
-    pages: ['clients', 'projects', 'pipeline', 'quotes', 'relances', 'tasks'],
+    pages: ['clients', 'contacts', 'projects', 'pipeline', 'quotes', 'relances', 'tasks'],
   },
   { label: 'Pilotage', pages: ['calendar', 'analytics', 'invoices'] },
   { label: 'Méthode', pages: ['playbook'] },

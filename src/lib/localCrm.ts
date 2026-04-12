@@ -43,7 +43,13 @@ function load(): CRMData {
     if (!raw) return empty();
     const p = JSON.parse(raw) as CRMData;
     return {
-      clients: Array.isArray(p.clients) ? p.clients : [],
+      clients: Array.isArray(p.clients)
+        ? p.clients.map((c) => ({
+            ...(c as Client),
+            satisfaction_rating: (c as Client).satisfaction_rating ?? null,
+            feedback: (c as Client).feedback ?? null,
+          }))
+        : [],
       projects: Array.isArray(p.projects)
         ? p.projects.map((proj) => ({
             ...proj,

@@ -18,7 +18,13 @@ export function useClients() {
           .select('*')
           .order('created_at', { ascending: false });
         if (err) throw err;
-        setClients(data || []);
+        setClients(
+          (data || []).map((c) => ({
+            ...c,
+            satisfaction_rating: c.satisfaction_rating ?? null,
+            feedback: c.feedback ?? null,
+          }))
+        );
       } else {
         setClients(local.localListClients());
       }

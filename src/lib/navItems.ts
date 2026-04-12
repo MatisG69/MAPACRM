@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Users,
+  Contact2,
   FolderKanban,
   GitBranch,
   ScrollText,
@@ -24,6 +25,7 @@ export interface NavItemConfig {
 export const MAIN_NAV_ITEMS: NavItemConfig[] = [
   { id: 'dashboard', label: 'Accueil', shortLabel: 'Accueil', icon: LayoutDashboard },
   { id: 'clients', label: 'Clients', shortLabel: 'Clients', icon: Users },
+  { id: 'contacts', label: 'Contacts', shortLabel: 'Contacts', icon: Contact2 },
   { id: 'projects', label: 'Projets', shortLabel: 'Projets', icon: FolderKanban },
   { id: 'pipeline', label: 'Pipeline', shortLabel: 'Pipeline', icon: GitBranch },
   { id: 'quotes', label: 'Devis', shortLabel: 'Devis', icon: ScrollText },

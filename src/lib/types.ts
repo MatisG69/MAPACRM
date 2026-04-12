@@ -18,6 +18,10 @@ export interface Client {
   status: ClientStatus;
   source: string | null;
   notes: string | null;
+  /** Note de satisfaction client (1–5), optionnelle */
+  satisfaction_rating: number | null;
+  /** Témoignage, retour ou citation client */
+  feedback: string | null;
   avatar_color: string;
   created_at: string;
   updated_at: string;
@@ -193,4 +197,6 @@ export type Page =
   /** Suggestions de relance */
   | 'relances'
   /** Guide méthode & cadre MAPA (usage interne partenaires) */
-  | 'playbook';
+  | 'playbook'
+  /** Annuaire enrichi : coordonnées, satisfaction, historique d’échanges */
+  | 'contacts';

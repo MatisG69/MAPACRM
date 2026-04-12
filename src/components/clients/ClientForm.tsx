@@ -31,6 +31,8 @@ export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
     status: initial?.status || 'prospect',
     source: initial?.source || '',
     notes: initial?.notes || '',
+    satisfaction_rating: initial?.satisfaction_rating ?? null,
+    feedback: initial?.feedback ?? null,
     avatar_color: initial?.avatar_color || getRandomColor(),
   });
   const [loading, setLoading] = useState(false);
@@ -95,8 +97,38 @@ export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
           </select>
         </div>
         <div className="col-span-2">
-          <label className="form-label">Notes</label>
+          <label className="form-label">Notes internes</label>
           <textarea className="input resize-none" rows={3} value={form.notes || ''} onChange={(e) => set('notes', e.target.value)} placeholder="Informations complémentaires..." />
+        </div>
+        <div>
+          <label className="form-label">Satisfaction client (1–5)</label>
+          <select
+            className="input"
+            value={form.satisfaction_rating ?? ''}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                satisfaction_rating: e.target.value === '' ? null : Number(e.target.value),
+              }))
+            }
+          >
+            <option value="">Non renseigné</option>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {n} — {n === 5 ? 'Excellent' : n === 1 ? 'À améliorer' : '…'}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-span-2">
+          <label className="form-label">Retour / témoignage client</label>
+          <textarea
+            className="input resize-none"
+            rows={3}
+            value={form.feedback || ''}
+            onChange={(e) => setForm((f) => ({ ...f, feedback: e.target.value || null }))}
+            placeholder="Citation, avis, retour d’expérience…"
+          />
         </div>
       </div>
 
