@@ -1,5 +1,6 @@
 import { Page } from '../../lib/types';
 import { MAIN_NAV_ITEMS } from '../../lib/navItems';
+import { MapaLogo } from './MapaLogo';
 
 interface SidebarProps {
   currentPage: Page;
@@ -36,23 +37,11 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           className="absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-ws-accent/45 to-transparent opacity-90"
           aria-hidden
         />
-        <div className="flex items-start gap-3.5">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-ws-accent/20 bg-gradient-to-br from-ws-raised to-ws-surface shadow-card-inner">
-            <span
-              className="font-display text-[15px] font-bold tracking-tight text-ws-cream"
-              aria-hidden
-            >
-              M
-            </span>
-          </div>
-          <div className="min-w-0 pt-0.5">
-            <p className="font-display text-[15px] font-semibold tracking-tight text-ws-paper leading-none">
-              MAPACRM
-            </p>
-            <p className="mt-1.5 font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-ws-mist/85">
-              Suite commerciale
-            </p>
-          </div>
+        <div className="flex flex-col gap-2.5 min-w-0">
+          <MapaLogo variant="sidebar" className="flex-shrink-0" />
+          <p className="font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-ws-mist/85">
+            MAPACRM · Suite commerciale
+          </p>
         </div>
       </div>
 

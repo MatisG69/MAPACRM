@@ -1,4 +1,5 @@
 import { Bell, Search } from 'lucide-react';
+import { MapaLogo } from './MapaLogo';
 
 interface HeaderProps {
   title: string;
@@ -51,6 +52,9 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
       </div>
 
       <div className="md:hidden flex flex-col gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <MapaLogo variant="header" className="flex-shrink-0" />
+        </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="h-2 w-2 rounded-full bg-ws-accent shadow-glow-sm flex-shrink-0" />
