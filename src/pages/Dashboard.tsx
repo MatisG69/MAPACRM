@@ -118,7 +118,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
         title="Tableau de bord"
         subtitle={`${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · synthèse commerciale`}
       />
-      <div className="relative px-4 py-6 md:p-8 space-y-6 md:space-y-8 min-h-[calc(100vh-1px)] overflow-hidden">
+      <div className="relative px-4 py-6 md:p-8 space-y-6 md:space-y-8 min-h-0 overflow-x-clip">
         <div className="pointer-events-none absolute -right-24 top-0 w-[min(420px,55vw)] h-[420px] opacity-[0.35] hidden sm:block">
           <svg viewBox="0 0 400 400" className="w-full h-full" aria-hidden>
             <circle cx="200" cy="200" r="188" fill="none" stroke="#af7037" strokeWidth="0.75" opacity="0.85" />
@@ -178,7 +178,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 min-w-0">
             <RevenueDesk
               monthlyRows={revenueByMonth}
               invoices={invoices}
@@ -186,7 +186,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
               subtitle="Série mensuelle, variation mois sur mois, répartition et journal des règlements — lecture type desk financier."
             />
           </div>
-          <div className="ws-card rounded-2xl p-5 relative z-[1]">
+          <div className="ws-card rounded-2xl p-5 relative z-[1] min-w-0">
             <h3 className="ws-section-title mb-1">Allocation projets</h3>
             <p className="text-[10px] font-mono text-ws-mist mb-4 uppercase tracking-wider">Par statut</p>
             {projectStatusData.length > 0 ? (
@@ -198,7 +198,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 ws-card rounded-2xl p-5 relative z-[1]">
+          <div className="lg:col-span-2 min-w-0 ws-card rounded-2xl p-5 relative z-[1]">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="ws-section-title">Carnet d&apos;ordres</h3>
@@ -250,7 +250,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
             )}
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 min-w-0">
             <div className="ws-card rounded-2xl p-5 relative z-[1]">
               <div className="flex items-center justify-between mb-4">
                 <div>

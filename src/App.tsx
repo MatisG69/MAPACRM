@@ -172,8 +172,9 @@ function App() {
       )}
 
       <main
-        className={`ml-0 md:ml-[calc(1rem+16rem+1rem)] md:mr-3 md:mt-3 md:mb-3 w-full max-w-[100vw] min-h-[100dvh] min-h-screen md:min-h-[calc(100dvh-1.5rem)] md:max-h-[calc(100dvh-1.5rem)]
-          overflow-x-hidden overflow-y-auto scrollbar-ws
+        className={`ml-0 md:ml-[calc(1rem+16rem+1rem)] md:mr-3 md:mt-3 md:mb-3 w-full min-w-0 max-md:max-w-[100vw] md:w-[calc(100%-18rem-0.75rem)] min-h-[100dvh] min-h-screen
+          md:min-h-[calc(100dvh-1.5rem)]
+          max-md:overflow-x-hidden
           bg-ws-mystic bg-ws-vignette bg-ws-noise
           md:rounded-2xl md:border md:border-white/[0.07] md:shadow-[0_25px_80px_-12px_rgba(0,0,0,0.85)]
           pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:pb-0

@@ -376,7 +376,7 @@ export function RevenueDesk({
   return (
     <>
       <section
-        className="ws-card relative overflow-hidden rounded-[1.35rem]"
+        className="ws-card relative min-w-0 overflow-hidden rounded-[1.35rem]"
         aria-labelledby="revenue-desk-title"
       >
         <div
