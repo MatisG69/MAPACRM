@@ -28,6 +28,8 @@ export interface Project {
   client_id: string | null;
   name: string;
   description: string | null;
+  /** URL du site livré ou en cours (aperçu visuel sur la carte) */
+  site_url: string | null;
   status: ProjectStatus;
   budget: number | null;
   start_date: string | null;
@@ -72,6 +74,8 @@ export interface Invoice {
   due_date: string | null;
   paid_date: string | null;
   notes: string | null;
+  /** Devis d’origine après conversion devis → facture */
+  source_quote_id: string | null;
   created_at: string;
   updated_at: string;
   client?: Pick<Client, 'id' | 'name' | 'company' | 'avatar_color'>;
@@ -102,6 +106,76 @@ export interface CalendarEvent {
   project?: Pick<Project, 'id' | 'name'>;
 }
 
+/** Étapes du tunnel commercial MAPA */
+export type DealStage =
+  | 'lead_detected'
+  | 'contacted'
+  | 'meeting_scheduled'
+  | 'quote_sent'
+  | 'follow_up'
+  | 'won'
+  | 'lost';
+
+export type LostReason =
+  | 'too_expensive'
+  | 'not_priority'
+  | 'competitor'
+  | 'no_budget'
+  | 'ghosted'
+  | 'other';
+
+export interface Opportunity {
+  id: string;
+  client_id: string;
+  project_id: string | null;
+  name: string;
+  stage: DealStage;
+  probability: number;
+  estimated_amount: number | null;
+  expected_close_date: string | null;
+  lost_reason: LostReason | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  client?: Pick<Client, 'id' | 'name' | 'avatar_color'>;
+  project?: Pick<Project, 'id' | 'name'>;
+}
+
+export type QuoteStatus = 'draft' | 'sent' | 'signed' | 'refused' | 'expired';
+
+export interface Quote {
+  id: string;
+  client_id: string;
+  project_id: string | null;
+  opportunity_id: string | null;
+  title: string;
+  quote_number: string | null;
+  amount: number;
+  status: QuoteStatus;
+  valid_until: string | null;
+  deposit_requested: boolean;
+  deposit_amount: number | null;
+  version: number;
+  parent_quote_id: string | null;
+  notes: string | null;
+  signed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  client?: Pick<Client, 'id' | 'name' | 'company' | 'avatar_color'>;
+  project?: Pick<Project, 'id' | 'name'>;
+  opportunity?: Pick<Opportunity, 'id' | 'name'>;
+}
+
+export interface ProjectChecklistItem {
+  id: string;
+  project_id: string;
+  label: string;
+  done: boolean;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Page =
   | 'dashboard'
   | 'clients'
@@ -111,4 +185,12 @@ export type Page =
   | 'tasks'
   | 'calendar'
   | 'analytics'
-  | 'invoices';
+  | 'invoices'
+  /** Pipeline opportunités (tunnel commercial) */
+  | 'pipeline'
+  /** Devis / propositions */
+  | 'quotes'
+  /** Suggestions de relance */
+  | 'relances'
+  /** Guide méthode & cadre MAPA (usage interne partenaires) */
+  | 'playbook';

@@ -10,6 +10,34 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /**
+   * Scrollbar alignée sur le thème MAPA (évite la piste blanche système sur nav sombre).
+   * Firefox: scrollbar-color thumb track · WebKit: hauteur/largeur fines pour horizontal + vertical.
+   */
+  .scrollbar-ws {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(201, 138, 76, 0.42) rgba(0, 0, 0, 0.32);
+  }
+  .scrollbar-ws::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .scrollbar-ws::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.28);
+    border-radius: 9999px;
+  }
+  .scrollbar-ws::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(212, 165, 116, 0.5), rgba(175, 112, 55, 0.45));
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+  }
+  .scrollbar-ws::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(232, 195, 150, 0.55), rgba(201, 138, 76, 0.55));
+  }
+  .scrollbar-ws::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @layer base {

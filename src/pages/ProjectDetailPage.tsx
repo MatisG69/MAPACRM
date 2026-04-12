@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowLeft, Pencil, Plus } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
@@ -6,16 +6,34 @@ import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ProjectForm } from '../components/projects/ProjectForm';
+import { ProjectCardPreview } from '../components/projects/ProjectCardPreview';
 import { TaskForm } from '../components/tasks/TaskForm';
 import { ProgressBar } from '../components/ui/ProgressBar';
-import { Client, Project, Task } from '../lib/types';
-import { formatCurrency, formatDate } from '../lib/utils';
+import type {
+  CalendarEvent,
+  Client,
+  Interaction,
+  Invoice,
+  Project,
+  ProjectChecklistItem,
+  Quote,
+  Task,
+} from '../lib/types';
 import { Page } from '../lib/types';
+import { formatCurrency, formatDate, formatDateTime } from '../lib/utils';
+import { resolveProjectProgress } from '../lib/projectProgress';
+import { buildProjectTimeline } from '../lib/projectTimeline';
 
 interface ProjectDetailPageProps {
   project: Project | undefined;
   clients: Client[];
   tasks: Task[];
+  clientInteractions: Interaction[];
+  projectInvoices: Invoice[];
+  projectQuotes: Quote[];
+  projectCalendarEvents: CalendarEvent[];
+  checklistItems: ProjectChecklistItem[];
+  onToggleChecklistItem: (id: string, done: boolean) => Promise<void>;
   onBack: () => void;
   onNavigate: (page: Page, id?: string) => void;
   onUpdateProject: (id: string, data: Partial<Project>) => Promise<Project>;
@@ -27,6 +45,12 @@ export function ProjectDetailPage({
   project,
   clients,
   tasks,
+  clientInteractions,
+  projectInvoices,
+  projectQuotes,
+  projectCalendarEvents,
+  checklistItems,
+  onToggleChecklistItem,
   onBack,
   onNavigate,
   onUpdateProject,
@@ -37,6 +61,19 @@ export function ProjectDetailPage({
   const [showTask, setShowTask] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const timeline = useMemo(() => {
+    if (!project) return [];
+    const pt = tasks.filter((t) => t.project_id === project.id);
+    return buildProjectTimeline(
+      project,
+      pt,
+      clientInteractions,
+      projectInvoices,
+      projectQuotes,
+      projectCalendarEvents
+    );
+  }, [project, tasks, clientInteractions, projectInvoices, projectQuotes, projectCalendarEvents]);
 
   if (!project) {
     return (
@@ -50,6 +87,7 @@ export function ProjectDetailPage({
   }
 
   const projectTasks = tasks.filter((t) => t.project_id === project.id);
+  const progress = resolveProjectProgress(project, tasks);
 
   const handleDelete = async () => {
     setDeleteLoading(true);
@@ -68,7 +106,7 @@ export function ProjectDetailPage({
           className="flex items-center gap-2 text-sm text-ws-ink hover:text-ws-gold mb-2 font-mono uppercase tracking-wider transition-colors"
         >
           <ArrowLeft size={16} />
-          Book projets
+          Retour aux projets
         </button>
       </div>
       <Header
@@ -92,12 +130,48 @@ export function ProjectDetailPage({
       />
 
       <div className="px-4 py-6 md:p-8 space-y-6 md:space-y-8 max-w-4xl bg-ws-deep/20 min-h-[calc(100vh-160px)]">
+        {project.site_url && (
+          <ProjectCardPreview
+            siteUrl={project.site_url}
+            projectName={project.name}
+            layout="hero"
+            className="shadow-[0_24px_60px_-24px_rgba(0,0,0,0.85)]"
+          />
+        )}
         <div className="ws-card rounded-lg p-6">
           <div className="flex flex-wrap gap-2 mb-4">
             <Badge value={project.status} />
             {project.type && <Badge value={project.type} />}
           </div>
-          <ProgressBar value={project.progress} color="bull" className="mb-5" />
+          <div
+            className={`rounded-2xl border px-4 py-4 mb-6 ${
+              progress.percent >= 100
+                ? 'border-emerald-500/35 bg-emerald-500/[0.07]'
+                : 'border-ws-accent/25 bg-ws-accent-dim/20'
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist">Avancement</p>
+              <span className="text-2xl font-display font-bold text-ws-cream tabular-nums">{progress.percent}%</span>
+            </div>
+            <ProgressBar value={progress.percent} size="lg" color="bull" className="mb-2" />
+            <p className="text-xs text-ws-ink font-mono leading-relaxed">
+              {progress.taskDriven ? (
+                <>
+                  <span className="text-ws-paper font-semibold">
+                    {progress.completed}/{progress.total}
+                  </span>{' '}
+                  tâches terminées — chaque tâche cochée « terminée » fait monter la barre (et met à jour la liste
+                  projets).
+                </>
+              ) : (
+                <>
+                  Pas encore de tâches sur ce projet : l’avancement est manuel. Utilisez le bouton ci-dessous pour
+                  en ajouter.
+                </>
+              )}
+            </p>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             {project.budget != null && (
               <div>
@@ -127,6 +201,52 @@ export function ProjectDetailPage({
             >
               Fiche client →
             </button>
+          )}
+        </div>
+
+        {checklistItems.length > 0 && (
+          <div className="ws-card rounded-lg p-6">
+            <h2 className="font-display text-lg font-bold text-ws-paper tracking-tight mb-4">
+              Checklist livrable
+            </h2>
+            <ul className="space-y-2">
+              {checklistItems.map((item) => (
+                <li key={item.id} className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={item.done}
+                    onChange={(e) => onToggleChecklistItem(item.id, e.target.checked)}
+                    className="mt-1 rounded border-ws-line"
+                    aria-label={item.label}
+                  />
+                  <span
+                    className={`text-sm ${item.done ? 'text-ws-mist line-through' : 'text-ws-paper'}`}
+                  >
+                    {item.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="ws-card rounded-lg p-6">
+          <h2 className="font-display text-lg font-bold text-ws-paper tracking-tight mb-4">
+            Timeline projet
+          </h2>
+          {timeline.length === 0 ? (
+            <p className="text-sm text-ws-mist font-mono">Aucun événement agrégé pour l’instant.</p>
+          ) : (
+            <ul className="relative border-l border-ws-line/80 pl-4 space-y-4 ml-2">
+              {timeline.map((row) => (
+                <li key={row.id} className="relative">
+                  <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-ws-accent/80 ring-4 ring-ws-deep" />
+                  <p className="text-xs font-mono text-ws-mist">{formatDateTime(row.at)}</p>
+                  <p className="text-sm text-ws-paper font-medium">{row.label}</p>
+                  <p className="text-xs text-ws-mist mt-0.5 leading-relaxed">{row.sub}</p>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
@@ -167,6 +287,7 @@ export function ProjectDetailPage({
         <ProjectForm
           initial={project}
           clients={clients}
+          tasks={tasks}
           onSubmit={async (data) => {
             await onUpdateProject(project.id, data);
             setShowEdit(false);

@@ -70,3 +70,11 @@ export function generateInvoiceNumber(): string {
   const rand = String(Math.floor(Math.random() * 9000) + 1000);
   return `MAPA-${year}${month}-${rand}`;
 }
+
+export function generateQuoteNumber(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const rand = String(Math.floor(Math.random() * 9000) + 1000);
+  return `DEV-${year}${month}-${rand}`;
+}

@@ -20,6 +20,7 @@ import { RevenueDesk } from '../components/revenue/RevenueDesk';
 import { Header } from '../components/layout/Header';
 import { Client, Project, Task, Interaction, Invoice } from '../lib/types';
 import { formatCurrency, formatRelativeDate, formatDate, isOverdue, daysUntil } from '../lib/utils';
+import { resolveProjectProgress } from '../lib/projectProgress';
 import { Page } from '../lib/types';
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -211,33 +212,40 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
               <p className="text-sm text-ws-mist text-center py-6 font-mono">Aucun projet</p>
             ) : (
               <div className="space-y-2">
-                {recentProjects.map((p) => (
-                  <div
-                    key={p.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onNavigate('project-detail', p.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onNavigate('project-detail', p.id);
-                      }
-                    }}
-                    className="flex items-center gap-4 p-3 rounded-2xl border border-transparent hover:border-ws-accent/20 hover:bg-ws-raised/40 cursor-pointer transition-all group"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <p className="text-sm font-medium text-ws-paper truncate group-hover:text-ws-accent-soft transition-colors">
-                          {p.name}
-                        </p>
-                        <Badge value={p.status} />
+                {recentProjects.map((p) => {
+                  const rp = resolveProjectProgress(p, tasks);
+                  return (
+                    <div
+                      key={p.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onNavigate('project-detail', p.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onNavigate('project-detail', p.id);
+                        }
+                      }}
+                      className="flex items-center gap-4 p-3 rounded-2xl border border-transparent hover:border-ws-accent/20 hover:bg-ws-raised/40 cursor-pointer transition-all group"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <p className="text-sm font-medium text-ws-paper truncate group-hover:text-ws-accent-soft transition-colors">
+                            {p.name}
+                          </p>
+                          <Badge value={p.status} />
+                        </div>
+                        <p className="text-xs text-ws-mist truncate font-mono">{p.client?.name || 'Sans client'}</p>
+                        <ProgressBar value={rp.percent} size="sm" color="bull" className="mt-2" showLabel />
+                        {rp.taskDriven && (
+                          <p className="text-[9px] font-mono text-ws-mist mt-1">
+                            {rp.completed}/{rp.total} tâches
+                          </p>
+                        )}
                       </div>
-                      <p className="text-xs text-ws-mist truncate font-mono">{p.client?.name || 'Sans client'}</p>
-                      <ProgressBar value={p.progress} size="sm" color="bull" className="mt-2" />
                     </div>
-                    <span className="text-xs font-mono text-ws-accent-soft flex-shrink-0 tabular-nums">{p.progress}%</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

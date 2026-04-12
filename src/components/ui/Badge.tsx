@@ -40,6 +40,21 @@ const variantStyles: Record<string, string> = {
   maintenance: 'bg-teal-500/10 text-teal-300 border-teal-500/25',
   seo: 'bg-lime-500/10 text-lime-300 border-lime-500/25',
   other: 'bg-ws-deep text-ws-mist border-ws-line',
+  lead_detected: 'bg-slate-500/15 text-slate-300 border-slate-500/25',
+  contacted: 'bg-ws-wire/15 text-ws-highlight border-ws-wire/30',
+  meeting_scheduled: 'bg-violet-500/12 text-violet-200 border-violet-500/25',
+  quote_sent: 'bg-amber-500/12 text-amber-200 border-amber-500/30',
+  follow_up: 'bg-orange-500/12 text-orange-200 border-orange-500/25',
+  won: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+  lost: 'bg-ws-bear-dim text-ws-bear border-ws-bear/35',
+  signed: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+  refused: 'bg-red-500/12 text-red-300 border-red-500/30',
+  expired: 'bg-ws-deep text-ws-mist/80 border-ws-line',
+  too_expensive: 'bg-ws-deep text-ws-mist border-ws-line',
+  not_priority: 'bg-ws-deep text-ws-mist border-ws-line',
+  competitor: 'bg-ws-bear-dim/50 text-ws-bear border-ws-bear/25',
+  no_budget: 'bg-ws-deep text-ws-mist border-ws-line',
+  ghosted: 'bg-zinc-500/12 text-zinc-300 border-zinc-500/25',
 };
 
 const variantLabels: Record<string, string> = {
@@ -73,6 +88,21 @@ const variantLabels: Record<string, string> = {
   maintenance: 'Maintenance',
   seo: 'SEO',
   other: 'Autre',
+  lead_detected: 'Lead',
+  contacted: 'Contacté',
+  meeting_scheduled: 'RDV prévu',
+  quote_sent: 'Devis envoyé',
+  follow_up: 'Relance',
+  won: 'Gagné',
+  lost: 'Perdu',
+  signed: 'Signé',
+  refused: 'Refusé',
+  expired: 'Expiré',
+  too_expensive: 'Trop cher',
+  not_priority: 'Pas prioritaire',
+  competitor: 'Concurrent',
+  no_budget: 'Pas de budget',
+  ghosted: 'Sans réponse',
 };
 
 interface BadgeProps {

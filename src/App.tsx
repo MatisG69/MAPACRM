@@ -10,14 +10,22 @@ import { TasksPage } from './pages/TasksPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { CommercialPlaybookPage } from './pages/CommercialPlaybookPage';
+import { PipelinePage } from './pages/PipelinePage';
+import { QuotesPage } from './pages/QuotesPage';
+import { RelancesPage } from './pages/RelancesPage';
 import { useClients } from './hooks/useClients';
 import { useProjects } from './hooks/useProjects';
 import { useTasks } from './hooks/useTasks';
 import { useInteractions } from './hooks/useInteractions';
 import { useInvoices } from './hooks/useInvoices';
 import { useCalendarEvents } from './hooks/useCalendarEvents';
+import { useOpportunities } from './hooks/useOpportunities';
+import { useQuotes } from './hooks/useQuotes';
+import { useChecklistItems } from './hooks/useChecklistItems';
 import { Page } from './lib/types';
 import { isSupabaseEnabled } from './lib/supabase';
+import { seedChecklistForProject } from './lib/checklistSeed';
 import { Loader2 } from 'lucide-react';
 
 function App() {
@@ -26,11 +34,21 @@ function App() {
   const [projectDetailId, setProjectDetailId] = useState<string | null>(null);
 
   const clientsHook = useClients();
-  const projectsHook = useProjects();
-  const tasksHook = useTasks();
+  const checklistHook = useChecklistItems();
+  const projectsHook = useProjects(undefined, {
+    afterCreate: async (p) => {
+      await seedChecklistForProject(p.id, p.type ?? null);
+      await checklistHook.refetch();
+    },
+  });
+  const tasksHook = useTasks(undefined, {
+    onProjectProgressSync: () => projectsHook.refreshProjectsQuietly(),
+  });
   const interactionsHook = useInteractions();
   const invoicesHook = useInvoices();
   const calendarHook = useCalendarEvents();
+  const opportunitiesHook = useOpportunities();
+  const quotesHook = useQuotes();
 
   const navigate = useCallback((p: Page, id?: string) => {
     if (p === 'client-detail' && id) {
@@ -75,13 +93,52 @@ function App() {
     [invoicesHook.invoices, clientDetailId]
   );
 
+  const clientInteractionsForProject = useMemo(() => {
+    const cid = projectForDetail?.client_id;
+    if (!cid) return [];
+    return interactionsHook.interactions.filter((i) => i.client_id === cid);
+  }, [projectForDetail?.client_id, interactionsHook.interactions]);
+
+  const projectInvoicesDetail = useMemo(
+    () =>
+      projectForDetail
+        ? invoicesHook.invoices.filter((i) => i.project_id === projectForDetail.id)
+        : [],
+    [projectForDetail, invoicesHook.invoices]
+  );
+
+  const projectQuotesDetail = useMemo(
+    () =>
+      projectForDetail ? quotesHook.quotes.filter((q) => q.project_id === projectForDetail.id) : [],
+    [projectForDetail, quotesHook.quotes]
+  );
+
+  const projectCalendarDetail = useMemo(
+    () =>
+      projectForDetail
+        ? calendarHook.events.filter((e) => e.project_id === projectForDetail.id)
+        : [],
+    [projectForDetail, calendarHook.events]
+  );
+
+  const checklistForProjectDetail = useMemo(
+    () =>
+      projectForDetail
+        ? checklistHook.items.filter((c) => c.project_id === projectForDetail.id)
+        : [],
+    [projectForDetail, checklistHook.items]
+  );
+
   const loading =
     clientsHook.loading ||
     projectsHook.loading ||
     tasksHook.loading ||
     interactionsHook.loading ||
     invoicesHook.loading ||
-    calendarHook.loading;
+    calendarHook.loading ||
+    opportunitiesHook.loading ||
+    quotesHook.loading ||
+    checklistHook.loading;
 
   const dataError =
     clientsHook.error ||
@@ -89,7 +146,10 @@ function App() {
     tasksHook.error ||
     interactionsHook.error ||
     invoicesHook.error ||
-    calendarHook.error;
+    calendarHook.error ||
+    opportunitiesHook.error ||
+    quotesHook.error ||
+    checklistHook.error;
 
   const localMode = !isSupabaseEnabled();
 
@@ -167,6 +227,7 @@ function App() {
               <ProjectsPage
                 projects={projectsHook.projects}
                 clients={clientsHook.clients}
+                tasks={tasksHook.tasks}
                 onCreate={projectsHook.createProject}
                 onUpdate={projectsHook.updateProject}
                 onDelete={projectsHook.deleteProject}
@@ -178,11 +239,52 @@ function App() {
                 project={projectForDetail}
                 clients={clientsHook.clients}
                 tasks={tasksHook.tasks}
+                clientInteractions={clientInteractionsForProject}
+                projectInvoices={projectInvoicesDetail}
+                projectQuotes={projectQuotesDetail}
+                projectCalendarEvents={projectCalendarDetail}
+                checklistItems={checklistForProjectDetail}
+                onToggleChecklistItem={async (id, done) => {
+                  await checklistHook.updateItem(id, { done });
+                }}
                 onBack={() => navigate('projects')}
                 onNavigate={navigate}
                 onUpdateProject={projectsHook.updateProject}
                 onDeleteProject={projectsHook.deleteProject}
                 onCreateTask={tasksHook.createTask}
+              />
+            )}
+            {page === 'pipeline' && (
+              <PipelinePage
+                opportunities={opportunitiesHook.opportunities}
+                clients={clientsHook.clients}
+                projects={projectsHook.projects}
+                onCreate={opportunitiesHook.createOpportunity}
+                onUpdate={opportunitiesHook.updateOpportunity}
+                onDelete={opportunitiesHook.deleteOpportunity}
+              />
+            )}
+            {page === 'quotes' && (
+              <QuotesPage
+                quotes={quotesHook.quotes}
+                clients={clientsHook.clients}
+                projects={projectsHook.projects}
+                opportunities={opportunitiesHook.opportunities}
+                onCreate={quotesHook.createQuote}
+                onUpdate={quotesHook.updateQuote}
+                onDelete={quotesHook.deleteQuote}
+                onCreateInvoice={invoicesHook.createInvoice}
+              />
+            )}
+            {page === 'relances' && (
+              <RelancesPage
+                clients={clientsHook.clients}
+                interactions={interactionsHook.interactions}
+                projects={projectsHook.projects}
+                tasks={tasksHook.tasks}
+                invoices={invoicesHook.invoices}
+                quotes={quotesHook.quotes}
+                onNavigate={navigate}
               />
             )}
             {page === 'tasks' && (
@@ -200,6 +302,10 @@ function App() {
                 events={calendarHook.events}
                 clients={clientsHook.clients}
                 projects={projectsHook.projects}
+                tasks={tasksHook.tasks}
+                interactions={interactionsHook.interactions}
+                invoices={invoicesHook.invoices}
+                onNavigate={navigate}
                 onCreate={calendarHook.createEvent}
                 onUpdate={calendarHook.updateEvent}
                 onDelete={calendarHook.deleteEvent}
@@ -210,6 +316,8 @@ function App() {
                 clients={clientsHook.clients}
                 projects={projectsHook.projects}
                 invoices={invoicesHook.invoices}
+                opportunities={opportunitiesHook.opportunities}
+                quotes={quotesHook.quotes}
               />
             )}
             {page === 'invoices' && (
@@ -222,6 +330,7 @@ function App() {
                 onDelete={invoicesHook.deleteInvoice}
               />
             )}
+            {page === 'playbook' && <CommercialPlaybookPage />}
           </>
         )}
       </main>

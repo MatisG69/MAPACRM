@@ -27,6 +27,7 @@ export function InvoiceForm({ initial, clients, projects, onSubmit, onCancel }: 
   const [form, setForm] = useState<FormData>({
     client_id: initial?.client_id ?? null,
     project_id: initial?.project_id ?? null,
+    source_quote_id: initial?.source_quote_id ?? null,
     invoice_number: initial?.invoice_number || generateInvoiceNumber(),
     amount: initial?.amount ?? 0,
     status: initial?.status || 'draft',
@@ -51,6 +52,7 @@ export function InvoiceForm({ initial, clients, projects, onSubmit, onCancel }: 
     try {
       await onSubmit({
         ...form,
+        source_quote_id: form.source_quote_id || null,
         due_date: form.due_date || null,
         paid_date: form.paid_date || null,
         notes: form.notes || null,

@@ -9,8 +9,12 @@ interface SidebarProps {
 /** Regroupement aligné sur un parcours commercial classique */
 const SECTIONS: { label: string; pages: readonly Page[] }[] = [
   { label: 'Synthèse', pages: ['dashboard'] },
-  { label: 'Portefeuille', pages: ['clients', 'projects', 'tasks'] },
+  {
+    label: 'Portefeuille',
+    pages: ['clients', 'projects', 'pipeline', 'quotes', 'relances', 'tasks'],
+  },
   { label: 'Pilotage', pages: ['calendar', 'analytics', 'invoices'] },
+  { label: 'Méthode', pages: ['playbook'] },
 ];
 
 export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
@@ -52,7 +56,10 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-5 [scrollbar-width:thin]" aria-label="Sections">
+      <nav
+        className="flex-1 overflow-y-auto px-3 py-5 scrollbar-ws [color-scheme:dark]"
+        aria-label="Sections"
+      >
         {SECTIONS.map((section) => {
           const items = MAIN_NAV_ITEMS.filter((item) => section.pages.includes(item.id));
           if (items.length === 0) return null;

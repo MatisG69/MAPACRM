@@ -1,7 +1,7 @@
 interface ProgressBarProps {
   value: number;
   max?: number;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   color?: 'blue' | 'emerald' | 'amber' | 'red' | 'bull';
   showLabel?: boolean;
   className?: string;
@@ -25,7 +25,7 @@ export function ProgressBar({
     bull: 'bg-gradient-to-r from-ws-accent-muted to-ws-accent-soft shadow-[0_0_14px_rgba(175,112,55,0.5)]',
   };
 
-  const heights = { sm: 'h-1', md: 'h-1.5' };
+  const heights = { sm: 'h-1', md: 'h-1.5', lg: 'h-2.5' };
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -33,7 +33,7 @@ export function ProgressBar({
         className={`flex-1 bg-ws-deep rounded-full overflow-hidden border border-ws-line ${heights[size]}`}
       >
         <div
-          className={`${heights[size]} rounded-full transition-all duration-500 ${colors[color]}`}
+          className={`${heights[size]} rounded-full transition-all duration-700 ease-out ${colors[color]}`}
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -5,17 +5,22 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { CalendarEventForm } from '../components/calendar/CalendarEventForm';
-import { expandCalendarEvents, type CalendarOccurrence } from '../lib/calendarExpand';
-import type { CalendarEvent, Client, Project } from '../lib/types';
+import {
+  buildUnifiedCalendarOccurrences,
+  bucketUnifiedByDay,
+  dayKeyCal,
+  type UnifiedCalendarOccurrence,
+} from '../lib/calendarUnified';
+import type {
+  CalendarEvent,
+  Client,
+  Interaction,
+  Invoice,
+  Page,
+  Project,
+  Task,
+} from '../lib/types';
 import { formatDateTime } from '../lib/utils';
-
-function pad2(n: number) {
-  return String(n).padStart(2, '0');
-}
-
-function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
 
 function startOfDay(d: Date): Date {
   const x = new Date(d);
@@ -29,7 +34,6 @@ function addDays(d: Date, n: number): Date {
   return x;
 }
 
-/** Premier jour affiché (lundi) pour la grille du mois. */
 function gridStartMonday(firstOfMonth: Date): Date {
   const first = new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth(), 1);
   const day = first.getDay();
@@ -37,38 +41,43 @@ function gridStartMonday(firstOfMonth: Date): Date {
   return startOfDay(addDays(first, diff));
 }
 
-function buildDayBuckets(
-  occurrences: CalendarOccurrence[]
-): Map<string, CalendarOccurrence[]> {
-  const map = new Map<string, CalendarOccurrence[]>();
-  for (const occ of occurrences) {
-    const start = startOfDay(occ.startAt);
-    const endDay = occ.endAt ? startOfDay(occ.endAt) : start;
-    for (let x = new Date(start); x.getTime() <= endDay.getTime(); x = addDays(x, 1)) {
-      const k = dayKey(x);
-      const list = map.get(k) ?? [];
-      if (!list.some((o) => o.occurrenceKey === occ.occurrenceKey)) list.push(occ);
-      map.set(k, list);
-    }
-  }
-  for (const [, list] of map) {
-    list.sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
-  }
-  return map;
-}
-
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+const LEGEND: { kind: UnifiedCalendarOccurrence['kind']; label: string; color: string }[] = [
+  { kind: 'agenda', label: 'Agenda', color: '#a8a2ff' },
+  { kind: 'project', label: 'Projet', color: '#af7037' },
+  { kind: 'task', label: 'Tâche', color: '#c98a4c' },
+  { kind: 'client', label: 'Client', color: '#059669' },
+  { kind: 'interaction', label: 'Échange', color: '#0891B2' },
+  { kind: 'invoice_due', label: 'Facture', color: '#d4a574' },
+  { kind: 'invoice_paid', label: 'Payé', color: '#34d399' },
+];
 
 interface CalendarPageProps {
   events: CalendarEvent[];
   clients: Client[];
   projects: Project[];
+  tasks: Task[];
+  interactions: Interaction[];
+  invoices: Invoice[];
+  onNavigate: (page: Page, id?: string) => void;
   onCreate: (data: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'client' | 'project'>) => Promise<CalendarEvent>;
   onUpdate: (id: string, data: Partial<CalendarEvent>) => Promise<CalendarEvent>;
   onDelete: (id: string) => Promise<void>;
 }
 
-export function CalendarPage({ events, clients, projects, onCreate, onUpdate, onDelete }: CalendarPageProps) {
+export function CalendarPage({
+  events,
+  clients,
+  projects,
+  tasks,
+  interactions,
+  invoices,
+  onNavigate,
+  onCreate,
+  onUpdate,
+  onDelete,
+}: CalendarPageProps) {
   const [viewMonth, setViewMonth] = useState(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
@@ -84,11 +93,19 @@ export function CalendarPage({ events, clients, projects, onCreate, onUpdate, on
   const gridEnd = useMemo(() => addDays(gridStart, 41), [gridStart]);
 
   const occurrences = useMemo(
-    () => expandCalendarEvents(events, gridStart, gridEnd),
-    [events, gridStart, gridEnd]
+    () =>
+      buildUnifiedCalendarOccurrences(gridStart, gridEnd, {
+        events,
+        projects,
+        tasks,
+        clients,
+        interactions,
+        invoices,
+      }),
+    [events, projects, tasks, clients, interactions, invoices, gridStart, gridEnd]
   );
 
-  const byDay = useMemo(() => buildDayBuckets(occurrences), [occurrences]);
+  const byDay = useMemo(() => bucketUnifiedByDay(occurrences), [occurrences]);
 
   const cells = useMemo(() => {
     const out: { date: Date; inMonth: boolean }[] = [];
@@ -111,7 +128,7 @@ export function CalendarPage({ events, clients, projects, onCreate, onUpdate, on
     setViewMonth(new Date(n.getFullYear(), n.getMonth(), 1));
   };
 
-  const todayKey = dayKey(new Date());
+  const todayKey = dayKeyCal(new Date());
 
   const openCreate = (day?: Date) => {
     setCreateDay(day);
@@ -132,11 +149,22 @@ export function CalendarPage({ events, clients, projects, onCreate, onUpdate, on
     setEditEvent(null);
   };
 
+  const handleOccurrenceClick = (e: React.MouseEvent, occ: UnifiedCalendarOccurrence) => {
+    e.stopPropagation();
+    if (occ.kind === 'agenda' && occ.calendarEvent) {
+      setEditEvent(occ.calendarEvent);
+      return;
+    }
+    if (occ.navigate) {
+      onNavigate(occ.navigate.page, occ.navigate.id);
+    }
+  };
+
   return (
     <div>
       <Header
         title="Calendrier"
-        subtitle="Vue d’ensemble de l’activité — vous remplissez chaque entrée (clients, livraisons, rendez-vous, récurrences…)"
+        subtitle="Agenda + projets (début / fin), tâches, nouveaux clients, échanges, factures — tout ce qui a une date."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1 rounded-2xl border border-ws-line bg-ws-panel/80 p-1">
@@ -172,13 +200,31 @@ export function CalendarPage({ events, clients, projects, onCreate, onUpdate, on
       />
 
       <div className="px-3 py-4 md:p-8 bg-ws-deep/20 min-h-[calc(100vh-100px)]">
-        <div className="flex items-baseline justify-between gap-4 mb-4 md:mb-6">
-          <h2 className="font-display text-xl md:text-2xl font-bold text-ws-cream capitalize tracking-tight">
-            {monthLabel}
-          </h2>
-          <p className="text-[10px] font-mono text-ws-mist uppercase tracking-[0.15em] hidden sm:block">
-            Grille 6 × 7 · {occurrences.length} occurrence{occurrences.length !== 1 ? 's' : ''} sur la période
-          </p>
+        <div className="flex flex-col gap-3 mb-4 md:mb-6">
+          <div className="flex items-baseline justify-between gap-4 flex-wrap">
+            <h2 className="font-display text-xl md:text-2xl font-bold text-ws-cream capitalize tracking-tight">
+              {monthLabel}
+            </h2>
+            <p className="text-[10px] font-mono text-ws-mist uppercase tracking-[0.15em]">
+              {occurrences.length} entrée{occurrences.length !== 1 ? 's' : ''} sur la période
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5 items-center">
+            <span className="text-[9px] font-mono uppercase tracking-wider text-ws-mist/80">Légende</span>
+            {LEGEND.map((item) => (
+              <span
+                key={item.kind}
+                className="inline-flex items-center gap-1.5 text-[9px] font-mono text-ws-ink"
+              >
+                <span
+                  className="h-2 w-2 rounded-full flex-shrink-0 ring-1 ring-white/10"
+                  style={{ backgroundColor: item.color }}
+                  aria-hidden
+                />
+                {item.label}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="rounded-[1.25rem] md:rounded-[1.75rem] border border-white/[0.08] bg-ws-panel/40 backdrop-blur-md overflow-hidden shadow-dock">
@@ -193,9 +239,9 @@ export function CalendarPage({ events, clients, projects, onCreate, onUpdate, on
             ))}
           </div>
 
-          <div className="grid grid-cols-7 auto-rows-fr min-h-[min(78dvh,560px)] md:min-h-[calc(100vh-220px)]">
+          <div className="grid grid-cols-7 auto-rows-fr min-h-[min(78dvh,560px)] md:min-h-[calc(100vh-260px)]">
             {cells.map(({ date, inMonth }) => {
-              const k = dayKey(date);
+              const k = dayKeyCal(date);
               const list = byDay.get(k) ?? [];
               const isToday = k === todayKey;
               return (
@@ -222,37 +268,39 @@ export function CalendarPage({ events, clients, projects, onCreate, onUpdate, on
                     {date.getDate()}
                   </span>
                   <div className="flex flex-col gap-0.5 md:gap-1 overflow-hidden flex-1 min-h-0 w-full">
-                    {list.slice(0, 5).map((occ) => {
-                      const ev = occ.event;
-                      const c = ev.color && /^#[0-9A-Fa-f]{6}$/.test(ev.color) ? ev.color : 'rgba(168, 162, 255, 0.55)';
+                    {list.slice(0, 6).map((occ) => {
+                      const c =
+                        occ.color && /^#[0-9A-Fa-f]{6}$/i.test(occ.color) ? occ.color : 'rgba(168, 162, 255, 0.55)';
+                      const isAgenda = occ.kind === 'agenda';
                       return (
                         <button
                           key={occ.occurrenceKey}
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditEvent(ev);
-                          }}
+                          onClick={(ev) => handleOccurrenceClick(ev, occ)}
                           className="truncate rounded-md px-1 py-0.5 md:px-1.5 md:py-1 text-[9px] md:text-[10px] font-medium leading-tight border text-left hover:brightness-110 touch-manipulation"
                           style={{
                             borderColor: c,
                             backgroundColor: `${c}22`,
                             color: 'var(--tw-prose-invert, #f5f0e8)',
                           }}
-                          title={ev.title}
+                          title={
+                            isAgenda
+                              ? `${occ.title} (agenda — clic pour modifier)`
+                              : `${occ.title} (clic pour ouvrir)`
+                          }
                         >
-                          {!ev.all_day && (
+                          {!occ.allDay && (
                             <span className="font-mono opacity-80 mr-0.5">
                               {occ.startAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           )}
-                          {ev.title}
+                          {occ.title}
                         </button>
                       );
                     })}
-                    {list.length > 5 && (
+                    {list.length > 6 && (
                       <span className="text-[9px] text-ws-mist font-mono pl-0.5 pointer-events-none">
-                        +{list.length - 5}
+                        +{list.length - 6}
                       </span>
                     )}
                   </div>

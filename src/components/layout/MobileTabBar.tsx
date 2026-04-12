@@ -19,9 +19,9 @@ export function MobileTabBar({ currentPage, onNavigate }: MobileTabBarProps) {
       className="fixed inset-x-0 bottom-0 z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none"
       aria-label="Navigation principale"
     >
-      <div className="pointer-events-auto mx-3 rounded-[1.75rem] border border-white/[0.07] bg-black/50 backdrop-blur-2xl shadow-dock w-[calc(100%-1.5rem)] max-w-xl mx-auto">
+      <div className="pointer-events-auto mx-3 rounded-[1.75rem] border border-white/[0.07] bg-black/50 backdrop-blur-2xl shadow-dock w-[calc(100%-1.5rem)] max-w-xl mx-auto [color-scheme:dark]">
         <div
-          className="flex items-end justify-between gap-0.5 px-1.5 pt-2 pb-2 overflow-x-auto scrollbar-none snap-x snap-mandatory touch-pan-x"
+          className="flex items-end justify-between gap-0.5 px-1.5 pt-2 pb-2 overflow-x-auto scrollbar-ws snap-x snap-mandatory touch-pan-x"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {MAIN_NAV_ITEMS.map((item) => {

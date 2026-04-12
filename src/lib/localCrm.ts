@@ -1,4 +1,14 @@
-import type { Client, Project, Task, Interaction, Invoice, CalendarEvent } from './types';
+import type {
+  Client,
+  Project,
+  Task,
+  Interaction,
+  Invoice,
+  CalendarEvent,
+  Opportunity,
+  Quote,
+  ProjectChecklistItem,
+} from './types';
 import { generateInvoiceNumber } from './utils';
 
 const STORAGE_KEY = 'mapa-crm-v1';
@@ -10,6 +20,9 @@ interface CRMData {
   interactions: Interaction[];
   invoices: Invoice[];
   calendar_events: CalendarEvent[];
+  opportunities: Opportunity[];
+  quotes: Quote[];
+  checklist_items: ProjectChecklistItem[];
 }
 
 const empty = (): CRMData => ({
@@ -19,6 +32,9 @@ const empty = (): CRMData => ({
   interactions: [],
   invoices: [],
   calendar_events: [],
+  opportunities: [],
+  quotes: [],
+  checklist_items: [],
 });
 
 function load(): CRMData {
@@ -28,11 +44,24 @@ function load(): CRMData {
     const p = JSON.parse(raw) as CRMData;
     return {
       clients: Array.isArray(p.clients) ? p.clients : [],
-      projects: Array.isArray(p.projects) ? p.projects : [],
+      projects: Array.isArray(p.projects)
+        ? p.projects.map((proj) => ({
+            ...proj,
+            site_url: (proj as Project).site_url ?? null,
+          }))
+        : [],
       tasks: Array.isArray(p.tasks) ? p.tasks : [],
       interactions: Array.isArray(p.interactions) ? p.interactions : [],
-      invoices: Array.isArray(p.invoices) ? p.invoices : [],
+      invoices: Array.isArray(p.invoices)
+        ? p.invoices.map((inv) => ({
+            ...inv,
+            source_quote_id: (inv as Invoice).source_quote_id ?? null,
+          }))
+        : [],
       calendar_events: Array.isArray(p.calendar_events) ? p.calendar_events : [],
+      opportunities: Array.isArray((p as CRMData).opportunities) ? (p as CRMData).opportunities : [],
+      quotes: Array.isArray((p as CRMData).quotes) ? (p as CRMData).quotes : [],
+      checklist_items: Array.isArray((p as CRMData).checklist_items) ? (p as CRMData).checklist_items : [],
     };
   } catch {
     return empty();
@@ -91,10 +120,43 @@ function hydrateInvoice(data: CRMData, inv: Invoice): Invoice {
   const proj = inv.project_id ? data.projects.find((x) => x.id === inv.project_id) : undefined;
   return {
     ...inv,
+    source_quote_id: inv.source_quote_id ?? null,
     client: c
       ? { id: c.id, name: c.name, company: c.company, avatar_color: c.avatar_color }
       : undefined,
     project: proj ? { id: proj.id, name: proj.name } : undefined,
+  };
+}
+
+function opportunitySlice(data: CRMData, id: string | null): Pick<Opportunity, 'id' | 'name'> | undefined {
+  if (!id) return undefined;
+  const o = data.opportunities.find((x) => x.id === id);
+  return o ? { id: o.id, name: o.name } : undefined;
+}
+
+function hydrateOpportunity(data: CRMData, row: Opportunity): Opportunity {
+  const c = clientById(data, row.client_id);
+  const proj = projectSlice(data, row.project_id);
+  return {
+    ...row,
+    client: c ? { id: c.id, name: c.name, avatar_color: c.avatar_color } : undefined,
+    project: proj,
+  };
+}
+
+function hydrateQuote(data: CRMData, row: Quote): Quote {
+  const c = clientById(data, row.client_id);
+  const proj = projectSlice(data, row.project_id);
+  const opp = opportunitySlice(data, row.opportunity_id);
+  return {
+    ...row,
+    deposit_requested: Boolean(row.deposit_requested),
+    version: row.version ?? 1,
+    client: c
+      ? { id: c.id, name: c.name, company: c.company, avatar_color: c.avatar_color }
+      : undefined,
+    project: proj,
+    opportunity: opp,
   };
 }
 
@@ -138,6 +200,8 @@ export function localDeleteClient(id: string): void {
   data.calendar_events = data.calendar_events.map((ev) =>
     ev.client_id === id ? { ...ev, client_id: null, updated_at: now() } : ev
   );
+  data.opportunities = data.opportunities.filter((o) => o.client_id !== id);
+  data.quotes = data.quotes.filter((q) => q.client_id !== id);
   save(data);
 }
 
@@ -176,6 +240,20 @@ export function localUpdateProject(id: string, values: Partial<Project>): Projec
   return hydrateProject(load(), merged);
 }
 
+/** Met à jour `progress` du projet selon le ratio tâches terminées / total (aucune action si 0 tâche). */
+export function localSyncProjectProgressFromTasks(projectId: string): void {
+  const data = load();
+  const tasks = data.tasks.filter((t) => t.project_id === projectId);
+  if (tasks.length === 0) return;
+  const done = tasks.filter((t) => t.status === 'completed').length;
+  const pct = Math.round((done / tasks.length) * 100);
+  const idx = data.projects.findIndex((p) => p.id === projectId);
+  if (idx < 0) return;
+  if (data.projects[idx].progress === pct) return;
+  data.projects[idx] = { ...data.projects[idx], progress: pct, updated_at: now() };
+  save(data);
+}
+
 export function localDeleteProject(id: string): void {
   const data = load();
   data.projects = data.projects.filter((p) => p.id !== id);
@@ -187,6 +265,13 @@ export function localDeleteProject(id: string): void {
   );
   data.calendar_events = data.calendar_events.map((ev) =>
     ev.project_id === id ? { ...ev, project_id: null, updated_at: now() } : ev
+  );
+  data.checklist_items = data.checklist_items.filter((c) => c.project_id !== id);
+  data.opportunities = data.opportunities.map((o) =>
+    o.project_id === id ? { ...o, project_id: null, updated_at: now() } : o
+  );
+  data.quotes = data.quotes.map((q) =>
+    q.project_id === id ? { ...q, project_id: null, updated_at: now() } : q
   );
   save(data);
 }
@@ -324,6 +409,7 @@ export function localCreateInvoice(
   const data = load();
   const row: Invoice = {
     ...values,
+    source_quote_id: values.source_quote_id ?? null,
     invoice_number: values.invoice_number || generateInvoiceNumber(),
     id: newId(),
     created_at: now(),
@@ -351,4 +437,152 @@ export function localDeleteInvoice(id: string): void {
   const data = load();
   data.invoices = data.invoices.filter((i) => i.id !== id);
   save(data);
+}
+
+export function localListOpportunities(): Opportunity[] {
+  const data = load();
+  return [...data.opportunities]
+    .map((o) => hydrateOpportunity(data, o))
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+}
+
+export function localCreateOpportunity(
+  values: Omit<Opportunity, 'id' | 'created_at' | 'updated_at' | 'client' | 'project'>
+): Opportunity {
+  const data = load();
+  const row: Opportunity = {
+    ...values,
+    project_id: values.project_id ?? null,
+    estimated_amount: values.estimated_amount ?? null,
+    expected_close_date: values.expected_close_date ?? null,
+    lost_reason: values.lost_reason ?? null,
+    notes: values.notes ?? null,
+    probability: Math.min(100, Math.max(0, values.probability)),
+    id: newId(),
+    created_at: now(),
+    updated_at: now(),
+  };
+  data.opportunities.unshift(row);
+  save(data);
+  return hydrateOpportunity(load(), row);
+}
+
+export function localUpdateOpportunity(id: string, values: Partial<Opportunity>): Opportunity {
+  const data = load();
+  const idx = data.opportunities.findIndex((o) => o.id === id);
+  if (idx < 0) throw new Error('Opportunité introuvable');
+  const { client: _c, project: _p, ...rest } = values as Partial<Opportunity & { client?: unknown; project?: unknown }>;
+  const merged = {
+    ...data.opportunities[idx],
+    ...rest,
+    updated_at: now(),
+  };
+  if (typeof merged.probability === 'number') {
+    merged.probability = Math.min(100, Math.max(0, merged.probability));
+  }
+  data.opportunities[idx] = merged;
+  save(data);
+  return hydrateOpportunity(load(), merged);
+}
+
+export function localDeleteOpportunity(id: string): void {
+  const data = load();
+  data.opportunities = data.opportunities.filter((o) => o.id !== id);
+  data.quotes = data.quotes.map((q) =>
+    q.opportunity_id === id ? { ...q, opportunity_id: null, updated_at: now() } : q
+  );
+  save(data);
+}
+
+export function localListQuotes(clientId?: string): Quote[] {
+  const data = load();
+  let list = data.quotes;
+  if (clientId) list = list.filter((q) => q.client_id === clientId);
+  return list
+    .map((q) => hydrateQuote(data, q))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+export function localCreateQuote(
+  values: Omit<Quote, 'id' | 'created_at' | 'updated_at' | 'client' | 'project' | 'opportunity'>
+): Quote {
+  const data = load();
+  const row: Quote = {
+    ...values,
+    project_id: values.project_id ?? null,
+    opportunity_id: values.opportunity_id ?? null,
+    quote_number: values.quote_number ?? null,
+    valid_until: values.valid_until ?? null,
+    deposit_amount: values.deposit_amount ?? null,
+    parent_quote_id: values.parent_quote_id ?? null,
+    notes: values.notes ?? null,
+    signed_at: values.signed_at ?? null,
+    version: values.version ?? 1,
+    deposit_requested: Boolean(values.deposit_requested),
+    id: newId(),
+    created_at: now(),
+    updated_at: now(),
+  };
+  data.quotes.unshift(row);
+  save(data);
+  return hydrateQuote(load(), row);
+}
+
+export function localUpdateQuote(id: string, values: Partial<Quote>): Quote {
+  const data = load();
+  const idx = data.quotes.findIndex((q) => q.id === id);
+  if (idx < 0) throw new Error('Devis introuvable');
+  const { client: _c, project: _p, opportunity: _o, ...rest } = values as Partial<
+    Quote & { client?: unknown; project?: unknown; opportunity?: unknown }
+  >;
+  const merged = { ...data.quotes[idx], ...rest, updated_at: now() };
+  data.quotes[idx] = merged;
+  save(data);
+  return hydrateQuote(load(), merged);
+}
+
+export function localDeleteQuote(id: string): void {
+  const data = load();
+  data.quotes = data.quotes.filter((q) => q.id !== id);
+  data.invoices = data.invoices.map((inv) =>
+    inv.source_quote_id === id ? { ...inv, source_quote_id: null, updated_at: now() } : inv
+  );
+  save(data);
+}
+
+export function localListChecklistItems(projectId?: string): ProjectChecklistItem[] {
+  const data = load();
+  let list = data.checklist_items;
+  if (projectId) list = list.filter((c) => c.project_id === projectId);
+  return [...list].sort((a, b) => a.position - b.position || a.label.localeCompare(b.label));
+}
+
+export function localBulkCreateChecklistItems(projectId: string, labels: string[]): void {
+  if (labels.length === 0) return;
+  const data = load();
+  let pos =
+    data.checklist_items.filter((c) => c.project_id === projectId).reduce((m, c) => Math.max(m, c.position), -1) + 1;
+  for (const label of labels) {
+    const row: ProjectChecklistItem = {
+      id: newId(),
+      project_id: projectId,
+      label,
+      done: false,
+      position: pos++,
+      created_at: now(),
+      updated_at: now(),
+    };
+    data.checklist_items.push(row);
+  }
+  save(data);
+}
+
+export function localUpdateChecklistItem(id: string, values: Partial<ProjectChecklistItem>): ProjectChecklistItem {
+  const data = load();
+  const idx = data.checklist_items.findIndex((c) => c.id === id);
+  if (idx < 0) throw new Error('Élément checklist introuvable');
+  const merged = { ...data.checklist_items[idx], ...values, updated_at: now() };
+  data.checklist_items[idx] = merged;
+  save(data);
+  return merged;
 }

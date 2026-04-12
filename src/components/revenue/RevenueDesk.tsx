@@ -57,6 +57,7 @@ function RevenueExpandedOverlay({
   updatedIso: string;
 }) {
   const { mtd, ytd, pendingTotal, overdueTotal, paidCount, recentPaid, totalSixMonth } = computed;
+  const rollLabel = monthlyRows.length === 1 ? '1 mois' : `${monthlyRows.length} mois`;
   const currentMonthRowIndex = monthlyRows.length > 0 ? monthlyRows.length - 1 : -1;
 
   useEffect(() => {
@@ -140,7 +141,7 @@ function RevenueExpandedOverlay({
           {[
             { k: 'À encaisser', v: formatCurrency(pendingTotal), hint: 'Envoyées' },
             { k: 'En retard', v: formatCurrency(overdueTotal), hint: 'Échéance dépassée' },
-            { k: '6 mois', v: formatCurrency(totalSixMonth), hint: 'Glissant' },
+            { k: rollLabel, v: formatCurrency(totalSixMonth), hint: 'Glissant' },
             { k: 'Factures', v: String(paidCount), hint: 'Payées' },
           ].map((cell) => (
             <div
@@ -222,7 +223,7 @@ function RevenueExpandedOverlay({
                   <tfoot>
                     <tr className="border-t border-ws-accent/25 bg-ws-accent-dim/15 font-semibold">
                       <td className="px-3 py-2.5 text-xs uppercase tracking-wider text-ws-accent-soft sm:px-5 sm:py-3 sm:text-sm">
-                        6 mois
+                        {rollLabel}
                       </td>
                       <td className="px-2 py-2.5 text-right text-xs tabular-nums text-ws-paper sm:px-5 sm:py-3 sm:text-sm">
                         {formatCurrency(totalSixMonth)}
@@ -349,6 +350,7 @@ export function RevenueDesk({
   }, [invoices, monthlyRows, cm, cy]);
 
   const { mtd, ytd, pendingTotal, overdueTotal, paidCount, recentPaid, totalSixMonth } = computed;
+  const rollLabel = monthlyRows.length === 1 ? '1 mois' : `${monthlyRows.length} mois`;
 
   const currentMonthRowIndex = monthlyRows.length > 0 ? monthlyRows.length - 1 : -1;
 
@@ -506,7 +508,7 @@ export function RevenueDesk({
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-ws-accent/25 bg-ws-accent-dim/20 font-semibold">
-                    <td className="px-3 py-2.5 uppercase tracking-wider text-ws-accent-soft">6 mois</td>
+                    <td className="px-3 py-2.5 uppercase tracking-wider text-ws-accent-soft">{rollLabel}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-ws-paper">
                       {formatCurrency(totalSixMonth)}
                     </td>

@@ -20,7 +20,12 @@ export function useInvoices(clientId?: string) {
         if (clientId) query = query.eq('client_id', clientId);
         const { data, error: err } = await query;
         if (err) throw err;
-        setInvoices(data || []);
+        setInvoices(
+          (data || []).map((inv) => ({
+            ...inv,
+            source_quote_id: (inv as Invoice).source_quote_id ?? null,
+          }))
+        );
       } else {
         setInvoices(local.localListInvoices(clientId));
       }

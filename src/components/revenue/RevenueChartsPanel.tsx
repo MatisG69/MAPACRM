@@ -21,6 +21,7 @@ interface RevenueChartsPanelProps {
 }
 
 export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanelProps) {
+  const periodShort = `${monthlyRows.length} MOIS`;
   const barData = monthlyRows.map((r) => ({ label: r.label, value: r.value }));
   const donutSegments = monthlyRows
     .map((r, i) => ({
@@ -39,7 +40,7 @@ export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanel
       <div className={cardClass}>
         <h3 className="ws-section-title mb-0.5">Répartition</h3>
         <p className="mb-3 text-[10px] font-mono uppercase tracking-wider text-ws-mist">
-          Part du CA · 6 mois
+          Part du CA · {monthlyRows.length} mois
         </p>
         {donutSegments.length === 0 ? (
           <p className="py-8 text-center font-mono text-xs text-ws-mist">Aucun encaissement sur la période</p>
@@ -49,7 +50,7 @@ export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanel
               segments={donutSegments}
               size={spacious ? 136 : 132}
               trackColor="#1a1614"
-              centerCaption="6 MOIS"
+              centerCaption={periodShort}
               formatCenter={(t) => compactEUR(t)}
               formatLegendValue={(v) => compactEUR(v)}
             />
