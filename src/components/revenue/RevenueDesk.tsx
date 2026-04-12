@@ -431,7 +431,7 @@ export function RevenueDesk({
           </div>
         </div>
 
-        <div className="relative grid grid-cols-2 border-b border-white/[0.06] bg-ws-deep/30 font-mono md:grid-cols-4">
+        <div className="relative grid grid-cols-2 border-b border-white/[0.06] bg-ws-deep/30 font-mono lg:grid-cols-4">
           {[
             { k: 'MTD', v: formatCurrency(mtd), hint: 'Mois en cours' },
             { k: 'YTD', v: formatCurrency(ytd), hint: `Cumul ${cy}` },
@@ -440,7 +440,7 @@ export function RevenueDesk({
           ].map((cell) => (
             <div
               key={cell.k}
-              className="border-b border-white/[0.05] px-3 py-2.5 md:border-b-0 md:border-r md:border-white/[0.06] md:last:border-r-0"
+              className="border-b border-white/[0.05] px-3 py-2.5 lg:border-b-0 lg:border-r lg:border-white/[0.06] lg:last:border-r-0"
             >
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-ws-mist">{cell.k}</p>
               <p className="mt-1 tabular-nums text-sm font-semibold tracking-tight text-ws-paper">{cell.v}</p>
@@ -449,7 +449,7 @@ export function RevenueDesk({
           ))}
         </div>
 
-        <div className="relative grid gap-0 lg:grid-cols-[1fr_minmax(0,340px)] lg:divide-x lg:divide-white/[0.06]">
+        <div className="relative grid gap-0 lg:grid-cols-[1fr_minmax(0,260px)] xl:grid-cols-[1fr_minmax(0,300px)] 2xl:grid-cols-[1fr_minmax(0,340px)] lg:divide-x lg:divide-white/[0.06]">
           <div className="min-w-0 space-y-4 border-b border-white/[0.06] pb-4 lg:border-b-0 lg:pb-0">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[280px] border-collapse text-left font-mono text-xs">
