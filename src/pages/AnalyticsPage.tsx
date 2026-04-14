@@ -185,8 +185,8 @@ export function AnalyticsPage({
     return wonRevenue / paidInvoices.length;
   }, [paidInvoices.length, wonRevenue]);
 
-  const activeClients = clients.filter((c) => c.status === 'active').length;
-  const arpa = activeClients > 0 ? wonRevenue / activeClients : null;
+  const interestedClients = clients.filter((c) => c.status === 'interested').length;
+  const arpa = interestedClients > 0 ? wonRevenue / interestedClients : null;
 
   const concentrationTop3 = useMemo(() => {
     if (wonRevenue <= 0 || topCounterparties.length === 0) return null;
@@ -294,11 +294,11 @@ export function AnalyticsPage({
             trendLabel="Facture payée"
           />
           <StatCard
-            label="ARPA (clients actifs)"
+            label="ARPA (clients intéressés)"
             value={arpa != null ? formatCurrency(arpa) : '—'}
             icon={<Building2 size={20} className="text-ws-highlight" strokeWidth={2} />}
             iconBg="bg-ws-wire/15"
-            trendLabel={`${activeClients} actifs`}
+            trendLabel={`${interestedClients} intéressés`}
           />
           <StatCard
             label="Conc. top 3"

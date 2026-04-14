@@ -40,7 +40,9 @@ CREATE TABLE IF NOT EXISTS clients (
   address text,
   city text,
   website text,
-  status text NOT NULL DEFAULT 'prospect' CHECK (status IN ('prospect', 'active', 'inactive')),
+  status text NOT NULL DEFAULT 'prospect' CHECK (
+    status IN ('prospect', 'telephoned', 'in_discussion', 'interested', 'not_interested')
+  ),
   source text,
   notes text,
   satisfaction_rating integer CHECK (satisfaction_rating IS NULL OR (satisfaction_rating >= 1 AND satisfaction_rating <= 5)),

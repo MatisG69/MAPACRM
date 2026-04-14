@@ -1,3 +1,4 @@
+import { normalizeClientStatus } from './clientStatus';
 import type {
   Client,
   Project,
@@ -44,11 +45,15 @@ function load(): CRMData {
     const p = JSON.parse(raw) as CRMData;
     return {
       clients: Array.isArray(p.clients)
-        ? p.clients.map((c) => ({
-            ...(c as Client),
-            satisfaction_rating: (c as Client).satisfaction_rating ?? null,
-            feedback: (c as Client).feedback ?? null,
-          }))
+        ? p.clients.map((c) => {
+            const raw = c as Client;
+            return {
+              ...raw,
+              status: normalizeClientStatus(raw.status),
+              satisfaction_rating: raw.satisfaction_rating ?? null,
+              feedback: raw.feedback ?? null,
+            };
+          })
         : [],
       projects: Array.isArray(p.projects)
         ? p.projects.map((proj) => ({

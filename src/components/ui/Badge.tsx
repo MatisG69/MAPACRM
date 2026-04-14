@@ -10,9 +10,11 @@ import {
 type BadgeVariant = ClientStatus | ProjectStatus | TaskPriority | TaskStatus | InvoiceStatus | InteractionType;
 
 const variantStyles: Record<string, string> = {
-  prospect: 'bg-ws-gold-dim text-ws-gold border-ws-gold/25',
-  active: 'bg-ws-bull-dim text-ws-bull border-ws-bull/30',
-  inactive: 'bg-ws-deep text-ws-mist border-ws-line',
+  prospect: 'bg-amber-500/15 text-amber-200 border-amber-500/35',
+  telephoned: 'bg-sky-500/15 text-sky-200 border-sky-500/35',
+  in_discussion: 'bg-violet-500/15 text-violet-200 border-violet-500/35',
+  interested: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/35',
+  not_interested: 'bg-red-500/12 text-red-300 border-red-500/35',
   planning: 'bg-ws-deep text-ws-ink border-ws-line',
   in_progress: 'bg-ws-wire/20 text-ws-highlight border-ws-wire/35',
   review: 'bg-ws-gold-dim text-ws-gold border-ws-gold/25',
@@ -59,8 +61,10 @@ const variantStyles: Record<string, string> = {
 
 const variantLabels: Record<string, string> = {
   prospect: 'Prospect',
-  active: 'Actif',
-  inactive: 'Inactif',
+  telephoned: 'Téléphoné',
+  in_discussion: 'Contacté',
+  interested: 'Intéressé',
+  not_interested: 'Pas intéressé',
   planning: 'Planification',
   in_progress: 'En cours',
   review: 'En révision',

@@ -13,8 +13,10 @@ interface ClientFormProps {
 
 const statusOptions: { value: ClientStatus; label: string }[] = [
   { value: 'prospect', label: 'Prospect' },
-  { value: 'active', label: 'Actif' },
-  { value: 'inactive', label: 'Inactif' },
+  { value: 'telephoned', label: 'Téléphoné' },
+  { value: 'in_discussion', label: 'Contacté' },
+  { value: 'interested', label: 'Intéressé' },
+  { value: 'not_interested', label: 'Pas intéressé' },
 ];
 
 const sourceOptions = ['Site web', 'Référence', 'LinkedIn', 'Appel entrant', 'Réseaux sociaux', 'Salon / Événement', 'Autre'];

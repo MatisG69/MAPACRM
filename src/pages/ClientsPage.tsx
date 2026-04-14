@@ -7,14 +7,17 @@ import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ClientForm } from '../components/clients/ClientForm';
+import { CLIENT_CARD_STRIP } from '../lib/clientStatus';
 import { Client, ClientStatus } from '../lib/types';
 import { getInitials } from '../lib/utils';
 
 const statusFilters: { value: ClientStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Tous' },
-  { value: 'active', label: 'Actifs' },
-  { value: 'prospect', label: 'Prospects' },
-  { value: 'inactive', label: 'Inactifs' },
+  { value: 'prospect', label: 'Prospect' },
+  { value: 'telephoned', label: 'Téléphoné' },
+  { value: 'in_discussion', label: 'Contacté' },
+  { value: 'interested', label: 'Intéressé' },
+  { value: 'not_interested', label: 'Pas intéressé' },
 ];
 
 interface ClientsPageProps {
@@ -118,7 +121,7 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect }:
             {filtered.map((c) => (
               <div
                 key={c.id}
-                className="ws-card-hover rounded-lg group border-ws-line/80"
+                className={`ws-card-hover rounded-lg group border border-ws-line/80 border-l-[3px] shadow-[0_16px_40px_-24px_rgba(0,0,0,0.75)] ${CLIENT_CARD_STRIP[c.status]}`}
               >
                 <div className="p-5 cursor-pointer" onClick={() => onSelect(c.id)} role="presentation">
                   <div className="flex items-start justify-between mb-4">

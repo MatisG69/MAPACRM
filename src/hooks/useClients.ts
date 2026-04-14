@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseEnabled } from '../lib/supabase';
 import * as local from '../lib/localCrm';
+import { normalizeClientStatus } from '../lib/clientStatus';
 import { Client } from '../lib/types';
 
 export function useClients() {
@@ -21,6 +22,7 @@ export function useClients() {
         setClients(
           (data || []).map((c) => ({
             ...c,
+            status: normalizeClientStatus(c.status),
             satisfaction_rating: c.satisfaction_rating ?? null,
             feedback: c.feedback ?? null,
           }))

@@ -48,7 +48,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
   const currentYear = now.getFullYear();
 
   const stats = useMemo(() => {
-    const activeClients = clients.filter((c) => c.status === 'active').length;
+    const interestedClients = clients.filter((c) => c.status === 'interested').length;
     const prospects = clients.filter((c) => c.status === 'prospect').length;
     const activeProjects = projects.filter((p) => p.status === 'in_progress').length;
     const pendingTasks = tasks.filter((t) => t.status !== 'completed').length;
@@ -63,7 +63,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
     const totalRevenue = paidInvoices.reduce((s, i) => s + i.amount, 0);
     const pendingRevenue = invoices.filter((i) => i.status === 'sent').reduce((s, i) => s + i.amount, 0);
     return {
-      activeClients,
+      interestedClients,
       prospects,
       activeProjects,
       pendingTasks,
@@ -145,8 +145,8 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
 
         <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
-            label="Clients actifs"
-            value={stats.activeClients}
+            label="Clients intéressés"
+            value={stats.interestedClients}
             icon={<Users size={20} className="text-ws-accent-soft" strokeWidth={2} />}
             iconBg="bg-ws-accent-dim"
             trend={stats.prospects > 0 ? undefined : undefined}

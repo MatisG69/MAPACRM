@@ -15,6 +15,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
+import { CLIENT_CARD_STRIP } from '../lib/clientStatus';
 import type { Client, ClientStatus, Interaction, Page, Project } from '../lib/types';
 import { getInitials, formatDate } from '../lib/utils';
 
@@ -177,9 +178,11 @@ export function ContactsPage({
             {(
               [
                 ['all', 'Tous'],
-                ['active', 'Actifs'],
-                ['prospect', 'Prospects'],
-                ['inactive', 'Inactifs'],
+                ['prospect', 'Prospect'],
+                ['telephoned', 'Téléphoné'],
+                ['in_discussion', 'Contacté'],
+                ['interested', 'Intéressé'],
+                ['not_interested', 'Pas intéressé'],
               ] as const
             ).map(([v, label]) => (
               <button
@@ -229,7 +232,7 @@ export function ContactsPage({
               return (
                 <article
                   key={c.id}
-                  className="ws-card rounded-2xl p-5 border border-ws-line/50 flex flex-col min-w-0 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.85)]"
+                  className={`ws-card rounded-2xl p-5 border border-ws-line/50 border-l-[3px] flex flex-col min-w-0 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.85)] ${CLIENT_CARD_STRIP[c.status]}`}
                 >
                   <div className="flex items-start gap-3 mb-4">
                     <div

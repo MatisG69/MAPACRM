@@ -1,4 +1,10 @@
-export type ClientStatus = 'prospect' | 'active' | 'inactive';
+export type ClientStatus =
+  | 'prospect'
+  | 'telephoned'
+  /** Contacté — clé distincte du stade pipeline `contacted` */
+  | 'in_discussion'
+  | 'interested'
+  | 'not_interested';
 export type ProjectStatus = 'planning' | 'in_progress' | 'review' | 'completed' | 'on_hold';
 export type ProjectType = 'website' | 'ecommerce' | 'webapp' | 'redesign' | 'maintenance' | 'seo' | 'other';
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
