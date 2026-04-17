@@ -10,9 +10,11 @@ export function BarChart({ data, color = '#af7037', height = 160, formatValue }:
   const labelFill = '#7d6f62';
   const valueFill = '#c98a4c';
 
+  const chartW = Math.max(data.length * 60, 120);
+
   return (
-    <div style={{ height }}>
-      <svg width="100%" height={height} viewBox={`0 0 ${data.length * 60} ${height}`} preserveAspectRatio="none">
+    <div className="min-w-0 overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-ws" style={{ height }}>
+      <svg width={chartW} height={height} viewBox={`0 0 ${chartW} ${height}`} preserveAspectRatio="xMidYMid meet" className="block min-w-0">
         {data.map((d, i) => {
           const barH = Math.max(4, (d.value / max) * (height - 40));
           const x = i * 60 + 8;

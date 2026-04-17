@@ -43,8 +43,8 @@ export function CandlestickChart({ rows, height = 160 }: CandlestickChartProps) 
   const yAt = (v: number) => padT + ((maxV - v) / span) * innerH;
 
   return (
-    <div className="w-full overflow-x-auto scrollbar-ws [-webkit-overflow-scrolling:touch]">
-      <svg width={w} height={height} className="mx-auto block" aria-label="Graphique en chandeliers">
+    <div className="max-w-full min-w-0 overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-ws">
+      <svg width={w} height={height} className="mx-auto block max-w-none" aria-label="Graphique en chandeliers">
         <line
           x1={0}
           y1={yAt(maxV)}

@@ -449,15 +449,16 @@ export function RevenueDesk({
           ))}
         </div>
 
-        <div className="relative grid gap-0 lg:grid-cols-[1fr_minmax(0,260px)] xl:grid-cols-[1fr_minmax(0,300px)] 2xl:grid-cols-[1fr_minmax(0,340px)] lg:divide-x lg:divide-white/[0.06]">
-          <div className="@container min-w-0 space-y-4 border-b border-white/[0.06] pb-4 lg:border-b-0 lg:pb-0">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[280px] border-collapse text-left font-mono text-xs">
+        <div className="relative grid min-w-0 max-w-full gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:divide-x lg:divide-white/[0.06]">
+          <div className="@container min-w-0 max-w-full space-y-4 overflow-hidden border-b border-white/[0.06] pb-4 lg:border-b-0 lg:pb-0">
+            <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-ws-deep/20">
+              <div className="overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-ws">
+              <table className="w-full min-w-0 table-fixed border-collapse text-left font-mono text-xs">
                 <thead>
                   <tr className="ws-table-header">
-                    <th className="whitespace-nowrap px-3 py-2.5">Période</th>
-                    <th className="whitespace-nowrap px-3 py-2.5 text-right">Net encaissé</th>
-                    <th className="whitespace-nowrap px-3 py-2.5 text-right">Δ m/m</th>
+                    <th className="w-[32%] px-2 py-2.5 sm:px-3">Période</th>
+                    <th className="w-[38%] px-2 py-2.5 text-right sm:px-3">Net encaissé</th>
+                    <th className="w-[30%] px-2 py-2.5 text-right sm:px-3">Δ m/m</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -475,18 +476,18 @@ export function RevenueDesk({
                           isCurrentMonth ? 'bg-ws-accent-dim/25 ring-1 ring-inset ring-ws-accent/25' : ''
                         } ${idx % 2 === 1 && !isCurrentMonth ? 'bg-black/10' : ''}`}
                       >
-                        <td className="whitespace-nowrap px-3 py-2.5">
+                        <td className="px-2 py-2.5 align-top sm:px-3">
                           <span className="font-semibold text-ws-paper">{row.label}</span>
                           {isCurrentMonth && (
-                            <span className="ml-2 inline-block rounded-full border border-ws-accent/40 bg-ws-accent-dim px-1.5 py-px text-[8px] font-bold uppercase tracking-wider text-ws-accent-soft">
+                            <span className="mt-1 inline-block w-fit rounded-full border border-ws-accent/40 bg-ws-accent-dim px-1.5 py-px text-[8px] font-bold uppercase tracking-wider text-ws-accent-soft sm:ml-2 sm:mt-0 sm:inline-block">
                               Courant
                             </span>
                           )}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums font-semibold text-ws-gold">
+                        <td className="break-words px-2 py-2.5 text-right text-[11px] tabular-nums font-semibold leading-snug text-ws-gold sm:px-3 sm:text-xs">
                           {formatCurrency(row.value)}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">
+                        <td className="px-2 py-2.5 text-right text-[11px] tabular-nums sm:px-3 sm:text-xs">
                           {delta === null ? (
                             <span className="text-ws-mist">—</span>
                           ) : flat ? (
@@ -508,39 +509,47 @@ export function RevenueDesk({
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-ws-accent/25 bg-ws-accent-dim/20 font-semibold">
-                    <td className="px-3 py-2.5 uppercase tracking-wider text-ws-accent-soft">{rollLabel}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-ws-paper">
+                    <td className="px-2 py-2.5 align-top text-[10px] uppercase leading-snug tracking-wider text-ws-accent-soft sm:px-3 sm:text-xs">
+                      {rollLabel}
+                    </td>
+                    <td className="px-2 py-2.5 text-right text-[11px] tabular-nums leading-snug text-ws-paper sm:px-3 sm:text-xs">
                       {formatCurrency(totalSixMonth)}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider text-ws-mist">
-                      {paidCount} facture{paidCount > 1 ? 's' : ''} payée{paidCount > 1 ? 's' : ''} · glissant
+                    <td className="px-2 py-2.5 text-right text-[9px] uppercase leading-snug tracking-wider text-ws-mist sm:px-3 sm:text-[10px]">
+                      <span className="hidden sm:inline">
+                        {paidCount} facture{paidCount > 1 ? 's' : ''} payée{paidCount > 1 ? 's' : ''} · glissant
+                      </span>
+                      <span className="sm:hidden">
+                        {paidCount} payée{paidCount > 1 ? 's' : ''} · glissant
+                      </span>
                     </td>
                   </tr>
                 </tfoot>
               </table>
+              </div>
             </div>
 
             <RevenueChartsPanel monthlyRows={monthlyRows} />
           </div>
 
-          <div className="border-t border-white/[0.06] bg-ws-deep/25 lg:border-t-0">
+          <div className="min-w-0 max-w-full overflow-hidden border-t border-white/[0.06] bg-ws-deep/25 lg:border-t-0">
             <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
               <Receipt className="h-3.5 w-3.5 text-ws-accent-soft" strokeWidth={2} />
               <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ws-ink">
                 Derniers encaissements
               </p>
             </div>
-            <div className="max-h-[min(420px,55vh)] overflow-y-auto overscroll-contain">
+            <div className="max-h-[min(420px,55vh)] overflow-y-auto overflow-x-auto overscroll-contain [-webkit-overflow-scrolling:touch] scrollbar-ws">
               {recentPaid.length === 0 ? (
                 <p className="px-4 py-8 text-center text-xs text-ws-mist">Aucun encaissement enregistré</p>
               ) : (
-                <table className="w-full border-collapse font-mono text-[11px]">
-                  <thead className="sticky top-0 z-[1] border-b border-white/[0.06] bg-ws-deep/95 text-[9px] uppercase tracking-wider text-ws-mist backdrop-blur-sm">
+                <table className="w-full min-w-[260px] table-fixed border-collapse font-mono text-[10px] sm:min-w-0 sm:text-[11px]">
+                  <thead className="sticky top-0 z-[1] border-b border-white/[0.06] bg-ws-deep/95 text-[8px] uppercase tracking-wider text-ws-mist backdrop-blur-sm sm:text-[9px]">
                     <tr>
-                      <th className="px-3 py-2 text-left font-semibold">Date</th>
-                      <th className="px-2 py-2 text-left font-semibold">N°</th>
-                      <th className="min-w-0 px-2 py-2 text-left font-semibold">Contrepartie</th>
-                      <th className="px-3 py-2 text-right font-semibold">Montant</th>
+                      <th className="w-[22%] px-1.5 py-2 text-left font-semibold sm:px-2">Date</th>
+                      <th className="w-[18%] px-1 py-2 text-left font-semibold sm:px-2">N°</th>
+                      <th className="min-w-0 px-1 py-2 text-left font-semibold sm:px-2">Contrepartie</th>
+                      <th className="w-[26%] px-1.5 py-2 text-right font-semibold sm:px-2">Montant</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -551,16 +560,16 @@ export function RevenueDesk({
                           i % 2 === 1 ? 'bg-black/[0.07]' : ''
                         }`}
                       >
-                        <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ws-ink">
+                        <td className="whitespace-nowrap px-1.5 py-2 tabular-nums text-ws-ink sm:px-2">
                           {formatDate(inv.paid_date || inv.created_at)}
                         </td>
-                        <td className="whitespace-nowrap px-2 py-2 text-ws-mist">
+                        <td className="truncate px-1 py-2 text-ws-mist sm:px-2" title={inv.invoice_number || undefined}>
                           {inv.invoice_number || '—'}
                         </td>
-                        <td className="max-w-[140px] truncate px-2 py-2 text-ws-paper" title={inv.client?.name || ''}>
+                        <td className="min-w-0 truncate px-1 py-2 text-ws-paper sm:px-2" title={inv.client?.name || ''}>
                           {inv.client?.name || '—'}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums text-ws-gold">
+                        <td className="whitespace-nowrap px-1.5 py-2 text-right text-[10px] font-semibold tabular-nums leading-tight text-ws-gold sm:px-2 sm:text-[11px]">
                           {formatCurrency(inv.amount)}
                         </td>
                       </tr>

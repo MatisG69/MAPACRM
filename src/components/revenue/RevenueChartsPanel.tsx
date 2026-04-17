@@ -32,18 +32,17 @@ export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanel
     .filter((s) => s.value > 0);
 
   const cardClass = spacious
-    ? 'rounded-2xl border border-white/[0.08] bg-ws-deep/50 p-3 min-w-0 sm:p-5 md:p-6'
-    : 'rounded-xl border border-white/[0.08] bg-ws-deep/40 p-4 min-w-0';
+    ? 'overflow-hidden rounded-2xl border border-white/[0.08] bg-ws-deep/50 p-3 min-w-0 max-w-full sm:p-5 md:p-6'
+    : 'overflow-hidden rounded-xl border border-white/[0.08] bg-ws-deep/40 p-4 min-w-0 max-w-full';
 
   /**
-   * Vue desk : jamais 3 colonnes sur une ligne — elles vivent dans une colonne (~½ dashboard − encaissements), pas toute la fenêtre.
-   * Vue agrandie : 3 colonnes seulement si le conteneur @container est assez large (évite d’écraser sur tablette / laptop).
+   * Une colonne sur étroit : tout reste dans le module. 2 puis 3 colonnes seulement si le conteneur est assez large.
    */
   const gridClass = spacious
-    ? 'grid min-w-0 gap-3 sm:gap-4 md:grid-cols-2 md:gap-4 @[880px]:grid-cols-3 xl:gap-5'
-    : 'grid min-w-0 gap-3 sm:gap-4 md:grid-cols-2 md:gap-4';
+    ? '@container grid min-w-0 max-w-full gap-3 sm:gap-4 @[640px]:grid-cols-2 @[900px]:grid-cols-3 xl:gap-5'
+    : '@container grid min-w-0 max-w-full gap-3 sm:gap-4 @[560px]:grid-cols-2';
 
-  const candleColClass = spacious ? 'md:col-span-2 @[880px]:col-span-1' : 'md:col-span-2';
+  const candleColClass = spacious ? 'col-span-1 @[640px]:col-span-2 @[900px]:col-span-1' : 'col-span-1 @[560px]:col-span-2';
 
   const donutSize = spacious ? 136 : 128;
   const barH = spacious ? 168 : 156;
@@ -59,7 +58,7 @@ export function RevenueChartsPanel({ monthlyRows, spacious }: RevenueChartsPanel
         {donutSegments.length === 0 ? (
           <p className="py-8 text-center font-mono text-xs text-ws-mist">Aucun encaissement sur la période</p>
         ) : (
-          <div className="flex w-full min-w-0 justify-center overflow-x-auto py-1 scrollbar-ws [-webkit-overflow-scrolling:touch]">
+          <div className="flex w-full min-w-0 max-w-full justify-center py-1">
             <DonutChart
               segments={donutSegments}
               size={donutSize}

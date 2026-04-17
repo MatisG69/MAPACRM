@@ -40,9 +40,9 @@ export function DonutChart({
   });
 
   return (
-    <div className="flex w-full min-w-0 flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
+    <div className="flex w-full min-w-0 max-w-full flex-col items-center gap-4">
       <div className="flex-shrink-0">
-        <svg width={size} height={size}>
+        <svg width={size} height={size} className="max-w-full">
           <circle cx={cx} cy={cy} r={radius} fill="none" stroke={trackColor} strokeWidth={18} />
           {arcs.map((arc, i) => (
             <circle
@@ -84,19 +84,22 @@ export function DonutChart({
           </text>
         </svg>
       </div>
-      <div className="w-full min-w-0 flex-1 space-y-2 sm:w-auto">
+      <div className="w-full min-w-0 max-w-full space-y-2">
         {arcs.map((arc, i) => (
-          <div key={i} className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: arc.color }} />
-              <span className="text-[11px] text-ws-ink truncate uppercase tracking-wide">{arc.label}</span>
+          <div
+            key={i}
+            className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1 border-b border-white/[0.05] pb-2 last:border-0 last:pb-0"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="h-2 w-2 flex-shrink-0 rounded-sm" style={{ backgroundColor: arc.color }} />
+              <span className="min-w-0 truncate text-[11px] uppercase tracking-wide text-ws-ink">{arc.label}</span>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0 font-mono text-[11px]">
-              <span className="font-bold text-ws-paper tabular-nums">
-                {formatLegendValue ? formatLegendValue(arc.value) : arc.value}
-              </span>
-              <span className="text-ws-mist tabular-nums">{Math.round(arc.pct * 100)}%</span>
-            </div>
+            <span className="justify-self-end text-right font-mono text-[11px] font-bold tabular-nums text-ws-paper">
+              {formatLegendValue ? formatLegendValue(arc.value) : arc.value}
+            </span>
+            <span className="w-[2.75rem] flex-shrink-0 text-right font-mono text-[11px] tabular-nums text-ws-mist">
+              {Math.round(arc.pct * 100)}%
+            </span>
           </div>
         ))}
       </div>

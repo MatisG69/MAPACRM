@@ -265,8 +265,19 @@ export function generateDevisHTML(params: DevisParams): string {
   }
 
   @media print{
-    html,body{width:210mm;height:297mm;}
-    @page{margin:0;size:A4;}
+    @page{margin:0;size:A4 portrait;}
+    html,body{width:210mm;height:297mm;overflow:hidden;}
+    /* Footer ancré en bas de la page 1, hors du flux normal */
+    .footer{
+      position:fixed;
+      bottom:10mm;
+      left:14mm;right:14mm;
+      padding-top:8px;
+      border-top:1px solid rgba(201,168,76,.15);
+      text-align:center;
+    }
+    /* Empêche le body flex de pousser le footer hors de la page */
+    body{padding-bottom:24mm;}
   }
 
   @media screen{

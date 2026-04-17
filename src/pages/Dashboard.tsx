@@ -187,11 +187,13 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
               subtitle="Série mensuelle, variation mois sur mois, répartition et journal des règlements — lecture type desk financier."
             />
           </div>
-          <div className="ws-card rounded-2xl p-5 relative z-[1] min-w-0">
+          <div className="ws-card relative z-[1] min-w-0 max-w-full overflow-hidden rounded-2xl p-4 sm:p-5">
             <h3 className="ws-section-title mb-1">Allocation projets</h3>
-            <p className="text-[10px] font-mono text-ws-mist mb-4 uppercase tracking-wider">Par statut</p>
+            <p className="mb-4 text-[10px] font-mono uppercase tracking-wider text-ws-mist">Par statut</p>
             {projectStatusData.length > 0 ? (
-              <DonutChart segments={projectStatusData} />
+              <div className="min-w-0 max-w-full">
+                <DonutChart segments={projectStatusData} />
+              </div>
             ) : (
               <p className="text-sm text-ws-mist text-center py-8 font-mono">Aucun projet</p>
             )}
