@@ -22,6 +22,7 @@ import { RevenueDesk } from '../components/revenue/RevenueDesk';
 import { DeskTicker } from '../components/analytics/DeskTicker';
 import type { Client, DealStage, Opportunity, Project, Quote } from '../lib/types';
 import { formatCurrency, formatDate } from '../lib/utils';
+import { isEarlyFunnelClientStatus } from '../lib/clientStatus';
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
@@ -325,8 +326,8 @@ export function AnalyticsPage({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           <StatCard
-            label="Prospects"
-            value={clients.filter((c) => c.status === 'prospect').length}
+            label="Pistes"
+            value={clients.filter((c) => isEarlyFunnelClientStatus(c.status)).length}
             icon={<Users size={20} className="text-ws-highlight" strokeWidth={2} />}
             iconBg="bg-ws-wire/15"
             trendLabel={`${clients.length} comptes`}

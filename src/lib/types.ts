@@ -1,3 +1,12 @@
+export type WebsiteStatus =
+  | 'no_website'
+  | 'broken_website'
+  | 'social_only'
+  | 'directory_only'
+  | 'outdated_website'
+  | 'low_visibility'
+  | 'website_ok';
+
 export type ClientStatus =
   | 'prospect'
   | 'telephoned'
@@ -29,6 +38,14 @@ export interface Client {
   /** Témoignage, retour ou citation client */
   feedback: string | null;
   avatar_color: string;
+  /** Champs enrichissement scraping — optionnels, définis uniquement pour les leads importés via Apify */
+  is_scraped?: boolean;
+  source_platform?: string | null;
+  source_url?: string | null;
+  website_raw?: string | null;
+  website_status?: WebsiteStatus | null;
+  digital_score?: number | null;
+  scraped_at?: string | null;
   created_at: string;
   updated_at: string;
 }

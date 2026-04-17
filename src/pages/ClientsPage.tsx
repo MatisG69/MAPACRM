@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Users, Phone, Mail, Building2, Globe, Trash2, CreditCard as Edit2 } from 'lucide-react';
+import { Plus, Search, Users, Phone, Mail, Building2, Globe, Trash2, CreditCard as Edit2, Radar } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -7,13 +7,16 @@ import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ClientForm } from '../components/clients/ClientForm';
-import { CLIENT_CARD_STRIP } from '../lib/clientStatus';
+import { ScrapingImportModal } from '../components/scraping/ScrapingImportModal';
+import { CLIENT_CARD_STRIP, clientMatchesStatusFilter } from '../lib/clientStatus';
 import { Client, ClientStatus } from '../lib/types';
 import { getInitials } from '../lib/utils';
 
+type SourceFilter = 'all' | 'scrapping';
+
 const statusFilters: { value: ClientStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Tous' },
-  { value: 'prospect', label: 'Prospect' },
+  { value: 'prospect', label: 'Pistes' },
   { value: 'telephoned', label: 'Téléphoné' },
   { value: 'in_discussion', label: 'Contacté' },
   { value: 'interested', label: 'Intéressé' },
@@ -26,22 +29,26 @@ interface ClientsPageProps {
   onUpdate: (id: string, data: Partial<Client>) => Promise<Client>;
   onDelete: (id: string) => Promise<void>;
   onSelect: (id: string) => void;
+  onImportSuccess: () => void;
 }
 
-export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect }: ClientsPageProps) {
+export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, onImportSuccess }: ClientsPageProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const filtered = clients.filter((c) => {
-    const matchStatus = statusFilter === 'all' || c.status === statusFilter;
+    const matchStatus = clientMatchesStatusFilter(c.status, statusFilter);
+    const matchSource = sourceFilter === 'all' || (sourceFilter === 'scrapping' && c.is_scraped);
     const matchSearch =
       !search ||
       [c.name, c.company, c.email, c.city].some((f) => f?.toLowerCase().includes(search.toLowerCase()));
-    return matchStatus && matchSearch;
+    return matchStatus && matchSource && matchSearch;
   });
 
   const handleCreate = async (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
@@ -69,9 +76,19 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect }:
         title="Registre clients"
         subtitle={`${clients.length} ligne${clients.length > 1 ? 's' : ''} · carnet de contreparties`}
         actions={
-          <Button icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
-            Nouveau client
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              icon={<Radar size={16} />}
+              className="normal-case tracking-normal"
+              onClick={() => setShowImport(true)}
+            >
+              Importer leads
+            </Button>
+            <Button icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
+              Nouveau client
+            </Button>
+          </div>
         }
       />
 
@@ -98,6 +115,13 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect }:
                 {f.label}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setSourceFilter(sourceFilter === 'scrapping' ? 'all' : 'scrapping')}
+              className={`pill-filter ${sourceFilter === 'scrapping' ? 'pill-filter-active border-violet-500/50 bg-violet-600/15 text-violet-200' : 'pill-filter-idle'}`}
+            >
+              Scrapping
+            </button>
           </div>
         </div>
 
@@ -139,7 +163,13 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect }:
                         {c.company && <p className="text-xs text-ws-ink mt-0.5 font-mono">{c.company}</p>}
                       </div>
                     </div>
-                    <Badge value={c.status} />
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge value={c.status} />
+                      {c.is_scraped && <Badge value="scrapping" />}
+                      {c.is_scraped && c.website_status && c.website_status !== 'website_ok' && (
+                        <Badge value={c.website_status} />
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">
@@ -171,9 +201,16 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect }:
                 </div>
 
                 <div className="px-5 py-3 border-t border-ws-line flex items-center justify-between bg-ws-deep/40">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-ws-accent-soft/90">
-                    {c.source || 'Source N/C'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-ws-accent-soft/90">
+                      {c.source || 'Source N/C'}
+                    </span>
+                    {c.digital_score != null && (
+                      <span className="text-[10px] font-mono text-violet-300 border border-violet-500/30 bg-violet-600/10 rounded px-1.5 py-0.5">
+                        Score {c.digital_score}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"
@@ -202,6 +239,12 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect }:
           </div>
         )}
       </div>
+
+      <ScrapingImportModal
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+        onSuccess={onImportSuccess}
+      />
 
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Nouveau client" size="lg">
         <ClientForm onSubmit={handleCreate} onCancel={() => setShowCreate(false)} />

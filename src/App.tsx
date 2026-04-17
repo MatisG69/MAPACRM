@@ -216,6 +216,7 @@ function App() {
                 onUpdate={clientsHook.updateClient}
                 onDelete={clientsHook.deleteClient}
                 onSelect={(id) => navigate('client-detail', id)}
+                onImportSuccess={clientsHook.refetch}
               />
             )}
             {page === 'contacts' && (

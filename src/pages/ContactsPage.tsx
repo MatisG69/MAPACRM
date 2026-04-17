@@ -15,7 +15,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
-import { CLIENT_CARD_STRIP } from '../lib/clientStatus';
+import { CLIENT_CARD_STRIP, clientMatchesStatusFilter } from '../lib/clientStatus';
 import type { Client, ClientStatus, Interaction, Page, Project } from '../lib/types';
 import { getInitials, formatDate } from '../lib/utils';
 
@@ -98,7 +98,7 @@ export function ContactsPage({
 
   const filtered = useMemo(() => {
     return clients.filter((c) => {
-      if (statusFilter !== 'all' && c.status !== statusFilter) return false;
+      if (!clientMatchesStatusFilter(c.status, statusFilter)) return false;
       if (feedbackFilter === 'with' && !c.feedback?.trim()) return false;
       if (feedbackFilter === 'without' && c.feedback?.trim()) return false;
       if (!search.trim()) return true;
@@ -178,7 +178,7 @@ export function ContactsPage({
             {(
               [
                 ['all', 'Tous'],
-                ['prospect', 'Prospect'],
+                ['prospect', 'Pistes'],
                 ['telephoned', 'Téléphoné'],
                 ['in_discussion', 'Contacté'],
                 ['interested', 'Intéressé'],

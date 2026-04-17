@@ -57,6 +57,16 @@ const variantStyles: Record<string, string> = {
   competitor: 'bg-ws-bear-dim/50 text-ws-bear border-ws-bear/25',
   no_budget: 'bg-ws-deep text-ws-mist border-ws-line',
   ghosted: 'bg-zinc-500/12 text-zinc-300 border-zinc-500/25',
+  // Scraping
+  scrapping: 'bg-violet-600/20 text-violet-200 border-violet-500/50',
+  // Website status
+  no_website: 'bg-red-500/15 text-red-300 border-red-500/35',
+  broken_website: 'bg-orange-500/15 text-orange-300 border-orange-500/35',
+  social_only: 'bg-sky-500/15 text-sky-300 border-sky-500/35',
+  directory_only: 'bg-slate-500/15 text-slate-300 border-slate-500/35',
+  outdated_website: 'bg-yellow-500/15 text-yellow-200 border-yellow-500/35',
+  low_visibility: 'bg-amber-500/15 text-amber-200 border-amber-500/35',
+  website_ok: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35',
 };
 
 const variantLabels: Record<string, string> = {
@@ -107,6 +117,16 @@ const variantLabels: Record<string, string> = {
   competitor: 'Concurrent',
   no_budget: 'Pas de budget',
   ghosted: 'Sans réponse',
+  // Scraping
+  scrapping: 'Scrapping',
+  // Website status
+  no_website: 'Pas de site',
+  broken_website: 'Site cassé',
+  social_only: 'Réseaux seuls',
+  directory_only: 'Annuaire seul',
+  outdated_website: 'Site obsolète',
+  low_visibility: 'Faible visibilité',
+  website_ok: 'Site présent',
 };
 
 interface BadgeProps {

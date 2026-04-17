@@ -12,6 +12,7 @@ import {
   FolderKanban,
   CalendarCheck,
   Users,
+  Radar,
   type LucideIcon,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
@@ -152,6 +153,7 @@ export function ClientDetailPage({
           <div className="flex-1 space-y-3">
             <div className="flex flex-wrap gap-2 items-center">
               <Badge value={client.status} />
+              {client.is_scraped && <Badge value="scrapping" />}
               {client.source && (
                 <span className="text-[10px] font-mono uppercase tracking-wider text-ws-gold px-2 py-1 rounded border border-ws-gold/25 bg-ws-gold-dim">
                   Source : {client.source}
@@ -223,6 +225,63 @@ export function ClientDetailPage({
             <p className="text-2xl font-mono font-bold text-ws-gold tabular-nums">{interactions.length}</p>
           </div>
         </div>
+
+        {client.is_scraped && (
+          <section className="ws-card rounded-lg p-5 border border-violet-500/20 bg-violet-600/5">
+            <h2 className="font-display text-base font-bold text-ws-paper mb-4 flex items-center gap-2">
+              <Radar size={16} className="text-violet-300" />
+              Profil digital
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {client.website_status && (
+                <div>
+                  <p className="ws-section-title mb-1.5">Statut site web</p>
+                  <Badge value={client.website_status} />
+                </div>
+              )}
+              {client.digital_score != null && (
+                <div>
+                  <p className="ws-section-title mb-1.5">Score commercial</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-mono font-bold tabular-nums text-violet-300">
+                      {client.digital_score}
+                    </span>
+                    <span className="text-xs text-ws-mist font-mono">/ 100</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 rounded-full bg-ws-line overflow-hidden">
+                    <div
+                      className="h-full bg-violet-500 rounded-full transition-all"
+                      style={{ width: `${client.digital_score}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {client.scraped_at && (
+                <div>
+                  <p className="ws-section-title mb-1.5">Importé le</p>
+                  <p className="text-xs font-mono text-ws-ink">
+                    {new Date(client.scraped_at).toLocaleDateString('fr-FR', {
+                      day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+            {client.source_url && (
+              <div className="mt-3 pt-3 border-t border-violet-500/15">
+                <p className="ws-section-title mb-1">Source</p>
+                <a
+                  href={client.source_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-mono text-ws-highlight hover:text-ws-gold truncate block"
+                >
+                  {client.source_url}
+                </a>
+              </div>
+            )}
+          </section>
+        )}
 
         <section>
           <div className="flex items-center justify-between mb-4">

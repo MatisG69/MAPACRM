@@ -1,5 +1,25 @@
 import type { ClientStatus } from './types';
 
+/** Statuts « froid » avant qualification intéressé / refus (aligné migration pipeline). */
+export const EARLY_FUNNEL_STATUSES: readonly ClientStatus[] = [
+  'prospect',
+  'telephoned',
+  'in_discussion',
+];
+
+export function isEarlyFunnelClientStatus(status: ClientStatus): boolean {
+  return (
+    status === 'prospect' || status === 'telephoned' || status === 'in_discussion'
+  );
+}
+
+/** Filtre registre / contacts : « Prospect » regroupe tout le haut de tunnel. */
+export function clientMatchesStatusFilter(status: ClientStatus, filter: ClientStatus | 'all'): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'prospect') return isEarlyFunnelClientStatus(status);
+  return status === filter;
+}
+
 /** Bandeau gauche des cartes client (aligné sur le statut). */
 export const CLIENT_CARD_STRIP: Record<ClientStatus, string> = {
   prospect: 'border-l-amber-500/70',

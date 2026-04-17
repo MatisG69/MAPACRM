@@ -22,6 +22,7 @@ import { Client, Project, Task, Interaction, Invoice } from '../lib/types';
 import { formatCurrency, formatRelativeDate, formatDate, isOverdue, daysUntil } from '../lib/utils';
 import { resolveProjectProgress } from '../lib/projectProgress';
 import { Page } from '../lib/types';
+import { isEarlyFunnelClientStatus } from '../lib/clientStatus';
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
@@ -49,7 +50,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
 
   const stats = useMemo(() => {
     const interestedClients = clients.filter((c) => c.status === 'interested').length;
-    const prospects = clients.filter((c) => c.status === 'prospect').length;
+    const prospects = clients.filter((c) => isEarlyFunnelClientStatus(c.status)).length;
     const activeProjects = projects.filter((p) => p.status === 'in_progress').length;
     const pendingTasks = tasks.filter((t) => t.status !== 'completed').length;
     const overdueTasks = tasks.filter((t) => t.status !== 'completed' && isOverdue(t.due_date)).length;
@@ -150,7 +151,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
             icon={<Users size={20} className="text-ws-accent-soft" strokeWidth={2} />}
             iconBg="bg-ws-accent-dim"
             trend={stats.prospects > 0 ? undefined : undefined}
-            trendLabel={`${stats.prospects} prospect${stats.prospects > 1 ? 's' : ''}`}
+            trendLabel={`${stats.prospects} piste${stats.prospects > 1 ? 's' : ''} en amont`}
             onClick={() => onNavigate('clients')}
           />
           <StatCard

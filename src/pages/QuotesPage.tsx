@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, FileInput } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileInput, FileText, Eye } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Badge } from '../components/ui/Badge';
 import { QuoteForm } from '../components/quotes/QuoteForm';
+import { GenerateDevisModal } from '../components/quotes/GenerateDevisModal';
+import { DevisPreviewOverlay } from '../components/quotes/DevisPreviewOverlay';
+import { generateDevisHTML } from '../lib/devisGenerator';
 import type { Client, Invoice, Opportunity, Project, Quote } from '../lib/types';
 import { formatCurrency, formatDate, generateInvoiceNumber } from '../lib/utils';
 
@@ -32,13 +35,58 @@ export function QuotesPage({
   onDelete,
   onCreateInvoice,
 }: QuotesPageProps) {
-  const [modal, setModal] = useState<'new' | 'edit' | 'convert' | null>(null);
+  const [modal, setModal] = useState<'new' | 'edit' | 'convert' | 'devis' | null>(null);
   const [editing, setEditing] = useState<Quote | null>(null);
   const [convertQuote, setConvertQuote] = useState<Quote | null>(null);
+  const [previewQuote, setPreviewQuote] = useState<{ html: string; filename: string } | null>(null);
   const [convertMode, setConvertMode] = useState<'total' | 'deposit'>('total');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [convertLoading, setConvertLoading] = useState(false);
+
+  const openPreview = (q: Quote) => {
+    // Prefer full client from prop array; fall back to embedded partial data on the quote
+    const fullClient = clients.find((c) => c.id === q.client_id)
+    const client: Client | null = fullClient ?? (q.client
+      ? {
+          id: q.client.id,
+          name: q.client.name,
+          company: q.client.company ?? null,
+          email: null,
+          phone: null,
+          address: null,
+          city: null,
+          website: null,
+          status: 'prospect' as const,
+          source: null,
+          notes: null,
+          satisfaction_rating: null,
+          feedback: null,
+          avatar_color: q.client.avatar_color,
+          created_at: '',
+          updated_at: '',
+        }
+      : null)
+
+    if (!client) return
+
+    const project = projects.find((p) => p.id === q.project_id) ?? null
+    const depositPercent =
+      q.deposit_requested && q.deposit_amount && q.amount
+        ? Math.round((q.deposit_amount / q.amount) * 100)
+        : 30
+
+    const html = generateDevisHTML({
+      client,
+      project,
+      amount: q.amount,
+      quoteNumber: q.quote_number ?? undefined,
+      validityDays: 30,
+      depositPercent,
+      customNotes: q.notes ?? undefined,
+    })
+    setPreviewQuote({ html, filename: `devis-${q.quote_number ?? q.id}.pdf` })
+  }
 
   const openConvert = (q: Quote) => {
     setConvertQuote(q);
@@ -88,9 +136,19 @@ export function QuotesPage({
         title="Devis"
         subtitle="Propositions commerciales · conversion facture"
         actions={
-          <Button icon={<Plus size={16} />} className="normal-case tracking-normal" onClick={() => setModal('new')}>
-            Nouveau devis
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              icon={<FileText size={16} />}
+              className="normal-case tracking-normal"
+              onClick={() => setModal('devis')}
+            >
+              Générer devis PDF
+            </Button>
+            <Button icon={<Plus size={16} />} className="normal-case tracking-normal" onClick={() => setModal('new')}>
+              Nouveau devis
+            </Button>
+          </div>
         }
       />
       <div className="px-4 py-4 md:p-8 space-y-4 bg-ws-deep/20 min-h-[calc(100vh-120px)]">
@@ -128,6 +186,14 @@ export function QuotesPage({
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    icon={<Eye size={16} />}
+                    className="normal-case tracking-normal text-xs"
+                    onClick={() => openPreview(q)}
+                  >
+                    Aperçu
+                  </Button>
                   <Button
                     variant="secondary"
                     icon={<FileInput size={16} />}
@@ -251,6 +317,22 @@ export function QuotesPage({
         description="Action définitive."
         loading={deleteLoading}
       />
+
+      <GenerateDevisModal
+        isOpen={modal === 'devis'}
+        onClose={() => setModal(null)}
+        clients={clients}
+        projects={projects}
+        onCreateQuote={onCreate}
+      />
+
+      {previewQuote && (
+        <DevisPreviewOverlay
+          html={previewQuote.html}
+          filename={previewQuote.filename}
+          onClose={() => setPreviewQuote(null)}
+        />
+      )}
     </div>
   );
 }

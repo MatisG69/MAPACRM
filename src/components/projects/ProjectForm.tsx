@@ -71,6 +71,8 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onCancel }
       const base = {
         ...form,
         site_url: normalizeSiteUrl(form.site_url || undefined),
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
       };
       if (taskDriven) {
         const { progress: _p, ...rest } = base;
