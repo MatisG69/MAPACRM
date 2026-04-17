@@ -266,18 +266,32 @@ export function generateDevisHTML(params: DevisParams): string {
 
   @media print{
     @page{margin:0;size:A4 portrait;}
-    html,body{width:210mm;height:297mm;overflow:hidden;}
-    /* Footer ancré en bas de la page 1, hors du flux normal */
-    .footer{
-      position:fixed;
-      bottom:10mm;
-      left:14mm;right:14mm;
-      padding-top:8px;
-      border-top:1px solid rgba(201,168,76,.15);
-      text-align:center;
+    html,body{width:210mm;height:297mm;}
+    body{
+      padding:6mm 10mm;
+      height:297mm;
+      overflow:hidden;
+      font-size:7pt;
+      line-height:1.4;
     }
-    /* Empêche le body flex de pousser le footer hors de la page */
-    body{padding-bottom:24mm;}
+    .logo{font-size:16pt;}
+    .agency{font-size:4.5pt;}
+    .doc-title{font-size:9pt;}
+    .diamond-row{margin:4px 0;}
+    .header{padding-bottom:6px;margin-bottom:7px;}
+    .slabel{margin-top:6px;margin-bottom:4px;font-size:4.5pt;}
+    .info-block{padding:7px 10px;}
+    .info-block .val{font-size:7pt;}
+    .info-block .line{font-size:6.5pt;}
+    .prest-list li{padding:3px 0;font-size:6.5pt;}
+    .price-table td{padding:5px 8px;font-size:6.5pt;}
+    .price-table th{padding:4px 8px;font-size:4.5pt;}
+    .total-block{padding:7px 12px;margin-top:5px;}
+    .tline{padding:2px 0;font-size:6.5pt;}
+    .tline.main{font-size:8.5pt;padding-top:5px;}
+    .tline.main .val{font-size:10pt;}
+    .cond-block{padding:6px 10px;font-size:6pt;}
+    .footer{margin-top:auto;padding-top:6px;}
   }
 
   @media screen{
