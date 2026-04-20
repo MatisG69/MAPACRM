@@ -46,6 +46,7 @@ function normalizeName(name: string): string {
 export async function importLeadsToSupabase(
   results: ApifyBusinessResult[],
   onProgress?: (done: number, total: number) => void,
+  searchQuery?: string,
 ): Promise<ImportStats> {
   if (!supabase) throw new Error('Supabase non disponible — vérifiez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY')
 
@@ -102,7 +103,8 @@ export async function importLeadsToSupabase(
       website: websiteStatus === 'website_ok' ? (item.website || null) : null,
       status: 'prospect',
       source: 'scraping',
-      notes: item.categoryName ? `Catégorie : ${item.categoryName}` : null,
+      profession: item.categoryName || searchQuery || null,
+      notes: null,
       satisfaction_rating: null,
       feedback: null,
       avatar_color: randomAvatarColor(),

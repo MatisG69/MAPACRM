@@ -44,6 +44,7 @@ export function useLeadImport(onInsertDone?: () => void) {
               const importStats = await importLeadsToSupabase(
                 rawItems as ApifyBusinessResult[],
                 (done, total) => setImportProgress(total > 0 ? Math.round((done / total) * 100) : 0),
+                query,
               )
               setStats(importStats)
               setStatus('done')

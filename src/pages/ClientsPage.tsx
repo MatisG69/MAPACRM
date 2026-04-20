@@ -165,6 +165,11 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                       <Badge value={c.status} />
+                      {c.profession && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-ws-line bg-ws-panel text-ws-ink whitespace-nowrap">
+                          {c.profession}
+                        </span>
+                      )}
                       {c.is_scraped && <Badge value="scrapping" />}
                       {c.is_scraped && c.website_status && c.website_status !== 'website_ok' && (
                         <Badge value={c.website_status} />

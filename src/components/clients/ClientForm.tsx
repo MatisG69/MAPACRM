@@ -35,6 +35,7 @@ export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
     notes: initial?.notes || '',
     satisfaction_rating: initial?.satisfaction_rating ?? null,
     feedback: initial?.feedback ?? null,
+    profession: initial?.profession ?? null,
     avatar_color: initial?.avatar_color || getRandomColor(),
   });
   const [loading, setLoading] = useState(false);
@@ -68,6 +69,15 @@ export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
         <div>
           <label className="form-label">Entreprise</label>
           <input className="input" value={form.company || ''} onChange={(e) => set('company', e.target.value)} placeholder="Dupont SARL" />
+        </div>
+        <div>
+          <label className="form-label">Profession / Secteur</label>
+          <input
+            className="input"
+            value={form.profession || ''}
+            onChange={(e) => setForm((f) => ({ ...f, profession: e.target.value || null }))}
+            placeholder="Restaurant, Charpentier, Architecte…"
+          />
         </div>
         <div>
           <label className="form-label">Statut</label>

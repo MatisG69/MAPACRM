@@ -37,6 +37,8 @@ export interface Client {
   satisfaction_rating: number | null;
   /** Témoignage, retour ou citation client */
   feedback: string | null;
+  /** Secteur d'activité ou métier du client — ex: Restaurant, Charpentier */
+  profession: string | null;
   avatar_color: string;
   /** Champs enrichissement scraping — optionnels, définis uniquement pour les leads importés via Apify */
   is_scraped?: boolean;
