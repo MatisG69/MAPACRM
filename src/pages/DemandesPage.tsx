@@ -7,23 +7,23 @@ import {
   CheckCircle2,
   Clock,
   Archive,
-  ArrowRight,
+  UserPlus,
   Inbox,
+  X,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import type { AppNotification } from '../components/layout/Header';
-import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EmptyState } from '../components/ui/EmptyState';
-import type { ServiceRequest, ServiceRequestStatus } from '../lib/types';
+import type { Client, ServiceRequest, ServiceRequestStatus } from '../lib/types';
 
 const STATUS_CONFIG: Record<ServiceRequestStatus, { label: string; style: string }> = {
-  new:        { label: 'Nouvelle',    style: 'bg-ws-accent-dim text-ws-accent-soft border-ws-accent/35' },
-  read:       { label: 'Lue',         style: 'bg-ws-deep text-ws-mist border-ws-line' },
-  in_progress:{ label: 'En cours',    style: 'bg-ws-wire/20 text-ws-highlight border-ws-wire/35' },
-  converted:  { label: 'Convertie',   style: 'bg-ws-bull-dim text-ws-bull border-ws-bull/30' },
-  archived:   { label: 'Archivée',    style: 'bg-ws-deep text-ws-mist/60 border-ws-line/50' },
+  new:         { label: 'Nouvelle',   style: 'bg-ws-accent-dim text-ws-accent-soft border-ws-accent/35' },
+  read:        { label: 'Lue',        style: 'bg-ws-deep text-ws-mist border-ws-line' },
+  in_progress: { label: 'En cours',   style: 'bg-ws-wire/20 text-ws-highlight border-ws-wire/35' },
+  converted:   { label: 'Convertie',  style: 'bg-ws-bull-dim text-ws-bull border-ws-bull/30' },
+  archived:    { label: 'Archivee',   style: 'bg-ws-deep text-ws-mist/60 border-ws-line/50' },
 };
 
 const FILTER_OPTIONS: { value: ServiceRequestStatus | 'all'; label: string }[] = [
@@ -32,13 +32,27 @@ const FILTER_OPTIONS: { value: ServiceRequestStatus | 'all'; label: string }[] =
   { value: 'read',        label: 'Lues' },
   { value: 'in_progress', label: 'En cours' },
   { value: 'converted',   label: 'Converties' },
-  { value: 'archived',    label: 'Archivées' },
+  { value: 'archived',    label: 'Archivees' },
 ];
+
+const AVATAR_COLORS = [
+  '#C98A4C', '#7C6F9F', '#4A90A4', '#6BAA75', '#C4625A',
+  '#8E7B5E', '#5B8FB9', '#B5835A', '#7A9E7E', '#9B6B9B',
+];
+
+interface ConvertForm {
+  name: string;
+  email: string;
+  company: string;
+  profession: string;
+  notes: string;
+}
 
 interface DemandesPageProps {
   requests: ServiceRequest[];
   onUpdateStatus: (id: string, status: ServiceRequestStatus) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onConvertToClient: (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>, requestId: string) => Promise<void>;
 }
 
 function StatusBadge({ status }: { status: ServiceRequestStatus }) {
@@ -52,20 +66,123 @@ function StatusBadge({ status }: { status: ServiceRequestStatus }) {
 
 function formatDatetime(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }
 
-export function DemandesPage({ requests, onUpdateStatus, onDelete }: DemandesPageProps) {
+function ConvertModal({
+  request,
+  onConfirm,
+  onClose,
+  loading,
+}: {
+  request: ServiceRequest;
+  onConfirm: (form: ConvertForm) => void;
+  onClose: () => void;
+  loading: boolean;
+}) {
+  const [form, setForm] = useState<ConvertForm>({
+    name: request.name,
+    email: request.email,
+    company: request.company ?? '',
+    profession: request.project_type ?? '',
+    notes: request.message ?? '',
+  });
+
+  const set = (k: keyof ConvertForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm((prev) => ({ ...prev, [k]: e.target.value }));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-ws-panel border border-ws-lineStrong/60 rounded-2xl shadow-[0_25px_80px_-12px_rgba(0,0,0,0.85)] overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-ws-line">
+          <div>
+            <p className="font-display font-semibold text-ws-paper">Convertir en client</p>
+            <p className="text-[11px] font-mono text-ws-mist mt-0.5">Un fiche client sera creee avec ces informations</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-ws-raised text-ws-mist hover:text-ws-paper">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="px-5 py-5 space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono uppercase tracking-widest text-ws-mist">Nom *</label>
+            <input
+              className="input w-full text-sm"
+              value={form.name}
+              onChange={set('name')}
+              placeholder="Nom du contact"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono uppercase tracking-widest text-ws-mist">Email</label>
+            <input
+              className="input w-full text-sm"
+              value={form.email}
+              onChange={set('email')}
+              placeholder="email@exemple.com"
+              type="email"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono uppercase tracking-widest text-ws-mist">Entreprise</label>
+              <input
+                className="input w-full text-sm"
+                value={form.company}
+                onChange={set('company')}
+                placeholder="Nom de la societe"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono uppercase tracking-widest text-ws-mist">Secteur</label>
+              <input
+                className="input w-full text-sm"
+                value={form.profession}
+                onChange={set('profession')}
+                placeholder="Ex: Restaurant"
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono uppercase tracking-widest text-ws-mist">Notes (message)</label>
+            <textarea
+              className="input w-full text-sm resize-none"
+              rows={3}
+              value={form.notes}
+              onChange={set('notes')}
+              placeholder="Message initial du prospect..."
+            />
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t border-ws-line flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={onClose}>Annuler</Button>
+          <Button
+            size="sm"
+            icon={<UserPlus size={14} />}
+            loading={loading}
+            disabled={!form.name.trim()}
+            onClick={() => onConfirm(form)}
+          >
+            Creer le client
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DemandesPage({ requests, onUpdateStatus, onDelete, onConvertToClient }: DemandesPageProps) {
   const [filter, setFilter] = useState<ServiceRequestStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [convertRequest, setConvertRequest] = useState<ServiceRequest | null>(null);
+  const [convertLoading, setConvertLoading] = useState(false);
 
   const notifications = useMemo<AppNotification[]>(() => {
     const n = requests.filter((r) => r.status === 'new').length;
@@ -73,7 +190,7 @@ export function DemandesPage({ requests, onUpdateStatus, onDelete }: DemandesPag
     return [{
       id: 'new-requests',
       type: 'info',
-      message: `${n} nouvelle${n > 1 ? 's' : ''} demande${n > 1 ? 's' : ''} sur le site vitrine`,
+      message: n + ' nouvelle' + (n > 1 ? 's' : '') + ' demande' + (n > 1 ? 's' : '') + ' sur le site vitrine',
     }];
   }, [requests]);
 
@@ -108,11 +225,48 @@ export function DemandesPage({ requests, onUpdateStatus, onDelete }: DemandesPag
     setDeleteId(null);
   };
 
+  const handleConvert = async (form: ConvertForm) => {
+    if (!convertRequest) return;
+    setConvertLoading(true);
+    try {
+      const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+      await onConvertToClient(
+        {
+          name: form.name.trim(),
+          email: form.email.trim() || null,
+          phone: null,
+          company: form.company.trim() || null,
+          address: null,
+          city: null,
+          website: null,
+          status: 'interested',
+          source: 'website',
+          notes: form.notes.trim() || null,
+          satisfaction_rating: null,
+          feedback: null,
+          profession: form.profession.trim() || null,
+          avatar_color: color,
+          is_scraped: false,
+          source_platform: null,
+          source_url: null,
+          website_raw: null,
+          website_status: null,
+          digital_score: null,
+          scraped_at: null,
+        },
+        convertRequest.id
+      );
+      setConvertRequest(null);
+    } finally {
+      setConvertLoading(false);
+    }
+  };
+
   return (
     <div>
       <Header
         title="Demandes"
-        subtitle="Formulaires reçus depuis mapa-developpement.fr"
+        subtitle="Formulaires recus depuis mapa-developpement.fr"
         searchValue={search}
         onSearchChange={setSearch}
         notifications={notifications}
@@ -164,12 +318,12 @@ export function DemandesPage({ requests, onUpdateStatus, onDelete }: DemandesPag
           <EmptyState
             icon={<Inbox size={28} />}
             title="Aucune demande"
-            description="Les formulaires soumis sur mapa-developpement.fr apparaîtront ici en temps réel."
+            description="Les formulaires soumis sur mapa-developpement.fr apparaitront ici."
           />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<Inbox size={28} />}
-            title="Aucun résultat"
+            title="Aucun resultat"
             description="Affinez la recherche ou les filtres."
           />
         ) : (
@@ -219,7 +373,7 @@ export function DemandesPage({ requests, onUpdateStatus, onDelete }: DemandesPag
                   </div>
 
                   {/* Actions */}
-                  <div className="flex flex-wrap sm:flex-col gap-2 sm:min-w-[140px]">
+                  <div className="flex flex-wrap sm:flex-col gap-2 sm:min-w-[160px]">
                     {r.status === 'new' && (
                       <Button
                         variant="secondary"
@@ -244,15 +398,14 @@ export function DemandesPage({ requests, onUpdateStatus, onDelete }: DemandesPag
                         En cours
                       </Button>
                     )}
-                    {r.status === 'in_progress' && (
+                    {r.status !== 'converted' && r.status !== 'archived' && (
                       <Button
                         size="sm"
-                        icon={<ArrowRight size={14} />}
+                        icon={<UserPlus size={14} />}
                         className="normal-case tracking-normal text-xs flex-1 sm:flex-none"
-                        loading={updatingId === r.id}
-                        onClick={() => setStatus(r.id, 'converted')}
+                        onClick={() => setConvertRequest(r)}
                       >
-                        Convertie
+                        Convertir en client
                       </Button>
                     )}
                     {r.status !== 'archived' && r.status !== 'converted' && (
@@ -284,12 +437,21 @@ export function DemandesPage({ requests, onUpdateStatus, onDelete }: DemandesPag
         )}
       </div>
 
+      {convertRequest && (
+        <ConvertModal
+          request={convertRequest}
+          onConfirm={handleConvert}
+          onClose={() => setConvertRequest(null)}
+          loading={convertLoading}
+        />
+      )}
+
       <ConfirmDialog
         isOpen={Boolean(deleteId)}
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         title="Supprimer cette demande ?"
-        description="Action définitive."
+        description="Action definitive."
         loading={deleteLoading}
       />
     </div>

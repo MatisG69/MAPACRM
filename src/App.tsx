@@ -389,6 +389,10 @@ function App() {
                 requests={demandesHook.requests}
                 onUpdateStatus={demandesHook.updateStatus}
                 onDelete={demandesHook.deleteRequest}
+                onConvertToClient={async (clientData, requestId) => {
+                  await clientsHook.createClient(clientData);
+                  await demandesHook.updateStatus(requestId, 'converted');
+                }}
               />
             )}
           </>
