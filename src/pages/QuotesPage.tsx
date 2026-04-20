@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Plus, Pencil, Trash2, FileInput, FileText, Eye } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Pencil, Trash2, FileInput, FileText, Eye } from 'lucide-react';
 import { Header } from '../components/layout/Header';
+import type { AppNotification } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -9,8 +10,13 @@ import { QuoteForm } from '../components/quotes/QuoteForm';
 import { GenerateDevisModal } from '../components/quotes/GenerateDevisModal';
 import { DevisPreviewOverlay } from '../components/quotes/DevisPreviewOverlay';
 import { generateDevisHTML } from '../lib/devisGenerator';
-import type { Client, Invoice, Opportunity, Project, Quote } from '../lib/types';
+import type { Client, Invoice, InvoiceStatus, Opportunity, Project, Quote, QuoteStatus } from '../lib/types';
 import { formatCurrency, formatDate, generateInvoiceNumber } from '../lib/utils';
+
+function quoteStatusToInvoiceStatus(quoteStatus: QuoteStatus): InvoiceStatus {
+  if (quoteStatus === 'signed' || quoteStatus === 'sent') return 'sent';
+  return 'draft';
+}
 
 interface QuotesPageProps {
   quotes: Quote[];
@@ -35,7 +41,7 @@ export function QuotesPage({
   onDelete,
   onCreateInvoice,
 }: QuotesPageProps) {
-  const [modal, setModal] = useState<'new' | 'edit' | 'convert' | 'devis' | null>(null);
+  const [modal, setModal] = useState<'edit' | 'convert' | 'devis' | null>(null);
   const [editing, setEditing] = useState<Quote | null>(null);
   const [convertQuote, setConvertQuote] = useState<Quote | null>(null);
   const [previewQuote, setPreviewQuote] = useState<{ html: string; filename: string } | null>(null);
@@ -43,9 +49,57 @@ export function QuotesPage({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [convertLoading, setConvertLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredQuotes = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return quotes;
+    return quotes.filter((quote) => {
+      const clientName = clients.find((c) => c.id === quote.client_id)?.name ?? quote.client?.name ?? '';
+      return (
+        quote.title.toLowerCase().includes(q) ||
+        (quote.quote_number ?? '').toLowerCase().includes(q) ||
+        clientName.toLowerCase().includes(q) ||
+        (quote.project?.name ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [quotes, clients, searchQuery]);
+
+  const notifications = useMemo<AppNotification[]>(() => {
+    const today = new Date();
+    const result: AppNotification[] = [];
+
+    for (const q of quotes) {
+      if (q.valid_until) {
+        const expiry = new Date(q.valid_until);
+        const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysLeft >= 0 && daysLeft <= 7 && q.status !== 'signed' && q.status !== 'refused' && q.status !== 'expired') {
+          result.push({
+            id: `expiry-${q.id}`,
+            type: daysLeft <= 2 ? 'warning' : 'info',
+            message: `"${q.title}" expire dans ${daysLeft === 0 ? 'aujourd\'hui' : `${daysLeft} jour${daysLeft > 1 ? 's' : ''}`}`,
+            time: formatDate(q.valid_until),
+          });
+        }
+      }
+      if (q.status === 'signed' && q.signed_at) {
+        const signedDate = new Date(q.signed_at);
+        const daysSince = Math.floor((today.getTime() - signedDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSince <= 3) {
+          result.push({
+            id: `signed-${q.id}`,
+            type: 'success',
+            message: `Devis "${q.title}" signé${daysSince === 0 ? ' aujourd\'hui' : ` il y a ${daysSince} jour${daysSince > 1 ? 's' : ''}`}`,
+            time: formatDate(q.signed_at),
+          });
+        }
+      }
+    }
+
+    return result;
+  }, [quotes]);
 
   const openPreview = (q: Quote) => {
-    // Prefer full client from prop array; fall back to embedded partial data on the quote
     const fullClient = clients.find((c) => c.id === q.client_id)
     const client: Client | null = fullClient ?? (q.client
       ? {
@@ -110,7 +164,7 @@ export function QuotesPage({
         source_quote_id: convertQuote.id,
         invoice_number: generateInvoiceNumber(),
         amount,
-        status: 'draft',
+        status: quoteStatusToInvoiceStatus(convertQuote.status),
         due_date: null,
         paid_date: null,
         notes: `Suite au devis ${convertQuote.quote_number || convertQuote.title}${useDeposit ? ' (acompte)' : ''}`,
@@ -136,29 +190,27 @@ export function QuotesPage({
         title="Devis"
         subtitle="Propositions commerciales · conversion facture"
         actions={
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              icon={<FileText size={16} />}
-              className="normal-case tracking-normal"
-              onClick={() => setModal('devis')}
-            >
-              Générer devis PDF
-            </Button>
-            <Button icon={<Plus size={16} />} className="normal-case tracking-normal" onClick={() => setModal('new')}>
-              Nouveau devis
-            </Button>
-          </div>
+          <Button
+            variant="secondary"
+            icon={<FileText size={16} />}
+            className="normal-case tracking-normal"
+            onClick={() => setModal('devis')}
+          >
+            Générer devis PDF
+          </Button>
         }
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        notifications={notifications}
       />
       <div className="px-4 py-4 md:p-8 space-y-4 bg-ws-deep/20 min-h-[calc(100vh-120px)]">
-        {quotes.length === 0 ? (
+        {filteredQuotes.length === 0 ? (
           <p className="text-sm text-ws-mist font-mono text-center py-16 ws-card rounded-xl">
-            Aucun devis — créez-en un pour alimenter le pipeline.
+            {searchQuery ? `Aucun devis pour « ${searchQuery} »` : 'Aucun devis — créez-en un pour alimenter le pipeline.'}
           </p>
         ) : (
           <div className="space-y-2">
-            {quotes.map((q) => (
+            {filteredQuotes.map((q) => (
               <div
                 key={q.id}
                 className="ws-card rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-ws-line/80"
@@ -177,7 +229,7 @@ export function QuotesPage({
                   </p>
                   <p className="text-sm font-mono text-ws-bull mt-2 tabular-nums">{formatCurrency(q.amount)}</p>
                   {q.valid_until && (
-                    <p className="text-[10px] text-ws-mist mt-1">Valide jusqu’au {formatDate(q.valid_until)}</p>
+                    <p className="text-[10px] text-ws-mist mt-1">Valide jusqu'au {formatDate(q.valid_until)}</p>
                   )}
                   {q.deposit_requested && q.deposit_amount != null && (
                     <p className="text-[10px] text-ws-gold mt-1">
@@ -229,12 +281,12 @@ export function QuotesPage({
       </div>
 
       <Modal
-        isOpen={modal === 'new' || modal === 'edit'}
+        isOpen={modal === 'edit'}
         onClose={() => {
           setModal(null);
           setEditing(null);
         }}
-        title={modal === 'edit' ? 'Modifier le devis' : 'Nouveau devis'}
+        title="Modifier le devis"
         size="lg"
       >
         <QuoteForm
@@ -249,8 +301,6 @@ export function QuotesPage({
           onSubmit={async (data) => {
             if (editing) {
               await onUpdate(editing.id, data);
-            } else {
-              await onCreate(data);
             }
             setModal(null);
             setEditing(null);

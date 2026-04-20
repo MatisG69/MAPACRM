@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import { classifyWebsite, computeDigitalScore } from './qualify'
+import { classifyPresence, computeDigitalScore } from './qualify'
 import type { WebsiteStatus } from '../types'
 
 export interface ApifyBusinessResult {
@@ -75,7 +75,7 @@ export async function importLeadsToSupabase(
     const name = item.title?.trim()
     if (!name) { stats.errors++; continue }
 
-    const websiteStatus: WebsiteStatus = classifyWebsite(item.website)
+    const websiteStatus: WebsiteStatus = classifyPresence(item.website, item.reviewsCount, item.totalScore)
     const digitalScore = computeDigitalScore({
       websiteStatus,
       hasPhone: Boolean(phone),

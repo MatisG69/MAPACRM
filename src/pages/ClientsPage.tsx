@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Search, Users, Phone, Mail, Building2, Globe, Trash2, CreditCard as Edit2, Radar } from 'lucide-react';
 import { Header } from '../components/layout/Header';
+import type { AppNotification } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
@@ -42,6 +43,27 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const notifications = useMemo<AppNotification[]>(() => {
+    const result: AppNotification[] = [];
+    const interested = clients.filter((c) => c.status === 'interested');
+    if (interested.length > 0) {
+      result.push({
+        id: 'interested',
+        type: 'warning',
+        message: `${interested.length} client${interested.length > 1 ? 's' : ''} intéressé${interested.length > 1 ? 's' : ''} — suivi en attente`,
+      });
+    }
+    const scrapedUntouched = clients.filter((c) => c.is_scraped && c.status === 'prospect');
+    if (scrapedUntouched.length > 0) {
+      result.push({
+        id: 'scraped',
+        type: 'info',
+        message: `${scrapedUntouched.length} prospect${scrapedUntouched.length > 1 ? 's' : ''} scrappé${scrapedUntouched.length > 1 ? 's' : ''} non contacté${scrapedUntouched.length > 1 ? 's' : ''}`,
+      });
+    }
+    return result;
+  }, [clients]);
+
   const filtered = clients.filter((c) => {
     const matchStatus = clientMatchesStatusFilter(c.status, statusFilter);
     const matchSource = sourceFilter === 'all' || (sourceFilter === 'scrapping' && c.is_scraped);
@@ -75,6 +97,9 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
       <Header
         title="Registre clients"
         subtitle={`${clients.length} ligne${clients.length > 1 ? 's' : ''} · carnet de contreparties`}
+        searchValue={search}
+        onSearchChange={setSearch}
+        notifications={notifications}
         actions={
           <div className="flex gap-2">
             <Button

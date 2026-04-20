@@ -11,6 +11,7 @@ import {
   BarChart3,
   FileText,
   BookOpen,
+  Inbox,
   type LucideIcon,
 } from 'lucide-react';
 import { Page } from './types';
@@ -35,4 +36,5 @@ export const MAIN_NAV_ITEMS: NavItemConfig[] = [
   { id: 'analytics', label: 'Analytique', shortLabel: 'Stats', icon: BarChart3 },
   { id: 'invoices', label: 'Facturation', shortLabel: 'Factures', icon: FileText },
   { id: 'playbook', label: 'Guide MAPA', shortLabel: 'Guide', icon: BookOpen },
+  { id: 'demandes', label: 'Demandes', shortLabel: 'Demandes', icon: Inbox },
 ];

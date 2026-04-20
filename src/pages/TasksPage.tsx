@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Search, CheckSquare, Trash2, Pencil } from 'lucide-react';
 import { Header } from '../components/layout/Header';
+import type { AppNotification } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
@@ -33,6 +34,29 @@ export function TasksPage({ tasks, projects, onCreate, onUpdate, onDelete, onNav
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all');
   const [showCreate, setShowCreate] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
+
+  const notifications = useMemo<AppNotification[]>(() => {
+    const result: AppNotification[] = [];
+    const overdueTasks = tasks.filter(
+      (t) => t.status !== 'completed' && t.due_date && isOverdue(t.due_date)
+    );
+    if (overdueTasks.length > 0) {
+      result.push({
+        id: 'overdue-tasks',
+        type: 'warning',
+        message: `${overdueTasks.length} tâche${overdueTasks.length > 1 ? 's' : ''} en retard`,
+      });
+    }
+    const urgent = tasks.filter((t) => t.priority === 'urgent' && t.status !== 'completed');
+    if (urgent.length > 0) {
+      result.push({
+        id: 'urgent-tasks',
+        type: 'warning',
+        message: `${urgent.length} tâche${urgent.length > 1 ? 's' : ''} urgente${urgent.length > 1 ? 's' : ''} non terminée${urgent.length > 1 ? 's' : ''}`,
+      });
+    }
+    return result;
+  }, [tasks]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -61,6 +85,9 @@ export function TasksPage({ tasks, projects, onCreate, onUpdate, onDelete, onNav
       <Header
         title="Bloc-notes d’exécution"
         subtitle="Ordres du jour commercial — relances, jalons, livrables"
+        searchValue={search}
+        onSearchChange={setSearch}
+        notifications={notifications}
         actions={
           <Button icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
             Nouvelle tâche

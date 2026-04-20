@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, FileText, Pencil, Trash2 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
+import type { AppNotification } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
@@ -8,7 +9,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { InvoiceForm } from '../components/invoices/InvoiceForm';
 import { Client, Invoice, Project } from '../lib/types';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, isOverdue } from '../lib/utils';
 
 interface InvoicesPageProps {
   invoices: Invoice[];
@@ -26,10 +27,48 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   const totalPending = invoices
     .filter((i) => i.status === 'sent' || i.status === 'overdue')
     .reduce((s, i) => s + i.amount, 0);
+
+  const notifications = useMemo<AppNotification[]>(() => {
+    const result: AppNotification[] = [];
+    const overdueInvoices = invoices.filter((i) => i.status === 'overdue');
+    if (overdueInvoices.length > 0) {
+      result.push({
+        id: 'overdue-invoices',
+        type: 'warning',
+        message: `${overdueInvoices.length} facture${overdueInvoices.length > 1 ? 's' : ''} en retard de paiement`,
+      });
+    }
+    const today = new Date();
+    const soon = invoices.filter((i) => {
+      if (i.status !== 'sent' || !i.due_date) return false;
+      const d = new Date(i.due_date);
+      const days = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return days >= 0 && days <= 7;
+    });
+    if (soon.length > 0) {
+      result.push({
+        id: 'due-soon',
+        type: 'info',
+        message: `${soon.length} facture${soon.length > 1 ? 's' : ''} à échéance dans 7 jours`,
+      });
+    }
+    return result;
+  }, [invoices]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return invoices;
+    return invoices.filter((inv) =>
+      [inv.invoice_number, inv.client?.name, inv.project?.name, inv.notes].some((f) =>
+        f?.toLowerCase().includes(q)
+      )
+    );
+  }, [invoices, search]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -48,6 +87,9 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
             ? `${invoices.length} ligne(s) · ${formatCurrency(totalPending)} en attente de règlement`
             : 'Journal des montants facturés — suivi des encaissements'
         }
+        searchValue={search}
+        onSearchChange={setSearch}
+        notifications={notifications}
         actions={
           <Button icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
             Nouvelle facture
@@ -63,10 +105,16 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
             description="Consignez chaque facture pour un tableau de bord type reporting financier"
             action={{ label: 'Créer une facture', onClick: () => setShowCreate(true) }}
           />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={<FileText size={24} />}
+            title="Aucun résultat"
+            description={`Aucune facture pour « ${search} »`}
+          />
         ) : (
           <>
             <div className="md:hidden space-y-3">
-              {invoices.map((inv) => (
+              {filtered.map((inv) => (
                 <div
                   key={inv.id}
                   className="ws-card rounded-2xl p-4 border border-ws-line space-y-3 touch-manipulation"
@@ -85,7 +133,11 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
                     <span className="font-mono font-semibold text-ws-bull tabular-nums text-lg">
                       {formatCurrency(inv.amount)}
                     </span>
-                    <span className="font-mono text-xs text-ws-ink">{formatDate(inv.due_date)}</span>
+                    <span
+                      className={`font-mono text-xs ${inv.due_date && inv.status !== 'paid' && inv.status !== 'cancelled' && isOverdue(inv.due_date) ? 'text-ws-bear font-semibold' : 'text-ws-ink'}`}
+                    >
+                      {formatDate(inv.due_date)}
+                    </span>
                   </div>
                   <div className="flex justify-end gap-1">
                     <button
@@ -122,7 +174,7 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((inv) => (
+                {filtered.map((inv) => (
                   <tr key={inv.id} className="border-b border-ws-line/50 hover:bg-ws-raised/40 group">
                     <td className="px-4 py-3 font-mono text-xs text-ws-gold/90">{inv.invoice_number || '—'}</td>
                     <td className="px-4 py-3">
@@ -134,7 +186,13 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
                     <td className="px-4 py-3 text-right font-mono font-semibold text-ws-bull tabular-nums">
                       {formatCurrency(inv.amount)}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-ws-ink">{formatDate(inv.due_date)}</td>
+                    <td className="px-4 py-3 font-mono text-xs">
+                      <span
+                        className={inv.due_date && inv.status !== 'paid' && inv.status !== 'cancelled' && isOverdue(inv.due_date) ? 'text-ws-bear font-semibold' : 'text-ws-ink'}
+                      >
+                        {formatDate(inv.due_date)}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <Badge value={inv.status} />
                     </td>

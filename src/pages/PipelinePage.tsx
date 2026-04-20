@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 import { Header } from '../components/layout/Header';
+import type { AppNotification } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Badge } from '../components/ui/Badge';
 import { OpportunityForm } from '../components/opportunities/OpportunityForm';
 import type { Client, DealStage, Opportunity, Project } from '../lib/types';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, isOverdue } from '../lib/utils';
 import { PIPELINE_STAGES } from '../lib/pipelineStages';
 
 interface PipelinePageProps {
@@ -39,17 +40,62 @@ export function PipelinePage({
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const notifications = useMemo<AppNotification[]>(() => {
+    const result: AppNotification[] = [];
+    const followUp = opportunities.filter((o) => o.stage === 'follow_up');
+    if (followUp.length > 0) {
+      result.push({
+        id: 'follow-up',
+        type: 'warning',
+        message: `${followUp.length} opportunité${followUp.length > 1 ? 's' : ''} en attente de relance`,
+      });
+    }
+    const today = new Date();
+    const closingSoon = opportunities.filter((o) => {
+      if (!o.expected_close_date || !OPEN_STAGES.includes(o.stage)) return false;
+      const days = Math.ceil((new Date(o.expected_close_date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return days >= 0 && days <= 7;
+    });
+    if (closingSoon.length > 0) {
+      result.push({
+        id: 'closing-soon',
+        type: 'info',
+        message: `${closingSoon.length} deal${closingSoon.length > 1 ? 's' : ''} à signer dans 7 jours`,
+      });
+    }
+    const overdue = opportunities.filter(
+      (o) => o.expected_close_date && OPEN_STAGES.includes(o.stage) && isOverdue(o.expected_close_date)
+    );
+    if (overdue.length > 0) {
+      result.push({
+        id: 'overdue-deals',
+        type: 'warning',
+        message: `${overdue.length} deal${overdue.length > 1 ? 's' : ''} dont la date de signature est dépassée`,
+      });
+    }
+    return result;
+  }, [opportunities]);
 
   const byStage = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = q
+      ? opportunities.filter(
+          (o) =>
+            o.name.toLowerCase().includes(q) ||
+            (o.client?.name ?? '').toLowerCase().includes(q)
+        )
+      : opportunities;
     const m = new Map<DealStage, Opportunity[]>();
     for (const s of PIPELINE_STAGES) m.set(s.id, []);
-    for (const o of opportunities) {
+    for (const o of filtered) {
       const list = m.get(o.stage) || [];
       list.push(o);
       m.set(o.stage, list);
     }
     return m;
-  }, [opportunities]);
+  }, [opportunities, search]);
 
   const kpis = useMemo(() => {
     const open = opportunities.filter((o) => OPEN_STAGES.includes(o.stage));
@@ -79,6 +125,9 @@ export function PipelinePage({
       <Header
         title="Pipeline commercial"
         subtitle="Tunnel MAPA · probabilité · montants · signatures prévues"
+        searchValue={search}
+        onSearchChange={setSearch}
+        notifications={notifications}
         actions={
           <Button icon={<Plus size={16} />} className="normal-case tracking-normal" onClick={() => setModal('new')}>
             Opportunité

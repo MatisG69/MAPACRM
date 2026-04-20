@@ -34,6 +34,31 @@ export function classifyWebsite(url: string | null | undefined): WebsiteStatus {
   }
 }
 
+/**
+ * Classification enrichie : utilise les signaux Google Maps (reviews, score)
+ * pour détecter la faible visibilité même quand un site existe.
+ * - < 15 avis ET < 4.0 de note  → low_visibility
+ * - < 5 avis                     → low_visibility
+ * - site présent sans avis       → low_visibility
+ */
+export function classifyPresence(
+  url: string | null | undefined,
+  reviewCount?: number | null,
+  totalScore?: number | null,
+): WebsiteStatus {
+  const base = classifyWebsite(url)
+  if (base !== 'website_ok') return base
+
+  const noReviews = reviewCount == null || reviewCount === 0
+  const fewReviews = reviewCount != null && reviewCount < 5
+  const lowReviewsLowScore =
+    reviewCount != null && reviewCount < 15 && totalScore != null && totalScore < 4.0
+
+  if (noReviews || fewReviews || lowReviewsLowScore) return 'low_visibility'
+
+  return 'website_ok'
+}
+
 export interface ScoreParams {
   websiteStatus: WebsiteStatus
   hasPhone: boolean

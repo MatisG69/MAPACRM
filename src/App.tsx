@@ -15,7 +15,9 @@ import { PipelinePage } from './pages/PipelinePage';
 import { QuotesPage } from './pages/QuotesPage';
 import { RelancesPage } from './pages/RelancesPage';
 import { ContactsPage } from './pages/ContactsPage';
+import { DemandesPage } from './pages/DemandesPage';
 import { useClients } from './hooks/useClients';
+import { useServiceRequests } from './hooks/useServiceRequests';
 import { useProjects } from './hooks/useProjects';
 import { useTasks } from './hooks/useTasks';
 import { useInteractions } from './hooks/useInteractions';
@@ -54,6 +56,7 @@ function App() {
   const calendarHook = useCalendarEvents();
   const opportunitiesHook = useOpportunities();
   const quotesHook = useQuotes();
+  const demandesHook = useServiceRequests();
 
   const navigate = useCallback((p: Page, id?: string) => {
     if (p === 'client-detail' && id) {
@@ -160,7 +163,7 @@ function App() {
 
   return (
     <div className="min-h-[100dvh] min-h-screen bg-black font-sans text-ws-paper">
-      <Sidebar currentPage={page} onNavigate={(p) => navigate(p)} />
+      <Sidebar currentPage={page} onNavigate={(p) => navigate(p)} badges={{ demandes: demandesHook.newCount }} />
       <MobileTabBar currentPage={page} onNavigate={(p) => navigate(p)} />
 
       {localMode && (
@@ -381,6 +384,13 @@ function App() {
               />
             )}
             {page === 'playbook' && <CommercialPlaybookPage />}
+            {page === 'demandes' && (
+              <DemandesPage
+                requests={demandesHook.requests}
+                onUpdateStatus={demandesHook.updateStatus}
+                onDelete={demandesHook.deleteRequest}
+              />
+            )}
           </>
         )}
       </main>

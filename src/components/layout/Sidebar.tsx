@@ -5,11 +5,13 @@ import { MapaLogo } from './MapaLogo';
 interface SidebarProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
+  badges?: Partial<Record<Page, number>>;
 }
 
 /** Regroupement aligné sur un parcours commercial classique */
 const SECTIONS: { label: string; pages: readonly Page[] }[] = [
   { label: 'Synthèse', pages: ['dashboard'] },
+  { label: 'Entrants', pages: ['demandes'] },
   {
     label: 'Portefeuille',
     pages: ['clients', 'contacts', 'projects', 'pipeline', 'quotes', 'relances', 'tasks'],
@@ -18,7 +20,7 @@ const SECTIONS: { label: string; pages: readonly Page[] }[] = [
   { label: 'Méthode', pages: ['playbook'] },
 ];
 
-export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+export function Sidebar({ currentPage, onNavigate, badges = {} }: SidebarProps) {
   const activePage =
     currentPage === 'client-detail'
       ? 'clients'
@@ -96,6 +98,11 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                         <span className="min-w-0 flex-1 text-[13px] font-medium leading-snug tracking-tight">
                           {item.label}
                         </span>
+                        {badges[item.id] != null && badges[item.id]! > 0 && (
+                          <span className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-ws-accent text-ws-void text-[9px] font-bold font-mono px-1">
+                            {badges[item.id]! > 99 ? '99+' : badges[item.id]}
+                          </span>
+                        )}
                       </button>
                     </li>
                   );

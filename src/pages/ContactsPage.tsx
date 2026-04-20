@@ -9,6 +9,9 @@ import {
   Star,
   ExternalLink,
   Sparkles,
+  UserPlus,
+  X,
+  Search,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
@@ -21,6 +24,21 @@ import { getInitials, formatDate } from '../lib/utils';
 
 type FilterStatus = ClientStatus | 'all';
 type FilterFeedback = 'all' | 'with' | 'without';
+
+const STORAGE_KEY = 'mapacrm_contact_list';
+
+function loadContactIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveContactIds(ids: Set<string>) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
+}
 
 interface ContactsPageProps {
   clients: Client[];
@@ -56,6 +74,7 @@ export function ContactsPage({
   onUpdateClient,
   onNavigate,
 }: ContactsPageProps) {
+  const [contactIds, setContactIds] = useState<Set<string>>(loadContactIds);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [feedbackFilter, setFeedbackFilter] = useState<FilterFeedback>('all');
@@ -63,13 +82,44 @@ export function ContactsPage({
   const [saving, setSaving] = useState(false);
   const [draftRating, setDraftRating] = useState<number | null>(null);
   const [draftFeedback, setDraftFeedback] = useState('');
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState('');
+
+  const addContact = (id: string) => {
+    setContactIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      saveContactIds(next);
+      return next;
+    });
+  };
+
+  const removeContact = (id: string) => {
+    setContactIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      saveContactIds(next);
+      return next;
+    });
+  };
+
+  const contactClients = useMemo(
+    () => clients.filter((c) => contactIds.has(c.id)),
+    [clients, contactIds]
+  );
+
+  const availableClients = useMemo(() => {
+    const q = pickerSearch.trim().toLowerCase();
+    return clients.filter((c) => {
+      if (contactIds.has(c.id)) return false;
+      if (!q) return true;
+      return [c.name, c.company, c.email, c.city].some((f) => f?.toLowerCase().includes(q));
+    });
+  }, [clients, contactIds, pickerSearch]);
 
   const byClient = useMemo(() => {
-    const map = new Map<
-      string,
-      { count: number; last: Interaction | null; projects: number }
-    >();
-    for (const c of clients) {
+    const map = new Map<string, { count: number; last: Interaction | null; projects: number }>();
+    for (const c of contactClients) {
       map.set(c.id, { count: 0, last: null, projects: 0 });
     }
     for (const i of interactions) {
@@ -85,19 +135,19 @@ export function ContactsPage({
       if (cur) cur.projects += 1;
     }
     return map;
-  }, [clients, interactions, projects]);
+  }, [contactClients, interactions, projects]);
 
   const stats = useMemo(() => {
-    const withPhone = clients.filter((c) => c.phone?.trim()).length;
-    const rated = clients.filter((c) => c.satisfaction_rating != null).length;
-    const withFb = clients.filter((c) => c.feedback?.trim()).length;
-    const sum = clients.reduce((s, c) => s + (c.satisfaction_rating ?? 0), 0);
+    const withPhone = contactClients.filter((c) => c.phone?.trim()).length;
+    const rated = contactClients.filter((c) => c.satisfaction_rating != null).length;
+    const withFb = contactClients.filter((c) => c.feedback?.trim()).length;
+    const sum = contactClients.reduce((s, c) => s + (c.satisfaction_rating ?? 0), 0);
     const avg = rated ? (sum / rated).toFixed(1) : '—';
-    return { withPhone, rated, withFb, avg, total: clients.length };
-  }, [clients]);
+    return { withPhone, rated, withFb, avg, total: contactClients.length };
+  }, [contactClients]);
 
   const filtered = useMemo(() => {
-    return clients.filter((c) => {
+    return contactClients.filter((c) => {
       if (!clientMatchesStatusFilter(c.status, statusFilter)) return false;
       if (feedbackFilter === 'with' && !c.feedback?.trim()) return false;
       if (feedbackFilter === 'without' && c.feedback?.trim()) return false;
@@ -107,7 +157,7 @@ export function ContactsPage({
         f?.toLowerCase().includes(q)
       );
     });
-  }, [clients, search, statusFilter, feedbackFilter]);
+  }, [contactClients, search, statusFilter, feedbackFilter]);
 
   const openEdit = (c: Client) => {
     setEditClient(c);
@@ -131,14 +181,28 @@ export function ContactsPage({
 
   const telHref = (phone: string) => {
     const digits = phone.replace(/[^\d+]/g, '');
-    return digits.startsWith('+') ? `tel:${digits}` : `tel:${digits}`;
+    return `tel:${digits}`;
   };
 
   return (
     <div>
       <Header
         title="Contacts & retours"
-        subtitle="Annuaire vivant : coordonnées, satisfaction, témoignages et fil d’échanges par client"
+        subtitle="Clients fidélisés · bouche à oreille · témoignages · recontact"
+        searchValue={search}
+        onSearchChange={setSearch}
+        actions={
+          <Button
+            icon={<UserPlus size={16} />}
+            className="normal-case tracking-normal"
+            onClick={() => {
+              setPickerSearch('');
+              setShowPicker(true);
+            }}
+          >
+            Ajouter un contact
+          </Button>
+        }
       />
 
       <div className="px-4 py-4 md:p-8 bg-ws-deep/20 min-h-[calc(100vh-120px)]">
@@ -165,65 +229,70 @@ export function ContactsPage({
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-3 mb-6">
-          <input
-            type="search"
-            placeholder="Rechercher nom, société, email, téléphone, ville, retour…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input flex-1 font-mono text-xs"
-            enterKeyHint="search"
-          />
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ['all', 'Tous'],
-                ['prospect', 'Pistes'],
-                ['telephoned', 'Téléphoné'],
-                ['in_discussion', 'Contacté'],
-                ['interested', 'Intéressé'],
-                ['not_interested', 'Pas intéressé'],
-              ] as const
-            ).map(([v, label]) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setStatusFilter(v)}
-                className={`pill-filter ${statusFilter === v ? 'pill-filter-active' : 'pill-filter-idle'}`}
-              >
-                {label}
-              </button>
-            ))}
+        {contactClients.length > 0 && (
+          <div className="flex flex-col lg:flex-row gap-3 mb-6">
+            <input
+              type="search"
+              placeholder="Rechercher nom, société, email, téléphone, ville, retour…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input flex-1 font-mono text-xs"
+              enterKeyHint="search"
+            />
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ['all', 'Tous'],
+                  ['prospect', 'Pistes'],
+                  ['telephoned', 'Téléphoné'],
+                  ['in_discussion', 'Contacté'],
+                  ['interested', 'Intéressé'],
+                  ['not_interested', 'Pas intéressé'],
+                ] as const
+              ).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setStatusFilter(v)}
+                  className={`pill-filter ${statusFilter === v ? 'pill-filter-active' : 'pill-filter-idle'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ['all', 'Tous retours'],
+                  ['with', 'Avec témoignage'],
+                  ['without', 'Sans témoignage'],
+                ] as const
+              ).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setFeedbackFilter(v)}
+                  className={`pill-filter ${feedbackFilter === v ? 'pill-filter-active' : 'pill-filter-idle'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ['all', 'Tous retours'],
-                ['with', 'Avec témoignage'],
-                ['without', 'Sans témoignage'],
-              ] as const
-            ).map(([v, label]) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setFeedbackFilter(v)}
-                className={`pill-filter ${feedbackFilter === v ? 'pill-filter-active' : 'pill-filter-idle'}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
-        {filtered.length === 0 ? (
+        {contactClients.length === 0 ? (
           <EmptyState
             icon={<Sparkles size={28} />}
-            title={clients.length === 0 ? 'Aucun contact' : 'Aucun résultat'}
-            description={
-              clients.length === 0
-                ? 'Ajoutez des clients depuis le registre pour alimenter cet annuaire.'
-                : 'Affinez les filtres ou la recherche.'
-            }
+            title="Aucun contact ajouté"
+            description="Ajoutez vos clients fidélisés pour constituer votre réseau de bouche à oreille et suivre leur satisfaction."
+            action={{ label: 'Ajouter un contact', onClick: () => { setPickerSearch(''); setShowPicker(true); } }}
+          />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={<Sparkles size={28} />}
+            title="Aucun résultat"
+            description="Affinez les filtres ou la recherche."
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -255,6 +324,14 @@ export function ContactsPage({
                         <Badge value={c.status} />
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => removeContact(c.id)}
+                      className="flex-shrink-0 p-1.5 rounded-lg text-ws-mist/50 hover:text-ws-bear hover:bg-ws-bear-dim transition-colors"
+                      title="Retirer de la liste"
+                    >
+                      <X size={13} />
+                    </button>
                   </div>
 
                   <div className="space-y-2.5 text-sm mb-4">
@@ -351,6 +428,76 @@ export function ContactsPage({
         )}
       </div>
 
+      {/* Picker — ajouter un client à la liste */}
+      <Modal
+        isOpen={showPicker}
+        onClose={() => setShowPicker(false)}
+        title="Ajouter un contact"
+        size="md"
+      >
+        <div className="space-y-3">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ws-mist pointer-events-none" />
+            <input
+              type="search"
+              placeholder="Rechercher un client…"
+              value={pickerSearch}
+              onChange={(e) => setPickerSearch(e.target.value)}
+              className="input pl-9 text-sm font-mono"
+              autoFocus
+            />
+          </div>
+          {availableClients.length === 0 ? (
+            <p className="text-xs text-ws-mist font-mono text-center py-8">
+              {clients.length === contactIds.size
+                ? 'Tous vos clients sont déjà dans la liste.'
+                : 'Aucun client correspond à la recherche.'}
+            </p>
+          ) : (
+            <div className="max-h-80 overflow-y-auto space-y-1.5 pr-1">
+              {availableClients.map((c) => {
+                const clientProjects = projects.filter((p) => p.client_id === c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => addContact(c.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-ws-raised/60 border border-transparent hover:border-ws-line/60 transition-all text-left group"
+                  >
+                    <div
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-xs font-bold text-ws-void"
+                      style={{ backgroundColor: c.avatar_color }}
+                    >
+                      {getInitials(c.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-ws-paper truncate">{c.name}</p>
+                      <p className="text-[11px] font-mono text-ws-mist truncate">
+                        {c.company ? `${c.company} · ` : ''}{clientProjects.length} projet{clientProjects.length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <span className="text-xs text-ws-accent-soft font-mono opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      + Ajouter
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full normal-case tracking-normal"
+              onClick={() => setShowPicker(false)}
+            >
+              Fermer
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal notation */}
       <Modal
         isOpen={Boolean(editClient)}
         onClose={() => setEditClient(null)}
@@ -383,7 +530,7 @@ export function ContactsPage({
                 rows={4}
                 value={draftFeedback}
                 onChange={(e) => setDraftFeedback(e.target.value)}
-                placeholder="Avis, citation, retour d’expérience…"
+                placeholder="Avis, citation, retour d'expérience…"
               />
             </div>
             <div className="flex gap-2 pt-2">

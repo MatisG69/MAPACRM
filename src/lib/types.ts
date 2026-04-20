@@ -224,4 +224,21 @@ export type Page =
   /** Guide méthode & cadre MAPA (usage interne partenaires) */
   | 'playbook'
   /** Annuaire enrichi : coordonnées, satisfaction, historique d’échanges */
-  | 'contacts';
+  | ‘contacts’
+  /** Demandes de prestation reçues depuis le site vitrine */
+  | ‘demandes’;
+
+export type ServiceRequestStatus = ‘new’ | ‘read’ | ‘in_progress’ | ‘converted’ | ‘archived’;
+
+export interface ServiceRequest {
+  id: string;
+  name: string;
+  email: string;
+  company: string | null;
+  project_type: string | null;
+  message: string | null;
+  status: ServiceRequestStatus;
+  source: string | null;
+  created_at: string;
+  updated_at: string;
+}

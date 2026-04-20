@@ -18,6 +18,7 @@ import { Badge } from '../components/ui/Badge';
 import { DonutChart } from '../components/charts/DonutChart';
 import { RevenueDesk } from '../components/revenue/RevenueDesk';
 import { Header } from '../components/layout/Header';
+import type { AppNotification } from '../components/layout/Header';
 import { Client, Project, Task, Interaction, Invoice } from '../lib/types';
 import { formatCurrency, formatRelativeDate, formatDate, isOverdue, daysUntil } from '../lib/utils';
 import { resolveProjectProgress } from '../lib/projectProgress';
@@ -113,11 +114,49 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
     .slice(0, 5);
   const recentInteractions = interactions.slice(0, 5);
 
+  const notifications = useMemo<AppNotification[]>(() => {
+    const result: AppNotification[] = [];
+    const overdueTasks = tasks.filter((t) => t.status !== 'completed' && t.due_date && isOverdue(t.due_date));
+    if (overdueTasks.length > 0) {
+      result.push({
+        id: 'overdue-tasks',
+        type: 'warning',
+        message: `${overdueTasks.length} tâche${overdueTasks.length > 1 ? 's' : ''} en retard`,
+      });
+    }
+    const overdueInvoices = invoices.filter((i) => i.status === 'overdue');
+    if (overdueInvoices.length > 0) {
+      result.push({
+        id: 'overdue-invoices',
+        type: 'warning',
+        message: `${overdueInvoices.length} facture${overdueInvoices.length > 1 ? 's' : ''} en retard de paiement`,
+      });
+    }
+    const interested = clients.filter((c) => c.status === 'interested');
+    if (interested.length > 0) {
+      result.push({
+        id: 'interested-clients',
+        type: 'info',
+        message: `${interested.length} client${interested.length > 1 ? 's' : ''} intéressé${interested.length > 1 ? 's' : ''} à recontacter`,
+      });
+    }
+    const reviewProjects = projects.filter((p) => p.status === 'review');
+    if (reviewProjects.length > 0) {
+      result.push({
+        id: 'review-projects',
+        type: 'info',
+        message: `${reviewProjects.length} projet${reviewProjects.length > 1 ? 's' : ''} en révision`,
+      });
+    }
+    return result;
+  }, [tasks, invoices, clients, projects]);
+
   return (
     <div>
       <Header
         title="Tableau de bord"
         subtitle={`${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · synthèse commerciale`}
+        notifications={notifications}
       />
       <div className="relative px-4 py-6 md:p-8 space-y-6 md:space-y-8 min-h-0 overflow-x-clip">
         <div className="pointer-events-none absolute -right-24 top-0 w-[min(420px,55vw)] h-[420px] opacity-[0.35] hidden sm:block">

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Search, FolderKanban, Trash2, Pencil, ListChecks } from 'lucide-react';
 import { Header } from '../components/layout/Header';
+import type { AppNotification } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
@@ -10,15 +11,15 @@ import { ProjectForm } from '../components/projects/ProjectForm';
 import { ProjectCardPreview } from '../components/projects/ProjectCardPreview';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { Client, Project, ProjectStatus, Task } from '../lib/types';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, isOverdue } from '../lib/utils';
 import { resolveProjectProgress } from '../lib/projectProgress';
 
 const statusFilters: { value: ProjectStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Tous' },
   { value: 'planning', label: 'Planif.' },
   { value: 'in_progress', label: 'En cours' },
-  { value: 'review', label: 'Révision' },
-  { value: 'completed', label: 'Terminés' },
+  { value: 'review', label: 'Revision' },
+  { value: 'completed', label: 'Termines' },
   { value: 'on_hold', label: 'Pause' },
 ];
 
@@ -32,10 +33,10 @@ const STATUS_STRIP: Record<ProjectStatus, string> = {
 
 const SECTION_ORDER: { status: ProjectStatus; label: string }[] = [
   { status: 'in_progress', label: 'En cours' },
-  { status: 'review', label: 'En révision' },
+  { status: 'review', label: 'En revision' },
   { status: 'planning', label: 'Planification' },
   { status: 'on_hold', label: 'En pause' },
-  { status: 'completed', label: 'Terminés' },
+  { status: 'completed', label: 'Termines' },
 ];
 
 interface ProjectsPageProps {
@@ -57,7 +58,7 @@ function ProjectProgressSection({ project, tasks }: { project: Project; tasks: T
         {r.taskDriven ? (
           <span className="inline-flex items-center gap-1 text-[9px] font-mono text-ws-accent-soft">
             <ListChecks size={11} strokeWidth={2} />
-            Tâches
+            Taches
           </span>
         ) : (
           <span className="text-[9px] font-mono text-ws-mist">Manuel</span>
@@ -70,10 +71,10 @@ function ProjectProgressSection({ project, tasks }: { project: Project; tasks: T
             <span className="text-ws-paper font-semibold tabular-nums">
               {r.completed}/{r.total}
             </span>{' '}
-            tâches terminées — la barre se met à jour quand vous cochez une tâche.
+            taches terminees — la barre se met a jour quand vous cochez une tache.
           </>
         ) : (
-          <>Aucune tâche sur ce projet : utilisez le curseur dans « Modifier » ou ajoutez des tâches depuis la fiche.</>
+          <>Aucune tache sur ce projet : utilisez le curseur dans Modifier ou ajoutez des taches depuis la fiche.</>
         )}
       </p>
     </div>
@@ -92,9 +93,33 @@ export function ProjectsPage({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
   const [showCreate, setShowCreate] = useState(false);
+
   const [editProject, setEditProject] = useState<Project | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const notifications = useMemo<AppNotification[]>(() => {
+    const result: AppNotification[] = [];
+    const overdueProjects = projects.filter(
+      (p) => p.end_date && p.status !== 'completed' && isOverdue(p.end_date)
+    );
+    if (overdueProjects.length > 0) {
+      result.push({
+        id: 'overdue-projects',
+        type: 'warning',
+        message: overdueProjects.length + ' projet' + (overdueProjects.length > 1 ? 's' : '') + ' en retard sur l\'echeance',
+      });
+    }
+    const inReview = projects.filter((p) => p.status === 'review');
+    if (inReview.length > 0) {
+      result.push({
+        id: 'review-projects',
+        type: 'info',
+        message: inReview.length + ' projet' + (inReview.length > 1 ? 's' : '') + ' en revision — retour client attendu',
+      });
+    }
+    return result;
+  }, [projects]);
 
   const filtered = projects.filter((p) => {
     const okStatus = statusFilter === 'all' || p.status === statusFilter;
@@ -140,7 +165,7 @@ export function ProjectsPage({
         <ProjectProgressSection project={p} tasks={tasks} />
         <div className="flex flex-wrap gap-3 text-xs font-mono text-ws-accent-soft/90 mt-4 pt-3 border-t border-ws-line/40">
           {p.budget != null && <span>{formatCurrency(p.budget)}</span>}
-          {p.start_date && <span className="text-ws-mist">Début {formatDate(p.start_date)}</span>}
+          {p.start_date && <span className="text-ws-mist">Debut {formatDate(p.start_date)}</span>}
           {p.end_date && <span className="text-ws-mist">Fin {formatDate(p.end_date)}</span>}
         </div>
       </div>
@@ -173,7 +198,10 @@ export function ProjectsPage({
     <div>
       <Header
         title="Book projets"
-        subtitle={`${projects.length} mandat${projects.length > 1 ? 's' : ''} · progression liée aux tâches lorsqu’elles existent`}
+        subtitle={projects.length + ' mandat' + (projects.length > 1 ? 's' : '') + ' · progression liee aux taches'}
+        searchValue={search}
+        onSearchChange={setSearch}
+        notifications={notifications}
         actions={
           <Button icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
             Nouveau projet
@@ -187,7 +215,7 @@ export function ProjectsPage({
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ws-mist" />
             <input
               type="text"
-              placeholder="Filtrer par projet, client…"
+              placeholder="Filtrer par projet, client..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="input pl-9 w-full font-mono text-xs"
@@ -210,11 +238,11 @@ export function ProjectsPage({
         {filtered.length === 0 ? (
           <EmptyState
             icon={<FolderKanban size={24} />}
-            title={search || statusFilter !== 'all' ? 'Aucun résultat' : 'Aucun projet'}
+            title={search || statusFilter !== 'all' ? 'Aucun resultat' : 'Aucun projet'}
             description={
               search || statusFilter !== 'all'
                 ? 'Modifiez les filtres'
-                : 'Ouvrez une ligne pour chaque mandat (site, refonte, maintenance…)'
+                : 'Ouvrez une ligne pour chaque mandat (site, refonte, maintenance...)'
             }
             action={
               !search && statusFilter === 'all'
@@ -277,7 +305,7 @@ export function ProjectsPage({
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         title="Supprimer le projet"
-        description="Les tâches liées seront conservées sans projet. Les factures seront dissociées de ce projet."
+        description="Les taches liees seront conservees sans projet. Les factures seront dissociees de ce projet."
         loading={deleteLoading}
       />
     </div>
