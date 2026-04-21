@@ -196,8 +196,11 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
                         </span>
                       )}
                       {c.is_scraped && <Badge value="scrapping" />}
-                      {c.is_scraped && c.website_status && c.website_status !== 'website_ok' && (
-                        <Badge value={c.website_status} />
+                      {c.website_status && ['no_website','social_only','directory_only','broken_website'].includes(c.website_status) && (
+                        <Badge value="no_website" />
+                      )}
+                      {c.website_status && ['low_visibility','outdated_website'].includes(c.website_status) && (
+                        <Badge value="seo_needed" />
                       )}
                     </div>
                   </div>

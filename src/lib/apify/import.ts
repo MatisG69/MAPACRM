@@ -24,6 +24,8 @@ export interface ImportStats {
   errors: number
 }
 
+const HAS_REAL_WEBSITE: WebsiteStatus[] = ['website_ok', 'low_visibility', 'outdated_website']
+
 const AVATAR_COLORS = [
   '#8B7355', '#6B5B93', '#88B04B', '#92A8D1',
   '#955251', '#B565A7', '#009B77', '#DD4132',
@@ -82,6 +84,12 @@ export async function importLeadsToSupabase(
       hasEmail: Boolean(item.email),
       reviewCount: item.reviewsCount,
     })
+
+    if (HAS_REAL_WEBSITE.includes(websiteStatus)) {
+      stats.skipped++
+      continue
+    }
+
     stats.qualified++
 
     if (

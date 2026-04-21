@@ -67,6 +67,7 @@ const variantStyles: Record<string, string> = {
   outdated_website: 'bg-yellow-500/15 text-yellow-200 border-yellow-500/35',
   low_visibility: 'bg-amber-500/15 text-amber-200 border-amber-500/35',
   website_ok: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35',
+  seo_needed: 'bg-amber-500/15 text-amber-200 border-amber-500/35',
 };
 
 const variantLabels: Record<string, string> = {
@@ -120,13 +121,14 @@ const variantLabels: Record<string, string> = {
   // Scraping
   scrapping: 'Scrapping',
   // Website status
-  no_website: 'Pas de site',
-  broken_website: 'Site cassé',
-  social_only: 'Réseaux seuls',
-  directory_only: 'Annuaire seul',
-  outdated_website: 'Site obsolète',
-  low_visibility: 'Faible visibilité',
+  no_website: 'Pas de site web',
+  broken_website: 'Pas de site web',
+  social_only: 'Pas de site web',
+  directory_only: 'Pas de site web',
+  outdated_website: 'SEO à travailler',
+  low_visibility: 'SEO à travailler',
   website_ok: 'Site présent',
+  seo_needed: 'SEO à travailler',
 };
 
 interface BadgeProps {
