@@ -12,6 +12,7 @@ import {
   FileText,
   BookOpen,
   Inbox,
+  LineChart,
   type LucideIcon,
 } from 'lucide-react';
 import { Page } from './types';
@@ -37,4 +38,5 @@ export const MAIN_NAV_ITEMS: NavItemConfig[] = [
   { id: 'invoices', label: 'Facturation', shortLabel: 'Factures', icon: FileText },
   { id: 'playbook', label: 'Guide MAPA', shortLabel: 'Guide', icon: BookOpen },
   { id: 'demandes', label: 'Demandes', shortLabel: 'Demandes', icon: Inbox },
+  { id: 'analyse', label: 'Analyse site', shortLabel: 'Analyse', icon: LineChart },
 ];

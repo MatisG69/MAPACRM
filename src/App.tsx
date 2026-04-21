@@ -11,6 +11,7 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { CommercialPlaybookPage } from './pages/CommercialPlaybookPage';
+import { AnalyseSitePage } from './pages/AnalyseSitePage';
 import { PipelinePage } from './pages/PipelinePage';
 import { QuotesPage } from './pages/QuotesPage';
 import { RelancesPage } from './pages/RelancesPage';
@@ -384,6 +385,7 @@ function App() {
               />
             )}
             {page === 'playbook' && <CommercialPlaybookPage />}
+            {page === 'analyse' && <AnalyseSitePage />}
             {page === 'demandes' && (
               <DemandesPage
                 requests={demandesHook.requests}

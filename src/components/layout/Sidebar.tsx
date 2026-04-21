@@ -16,7 +16,7 @@ const SECTIONS: { label: string; pages: readonly Page[] }[] = [
     label: 'Portefeuille',
     pages: ['clients', 'contacts', 'projects', 'pipeline', 'quotes', 'relances', 'tasks'],
   },
-  { label: 'Pilotage', pages: ['calendar', 'analytics', 'invoices'] },
+  { label: 'Pilotage', pages: ['calendar', 'analytics', 'invoices', 'analyse'] },
   { label: 'Méthode', pages: ['playbook'] },
 ];
 

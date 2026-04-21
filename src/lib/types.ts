@@ -226,7 +226,9 @@ export type Page =
   /** Annuaire enrichi : coordonnées, satisfaction, historique d’échanges */
   | ‘contacts’
   /** Demandes de prestation reçues depuis le site vitrine */
-  | ‘demandes’;
+  | ‘demandes’
+  /** Analyse de trafic et performances du site vitrine */
+  | ‘analyse’;
 
 export type ServiceRequestStatus = ‘new’ | ‘read’ | ‘in_progress’ | ‘converted’ | ‘archived’;
 
