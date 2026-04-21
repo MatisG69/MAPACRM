@@ -173,25 +173,25 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
                 className={`ws-card-hover rounded-lg group border border-ws-line/80 border-l-[3px] shadow-[0_16px_40px_-24px_rgba(0,0,0,0.75)] ${CLIENT_CARD_STRIP[c.status]}`}
               >
                 <div className="p-5 cursor-pointer" onClick={() => onSelect(c.id)} role="presentation">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div
                         className="w-12 h-12 rounded-md flex items-center justify-center text-ws-void font-bold text-sm flex-shrink-0 font-mono border border-white/10"
                         style={{ backgroundColor: c.avatar_color }}
                       >
                         {getInitials(c.name)}
                       </div>
-                      <div>
-                        <p className="font-semibold text-ws-paper group-hover:text-ws-accent-soft transition-colors font-display tracking-tight">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-ws-paper group-hover:text-ws-accent-soft transition-colors font-display tracking-tight truncate">
                           {c.name}
                         </p>
-                        {c.company && <p className="text-xs text-ws-ink mt-0.5 font-mono">{c.company}</p>}
+                        {c.company && <p className="text-xs text-ws-ink mt-0.5 font-mono truncate">{c.company}</p>}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0 max-w-[45%]">
                       <Badge value={c.status} />
                       {c.profession && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-ws-line bg-ws-panel text-ws-ink whitespace-nowrap">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-ws-line bg-ws-panel text-ws-ink truncate max-w-full">
                           {c.profession}
                         </span>
                       )}
@@ -207,25 +207,25 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
 
                   <div className="space-y-1.5">
                     {c.email && (
-                      <div className="flex items-center gap-2 text-xs text-ws-ink">
+                      <div className="flex items-center gap-2 text-xs text-ws-ink min-w-0">
                         <Mail size={12} className="text-ws-mist flex-shrink-0" />
                         <span className="truncate font-mono">{c.email}</span>
                       </div>
                     )}
                     {c.phone && (
-                      <div className="flex items-center gap-2 text-xs text-ws-ink">
+                      <div className="flex items-center gap-2 text-xs text-ws-ink min-w-0">
                         <Phone size={12} className="text-ws-mist flex-shrink-0" />
-                        <span className="font-mono">{c.phone}</span>
+                        <span className="font-mono truncate">{c.phone}</span>
                       </div>
                     )}
                     {c.city && (
-                      <div className="flex items-center gap-2 text-xs text-ws-ink">
+                      <div className="flex items-center gap-2 text-xs text-ws-ink min-w-0">
                         <Building2 size={12} className="text-ws-mist flex-shrink-0" />
-                        <span>{c.city}</span>
+                        <span className="truncate">{c.city}</span>
                       </div>
                     )}
                     {c.website && (
-                      <div className="flex items-center gap-2 text-xs text-ws-ink">
+                      <div className="flex items-center gap-2 text-xs text-ws-ink min-w-0">
                         <Globe size={12} className="text-ws-mist flex-shrink-0" />
                         <span className="truncate font-mono">{c.website}</span>
                       </div>
@@ -233,18 +233,18 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
                   </div>
                 </div>
 
-                <div className="px-5 py-3 border-t border-ws-line flex items-center justify-between bg-ws-deep/40">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-ws-accent-soft/90">
+                <div className="px-5 py-3 border-t border-ws-line flex items-center justify-between gap-2 bg-ws-deep/40">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-ws-accent-soft/90 truncate">
                       {c.source || 'Source N/C'}
                     </span>
                     {c.digital_score != null && (
-                      <span className="text-[10px] font-mono text-violet-300 border border-violet-500/30 bg-violet-600/10 rounded px-1.5 py-0.5">
+                      <span className="text-[10px] font-mono text-violet-300 border border-violet-500/30 bg-violet-600/10 rounded px-1.5 py-0.5 flex-shrink-0">
                         Score {c.digital_score}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 flex-shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"
                       onClick={(e) => {
