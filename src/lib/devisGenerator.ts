@@ -9,6 +9,8 @@ export interface DevisParams {
   validityDays?: number
   depositPercent?: number
   customNotes?: string
+  /** Si true, ajoute les Conditions Générales de Vente sur la page 2 du PDF */
+  includeCGV?: boolean
 }
 
 const PROJECT_PRICES: Partial<Record<string, number>> = {
@@ -118,6 +120,7 @@ export function generateDevisHTML(params: DevisParams): string {
     validityDays = 30,
     depositPercent = 30,
     customNotes,
+    includeCGV = false,
   } = params
 
   const deposit = Math.round(amount * depositPercent / 100)
@@ -135,17 +138,33 @@ export function generateDevisHTML(params: DevisParams): string {
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  *{margin:0;padding:0;box-sizing:border-box;}
+  *{margin:0;padding:0;box-sizing:border-box;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
 
+  /* Fond noir sur toute la toile Puppeteer, quel que soit le nombre de pages */
+  @page{size:A4 portrait;margin:0;}
   html,body{
-    width:210mm;height:297mm;
     background:#0A0A0A;color:#E8E0D0;
-    font-family:'Inter',sans-serif;font-size:8.5pt;line-height:1.6;
+    font-family:'Inter',sans-serif;font-size:9pt;line-height:1.6;
   }
 
-  body{
-    padding:12mm 14mm;
+  /* Chaque .page = une feuille A4 strictement dimensionnée + fond noir plein */
+  .page{
+    width:210mm;height:297mm;min-height:297mm;
+    padding:14mm 16mm;
     display:flex;flex-direction:column;
+    background:#0A0A0A;
+    position:relative;
+    box-sizing:border-box;
+    page-break-after:always;
+    break-after:page;
+  }
+  .page:last-child{page-break-after:auto;break-after:auto;}
+
+  /* Zone centrale du devis qui remplit l'espace disponible */
+  .devis-body{
+    flex:1;display:flex;flex-direction:column;
+    justify-content:space-evenly;
   }
 
   /* ── En-tête ── */
@@ -264,51 +283,132 @@ export function generateDevisHTML(params: DevisParams): string {
     color:#9E9080;font-size:7.5pt;margin-top:1px;
   }
 
+  /* ══════════════════════════════════════════════
+     CGV — 2 pages A4, typographie lisible (cabinet d'avocats)
+     Flow vertical classique (plus de column-count qui débordait)
+     ══════════════════════════════════════════════ */
+  .cgv-head{
+    border-bottom:1px solid rgba(201,168,76,.3);
+    padding-bottom:10px;margin-bottom:14px;
+    display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  }
+  .cgv-head .eyebrow{
+    font-size:6.5pt;letter-spacing:.35em;text-transform:uppercase;color:#9E9080;
+    margin-bottom:3px;
+  }
+  .cgv-head .ttl{
+    font-family:'Playfair Display',serif;font-size:17pt;color:#E8E0D0;letter-spacing:.02em;
+  }
+  .cgv-head .meta{font-size:7pt;color:#9E9080;letter-spacing:.05em;text-align:right;line-height:1.6;}
+
+  .cgv-preamble{
+    font-size:8pt;line-height:1.65;color:#B5ABA0;
+    background:#0E0E0E;border-left:2px solid #C9A84C;
+    padding:10px 14px;margin-bottom:12px;
+    text-align:justify;
+  }
+  .cgv-preamble strong{color:#E2C97E;font-weight:500;}
+
+  .cgv-body{
+    flex:1;
+    font-size:7.5pt;line-height:1.6;color:#BAB0A0;
+    text-align:justify;
+  }
+  .cgv-art{
+    margin-bottom:9px;
+    break-inside:avoid;
+  }
+  .cgv-art h5{
+    font-size:7pt;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+    color:#C9A84C;margin-bottom:4px;
+  }
+  .cgv-art p{margin-bottom:3px;color:#BAB0A0;}
+  .cgv-art ul{margin:3px 0 4px 14px;padding:0;}
+  .cgv-art li{margin-bottom:2px;list-style:'—  ';padding-left:2px;color:#A89D8D;}
+  .cgv-art strong{color:#E2C97E;font-weight:500;}
+  .cgv-art em{font-style:italic;color:#C8BFB0;}
+
+  .cgv-continued{
+    font-size:6.5pt;letter-spacing:.18em;text-transform:uppercase;color:#6F645A;
+    text-align:right;padding-top:8px;
+    border-top:1px solid rgba(201,168,76,.12);
+  }
+
+  .cgv-sign{
+    margin-top:14px;padding-top:10px;
+    border-top:1px solid rgba(201,168,76,.25);
+    display:grid;grid-template-columns:1fr 1fr;gap:16px;
+    font-size:7pt;color:#9E9080;
+  }
+  .cgv-sign .box{
+    border:1px solid rgba(201,168,76,.2);background:#0E0E0E;
+    padding:10px 14px;min-height:60px;
+  }
+  .cgv-sign .box .lbl{
+    font-size:6.2pt;letter-spacing:.22em;text-transform:uppercase;
+    color:#C9A84C;margin-bottom:5px;font-weight:600;
+  }
+  .cgv-sign .box .desc{font-size:7pt;color:#A89D8D;line-height:1.65;}
+
+  .cgv-footer{
+    margin-top:10px;padding-top:6px;
+    border-top:1px solid rgba(201,168,76,.15);
+    font-size:6pt;letter-spacing:.2em;text-transform:uppercase;
+    color:#6F645A;text-align:center;
+  }
+
   @media print{
-    @page{margin:0;size:A4 portrait;}
-    html,body{width:210mm;height:297mm;}
-    body{
-      padding:6mm 10mm;
-      height:297mm;
+    .cgv-head .ttl{font-size:16pt;}
+    .cgv-head .eyebrow{font-size:6pt;}
+    .cgv-head .meta{font-size:6.8pt;}
+    .cgv-preamble{font-size:7.5pt;line-height:1.6;padding:9px 12px;margin-bottom:10px;}
+    .cgv-body{font-size:7.2pt;line-height:1.58;}
+    .cgv-art h5{font-size:6.8pt;margin-bottom:3px;}
+    .cgv-art{margin-bottom:7px;}
+    .cgv-sign .box{min-height:50px;padding:9px 12px;}
+    .cgv-sign .box .desc{font-size:6.8pt;}
+    .cgv-footer{font-size:5.8pt;}
+    .cgv-continued{font-size:6pt;}
+  }
+
+  @media print{
+    html,body{width:210mm;background:#0A0A0A;}
+    body{font-size:9pt;line-height:1.55;}
+    .page{
+      width:210mm;height:297mm;min-height:297mm;
+      padding:14mm 16mm;
       overflow:hidden;
-      font-size:7pt;
-      line-height:1.4;
     }
-    .logo{font-size:16pt;}
-    .agency{font-size:4.5pt;}
-    .doc-title{font-size:9pt;}
-    .diamond-row{margin:4px 0;}
-    .header{padding-bottom:6px;margin-bottom:7px;}
-    .slabel{margin-top:6px;margin-bottom:4px;font-size:4.5pt;}
-    .info-block{padding:7px 10px;}
-    .info-block .val{font-size:7pt;}
-    .info-block .line{font-size:6.5pt;}
-    .prest-list li{padding:3px 0;font-size:6.5pt;}
-    .price-table td{padding:5px 8px;font-size:6.5pt;}
-    .price-table th{padding:4px 8px;font-size:4.5pt;}
-    .total-block{padding:7px 12px;margin-top:5px;}
-    .tline{padding:2px 0;font-size:6.5pt;}
-    .tline.main{font-size:8.5pt;padding-top:5px;}
-    .tline.main .val{font-size:10pt;}
-    .cond-block{padding:6px 10px;font-size:6pt;}
-    .footer{margin-top:auto;padding-top:6px;}
+    .logo{font-size:24pt;}
+    .agency{font-size:6pt;}
+    .doc-title{font-size:13pt;}
+    .header{padding-bottom:12px;margin-bottom:14px;}
+    .slabel{font-size:6pt;margin-top:12px;margin-bottom:10px;}
+    .info-block{padding:12px 14px;}
+    .info-block .val{font-size:9.5pt;}
+    .info-block .line{font-size:8.5pt;line-height:1.75;}
+    .prest-list li{padding:6px 0;font-size:9pt;}
+    .price-table th{padding:6px 8px;font-size:6pt;}
+    .price-table td{padding:8px 8px;font-size:9pt;}
+    .total-block{padding:12px 14px;margin-top:10px;}
+    .tline{padding:4px 0;font-size:9pt;}
+    .tline.main{font-size:11pt;padding-top:8px;}
+    .tline.main .val{font-size:13pt;}
+    .cond-block{padding:10px 12px;font-size:8.5pt;line-height:1.7;}
+    .footer{padding-top:10px;}
   }
 
   @media screen{
     html{
       background:#0d0d0d;
       min-height:100vh;
-      display:flex;
-      justify-content:center;
-      align-items:flex-start;
       padding:40px 16px;
-      width:auto;height:auto;
     }
     body{
-      width:210mm;
-      min-height:297mm;
-      height:auto;
+      display:flex;flex-direction:column;align-items:center;gap:24px;
       margin:0;
+    }
+    .page{
       box-shadow:0 24px 80px rgba(0,0,0,.7);
       border-radius:2px;
     }
@@ -317,12 +417,16 @@ export function generateDevisHTML(params: DevisParams): string {
 </head>
 <body>
 
+<section class="page page-devis">
+
   <div class="header">
     <div class="logo">MAPA</div>
     <div class="agency">Développement · Solutions Digitales</div>
     <div class="diamond-row">♦</div>
     <div class="doc-title">${missionTitle}</div>
   </div>
+
+  <div class="devis-body">
 
   <div class="slabel">Parties</div>
   <div class="grid2">
@@ -374,7 +478,7 @@ export function generateDevisHTML(params: DevisParams): string {
   <div class="total-block">
     <div class="tline"><span>Acompte à la commande (${depositPercent}%)</span><span class="val">${formatEur(deposit)}</span></div>
     <div class="tline"><span>Solde à la livraison</span><span class="val">${formatEur(solde)}</span></div>
-    <div class="tline main"><span>Total TTC</span><span class="val">${formatEur(amount)}</span></div>
+    <div class="tline main"><span>Total HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(amount)}</span></div>
   </div>
 
   <div class="slabel">Conditions</div>
@@ -385,12 +489,204 @@ export function generateDevisHTML(params: DevisParams): string {
     <strong>Propriété</strong> — Les éléments livrés deviennent propriété du client après règlement intégral.
   </div>
 
+  </div><!-- /devis-body -->
+
   <div class="footer">
     <div class="diamond-row">♦</div>
     <div class="brand">MAPA Développement</div>
     <div class="name">Matis Gouyet</div>
   </div>
 
+</section>
+
+${includeCGV ? renderCGVPage({ quoteNumber, clientName: client.name }) : ''}
+
 </body>
 </html>`
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PAGE 2 — Conditions Générales de Vente
+   Rédigées pour une présentation à un cabinet d'avocats :
+   fondements légaux explicites (Code de commerce, Code civil,
+   Code de la propriété intellectuelle, Code de la consommation,
+   RGPD), structure ordonnée, zéro clause floue.
+   ═══════════════════════════════════════════════════════════ */
+function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string {
+  const { quoteNumber, clientName } = ctx
+  const updatedAt = today()
+  const safe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+  const cgvHeader = (pageLabel: string) => `
+  <div class="cgv-head">
+    <div>
+      <div class="eyebrow">Annexe contractuelle</div>
+      <div class="ttl">Conditions Générales de Vente</div>
+    </div>
+    <div class="meta">
+      En vigueur au ${updatedAt}<br>
+      Devis <strong style="color:#E2C97E">${safe(quoteNumber)}</strong> · ${safe(clientName)}<br>
+      ${pageLabel}
+    </div>
+  </div>`
+
+  const articlesPartOne = `
+    <div class="cgv-art">
+      <h5>Art. 1 - Objet</h5>
+      <p>Les présentes CGV ont pour objet de définir les conditions dans lesquelles le Prestataire fournit au Client des prestations de conception, développement, intégration, maintenance et hébergement de sites internet, d'applications web et de logiciels sur mesure, sur la base d'un devis préalablement accepté.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 2 - Devis et formation du contrat</h5>
+      <p>Chaque prestation fait l'objet d'un <strong>devis détaillé</strong>, valable trente (30) jours à compter de son émission. Le contrat est réputé formé à la date de réception par le Prestataire du devis signé ainsi que, le cas échéant, du versement de l'acompte. Toute modification du périmètre en cours d'exécution fera l'objet d'un <strong>avenant écrit</strong> et d'une révision tarifaire si applicable.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 3 - Prix et modalités de paiement</h5>
+      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. Sauf stipulation contraire : acompte de <strong>30 %</strong> à la commande, solde à la livraison. Les paiements sont effectués par virement bancaire ; aucun escompte pour paiement anticipé n'est consenti.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 4 - Pénalités de retard et indemnité forfaitaire</h5>
+      <p>Conformément à l'<em>article L. 441-10 du Code de commerce</em>, tout retard de paiement entraîne de plein droit, sans mise en demeure préalable, l'application de pénalités au taux directeur semestriel de la Banque centrale européenne majoré de dix (<strong>10</strong>) points de pourcentage. En application de l'<em>article D. 441-5 du Code de commerce</em>, une <strong>indemnité forfaitaire de 40 €</strong> pour frais de recouvrement est également due, sans préjudice d'une indemnisation complémentaire sur justificatif.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 5 - Délais d'exécution</h5>
+      <p>Les délais d'exécution sont donnés à titre indicatif. Le Prestataire met tout en œuvre pour les respecter ; aucun retard ne saurait toutefois ouvrir droit à dommages et intérêts, sauf faute lourde ou dolosive. Les délais sont prorogés de plein droit en cas de retard imputable au Client (défaut de validation, de contenus, d'accès) ou de force majeure.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 6 - Obligations du Client</h5>
+      <p>Le Client s'engage à fournir, dans les délais convenus, l'ensemble des éléments nécessaires à l'exécution de la prestation (contenus, visuels, accès techniques, informations légales). Il <strong>garantit le Prestataire</strong> contre toute action fondée sur la méconnaissance de droits de tiers (propriété intellectuelle, droit à l'image, droits voisins) au titre des éléments qu'il transmet. Il désigne un interlocuteur unique disposant du pouvoir de validation.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 7 - Obligations du Prestataire</h5>
+      <p>Le Prestataire s'engage à exécuter sa mission conformément aux règles de l'art et au périmètre contractuel. Il est tenu à une <strong>obligation de moyens</strong> et non de résultat. Il conserve le libre choix des moyens techniques et humains mis en œuvre.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 8 - Livraison, recette et garantie</h5>
+      <p>Le Client dispose d'un délai de <strong>sept (7) jours calendaires</strong> à compter de la livraison pour émettre, par écrit, ses réserves motivées ; à défaut, la livraison est réputée <strong>acceptée sans réserve</strong>. Le Prestataire garantit la conformité des livrables pendant <strong>trente (30) jours calendaires</strong> à compter de la livraison, à l'exclusion des anomalies résultant d'une utilisation non conforme, d'une intervention de tiers, d'un défaut des éléments fournis par le Client ou d'évolutions technologiques postérieures.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 9 - Suivi, maintenance, hébergement et évolutions</h5>
+      <p><strong>9.1 Prestation de suivi.</strong> La garantie de conformité prévue à l'article 8 ne constitue pas une prestation de maintenance. Au-delà de ce délai, toute intervention (correction, ajout, modification, évolution) fait l'objet d'une <strong>prestation distincte</strong>, sur devis ou dans le cadre d'un contrat de suivi dédié.</p>
+      <p><strong>9.2 Contrat de suivi.</strong> Le Client peut souscrire, à tout moment, un contrat de <strong>suivi et maintenance</strong> couvrant notamment : mises à jour techniques, supervision de la disponibilité, sauvegardes régulières, corrections d'anomalies, ajustements mineurs de contenu et accompagnement fonctionnel. Les modalités (périmètre, heures incluses, délais de réponse, tarif, durée) sont précisées dans un contrat distinct ou un bon de commande spécifique.</p>
+      <p><strong>9.3 Durée et reconduction.</strong> Sauf stipulation contraire, le contrat de suivi est conclu pour une durée initiale de <strong>douze (12) mois</strong>, reconductible par tacite reconduction pour des périodes successives de même durée. Chaque partie peut y mettre fin par lettre recommandée avec accusé de réception adressée au moins <strong>trente (30) jours</strong> avant le terme en cours.</p>
+      <p><strong>9.4 Hébergement et nom de domaine.</strong> L'hébergement du site et la gestion du nom de domaine constituent des prestations <strong>optionnelles</strong>, facturées séparément et reconductibles annuellement. À défaut de souscription, le Client conserve la charge exclusive de son hébergement et du renouvellement de son nom de domaine. Le Prestataire transfère, sur demande écrite, l'ensemble des accès et codes sources nécessaires à une migration.</p>
+      <p><strong>9.5 Évolutions et demandes complémentaires.</strong> Toute demande excédant le périmètre initial (nouvelles fonctionnalités, refonte de sections, intégrations tierces) fait l'objet d'un <strong>devis complémentaire</strong> facturé au <strong>taux journalier</strong> en vigueur communiqué sur demande.</p>
+      <p><strong>9.6 Exclusions.</strong> Ne sont pas couverts par le contrat de suivi, sauf mention expresse : refontes graphiques, migrations technologiques, nouvelles fonctionnalités, interventions consécutives à une modification du livrable par le Client ou un tiers, et incidents imputables à l'hébergeur, aux services tiers ou à une défaillance réseau.</p>
+      <p><strong>9.7 Fin du suivi.</strong> À l'issue du contrat de suivi, quelle qu'en soit la cause, le Prestataire n'est plus tenu à aucune obligation de maintenance ; il remet au Client, sur demande écrite, l'ensemble des éléments nécessaires à la continuité d'exploitation (accès, codes sources, procédures).</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 10 - Propriété intellectuelle</h5>
+      <p>Conformément aux <em>articles L. 111-1 et suivants du Code de la propriété intellectuelle</em>, le Prestataire demeure titulaire des droits d'auteur sur les éléments qu'il crée jusqu'au <strong>paiement intégral</strong> du prix. Le paiement intégral emporte cession, au sens de l'<em>article L. 131-3</em>, des droits patrimoniaux d'exploitation (reproduction, représentation, adaptation) sur les livrables créés spécifiquement pour le Client, pour la France et pour la durée légale de protection, dans la limite de l'usage contractuel.</p>
+      <p>Demeurent la propriété exclusive du Prestataire : les méthodes, le savoir-faire, les outils, les bibliothèques génériques et tout élément antérieur ou indépendant de la prestation. Toute reproduction non autorisée constitue une contrefaçon au sens de l'<em>article L. 335-2</em>.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 11 - Réserve de propriété</h5>
+      <p>Conformément à la <em>loi n° 80-335 du 12 mai 1980</em>, les livrables demeurent la propriété du Prestataire jusqu'au paiement intégral du prix et de ses accessoires. En cas de non-paiement à l'échéance, le Prestataire se réserve le droit de suspendre l'accès aux livrables ou de les retirer.</p>
+    </div>`
+
+  const articlesPartTwo = `
+    <div class="cgv-art">
+      <h5>Art. 12 - Confidentialité</h5>
+      <p>Chaque partie s'engage à préserver la confidentialité des informations non publiques échangées, pour toute la durée du contrat et pour une durée de <strong>trois (3) ans</strong> suivant son terme, sauf divulgation imposée par la loi ou une décision de justice.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 13 - Données personnelles (RGPD)</h5>
+      <p>Les traitements de données personnelles sont conduits dans le respect du <em>Règlement (UE) 2016/679</em> et de la <em>loi n° 78-17 du 6 janvier 1978 modifiée</em>. Lorsque le Prestataire traite des données pour le compte du Client (hébergement, formulaires), il agit en qualité de <strong>sous-traitant</strong> au sens de l'<em>article 28 du RGPD</em> ; les modalités font alors l'objet, si nécessaire, d'un accord de sous-traitance distinct.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 14 - Responsabilité</h5>
+      <p>La responsabilité du Prestataire ne peut être engagée que pour les <strong>dommages directs, matériels et prouvés</strong> résultant d'une faute qui lui est personnellement imputable. Sont exclus les dommages indirects (pertes d'exploitation, de clientèle, de données, manque à gagner, atteinte à l'image). Sauf dommages corporels ou faute lourde ou dolosive, la responsabilité globale du Prestataire est plafonnée au <strong>montant hors taxes effectivement perçu</strong> au titre de la prestation concernée.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 15 - Force majeure</h5>
+      <p>Aucune partie ne saurait voir sa responsabilité engagée en cas de force majeure au sens de l'<em>article 1218 du Code civil</em>. Si un tel événement se prolonge au-delà de <strong>soixante (60) jours</strong>, chaque partie peut résilier le contrat sans indemnité par lettre recommandée avec accusé de réception.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 16 - Résiliation</h5>
+      <p>En cas d'inexécution d'une obligation essentielle et à défaut de régularisation dans un délai de <strong>quinze (15) jours</strong> suivant mise en demeure restée infructueuse, la partie non défaillante peut résilier le contrat de plein droit. La résiliation aux torts du Client emporte exigibilité immédiate de l'ensemble des sommes dues ; l'acompte versé reste acquis au Prestataire à titre de frais engagés.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 17 - Droit de rétractation (consommateur)</h5>
+      <p>Le Client <em>consommateur</em> bénéficie, conformément à l'<em>article L. 221-18 du Code de la consommation</em>, d'un délai de rétractation de <strong>quatorze (14) jours</strong> à compter de la conclusion du contrat à distance. Ce droit ne s'exerce pas, conformément à l'<em>article L. 221-28, 1°</em>, pour les prestations pleinement exécutées avec accord exprès préalable du Client et renonciation expresse à son droit de rétractation.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 18 - Médiation de la consommation</h5>
+      <p>Conformément aux <em>articles L. 611-1 et suivants du Code de la consommation</em>, tout Client consommateur peut recourir gratuitement à un médiateur en cas de litige n'ayant pu être résolu à l'amiable. Plateforme européenne de règlement en ligne : <em>https://ec.europa.eu/consumers/odr</em>.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 19 - Non-sollicitation</h5>
+      <p>Chaque partie s'engage, pendant l'exécution du contrat et pendant douze (<strong>12</strong>) mois suivant son terme, à ne pas solliciter ni recruter, directement ou indirectement, tout collaborateur ou sous-traitant de l'autre partie ayant participé à la prestation. Tout manquement sera sanctionné par une indemnité équivalant à six (6) mois de rémunération brute de la personne concernée.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 20 - Référencement commercial</h5>
+      <p>Sauf opposition expresse et écrite du Client, le Prestataire est autorisé à <strong>citer le nom du Client et la nature des prestations réalisées</strong> à titre de référence commerciale (portfolio, dossiers, pitchs).</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 21 - Modifications - Nullité partielle</h5>
+      <p>Les CGV applicables sont celles en vigueur à la date d'acceptation du devis. La nullité ou l'inapplicabilité de l'une quelconque des stipulations <strong>n'affecte pas la validité des autres</strong> ; les parties s'engagent alors à négocier de bonne foi, au sens de l'<em>article 1104 du Code civil</em>, une stipulation de substitution d'effet économique équivalent.</p>
+    </div>
+
+    <div class="cgv-art">
+      <h5>Art. 22 - Droit applicable et juridiction</h5>
+      <p>Les présentes CGV sont soumises au <strong>droit français</strong>. À défaut de résolution amiable ou de médiation, tout litige sera porté devant les <strong>tribunaux compétents de Lille</strong>, y compris en cas de référé, d'appel en garantie ou de pluralité de défendeurs, sous réserve des règles de compétence impératives protectrices du consommateur le cas échéant.</p>
+    </div>`
+
+  const signBoxes = `
+  <div class="cgv-sign">
+    <div class="box">
+      <div class="lbl">Prestataire</div>
+      <div class="desc">MAPA Développement - Matis GOUYET<br>Siège : Rue Yves Decugis, 59650 Villeneuve-d'Ascq<br>SIREN 919 461 301 - contact@mapa-developpement.fr</div>
+    </div>
+    <div class="box">
+      <div class="lbl">Client - Bon pour accord</div>
+      <div class="desc">${safe(clientName)}<br>Date : _______________________<br>Signature précédée de la mention « Lu et approuvé, bon pour accord » :</div>
+    </div>
+  </div>`
+
+  return `
+<section class="page page-cgv">
+  ${cgvHeader('Page 2/3')}
+
+  <div class="cgv-preamble">
+    <strong>Préambule.</strong> Les présentes conditions générales de vente (ci-après « CGV ») régissent l'ensemble des relations contractuelles entre <strong>MAPA Développement</strong>, exploitée par Matis GOUYET, entrepreneur individuel sous le régime de la micro-entreprise, immatriculée au Registre National des Entreprises sous le numéro SIREN <strong>919 461 301</strong>, dont le siège est sis Rue Yves Decugis, 59650 Villeneuve-d'Ascq (ci-après « le Prestataire »), et toute personne physique ou morale passant commande (ci-après « le Client »). Toute commande emporte adhésion sans réserve aux présentes CGV, qui prévalent sur tout autre document du Client sauf dérogation écrite expresse du Prestataire.
+  </div>
+
+  <div class="cgv-body">
+    ${articlesPartOne}
+  </div>
+
+  <div class="cgv-continued">Suite page suivante →</div>
+</section>
+
+<section class="page page-cgv">
+  ${cgvHeader('Page 3/3')}
+
+  <div class="cgv-body">
+    ${articlesPartTwo}
+  </div>
+
+  ${signBoxes}
+
+  <div class="cgv-footer">
+    MAPA Développement - SIREN 919 461 301 - CGV applicables au devis ${safe(quoteNumber)}
+  </div>
+</section>`
 }

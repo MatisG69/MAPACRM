@@ -40,6 +40,7 @@ export function GenerateDevisModal({
   const [validUntil, setValidUntil] = useState('')
   const [depositRequested, setDepositRequested] = useState(true)
   const [depositAmount, setDepositAmount] = useState<string>('')
+  const [includeCGV, setIncludeCGV] = useState(true)
   const [status, setStatus] = useState<QuoteStatus>('draft')
   const [notes, setNotes] = useState('')
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
@@ -70,6 +71,7 @@ export function GenerateDevisModal({
       setValidUntil('')
       setDepositRequested(true)
       setDepositAmount('')
+      setIncludeCGV(true)
       setStatus('draft')
       setNotes('')
       setPreviewHtml(null)
@@ -156,6 +158,7 @@ export function GenerateDevisModal({
         validityDays: 30,
         depositPercent,
         customNotes: notes.trim() || undefined,
+        includeCGV,
       })
 
       setPreviewFilename(`devis-${quoteNumber.trim()}.pdf`)
@@ -301,30 +304,47 @@ export function GenerateDevisModal({
           </div>
         </div>
 
-        {/* Acompte demandé */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={depositRequested}
-              onChange={(e) => setDepositRequested(e.target.checked)}
-              className="w-4 h-4 rounded accent-ws-accent"
-            />
-            <span className="text-sm text-ws-paper font-medium">Acompte demandé</span>
-          </label>
-          {depositRequested && (
-            <div>
-              <label className="form-label">Montant de l'acompte (€)</label>
+        {/* Acompte demandé + Conditions générales de vente */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
               <input
-                type="number"
-                className="input font-mono"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                placeholder="ex : 240"
-                min={1}
+                type="checkbox"
+                checked={depositRequested}
+                onChange={(e) => setDepositRequested(e.target.checked)}
+                className="w-4 h-4 rounded accent-ws-accent"
               />
-            </div>
-          )}
+              <span className="text-sm text-ws-paper font-medium">Acompte demandé</span>
+            </label>
+            {depositRequested && (
+              <div>
+                <label className="form-label">Montant de l'acompte (€)</label>
+                <input
+                  type="number"
+                  className="input font-mono"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  placeholder="ex : 240"
+                  min={1}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={includeCGV}
+                onChange={(e) => setIncludeCGV(e.target.checked)}
+                className="w-4 h-4 rounded accent-ws-accent"
+              />
+              <span className="text-sm text-ws-paper font-medium">Conditions générales de vente</span>
+            </label>
+            <p className="text-[11px] font-mono text-ws-mist leading-relaxed pl-[26px]">
+              Joint les CGV en page 2 du PDF (même fichier). Recommandé pour tout envoi formel.
+            </p>
+          </div>
         </div>
 
         {/* Notes */}
