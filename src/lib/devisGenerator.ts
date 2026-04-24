@@ -371,6 +371,122 @@ export function generateDevisHTML(params: DevisParams): string {
     .cgv-continued{font-size:6pt;}
   }
 
+  /* ══════════════════════════════════════════════
+     PAGE 4 — Signatures (page dédiée, respiration max)
+     ══════════════════════════════════════════════ */
+  .page-sign{justify-content:space-between;}
+  .sign-head{
+    text-align:center;
+    padding-bottom:14px;
+    border-bottom:1px solid rgba(201,168,76,.3);
+  }
+  .sign-head .eyebrow{
+    font-size:7pt;letter-spacing:.35em;text-transform:uppercase;color:#9E9080;
+    margin-bottom:6px;
+  }
+  .sign-head .ttl{
+    font-family:'Playfair Display',serif;font-size:20pt;
+    color:#E8E0D0;letter-spacing:.015em;
+  }
+  .sign-head .sub{
+    font-size:8.5pt;color:#9E9080;margin-top:6px;line-height:1.6;
+  }
+
+  .sign-recap{
+    background:#0E0E0E;border-left:2px solid #C9A84C;
+    padding:14px 18px;margin-top:16px;
+    font-size:9pt;line-height:1.75;color:#C8BFB0;
+  }
+  .sign-recap strong{color:#E2C97E;font-weight:500;}
+  .sign-recap em{font-style:italic;color:#B5ABA0;}
+
+  .sign-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:20px;
+    margin:18px 0;
+  }
+  .sign-card{
+    border:1px solid rgba(201,168,76,.25);
+    background:linear-gradient(180deg,#0E0E0E 0%,#0A0A0A 100%);
+    padding:16px 18px;
+    display:flex;flex-direction:column;
+    min-height:155mm; /* grande hauteur pour signature manuscrite confortable */
+  }
+  .sign-card .lbl{
+    font-size:7.5pt;letter-spacing:.28em;text-transform:uppercase;
+    color:#C9A84C;margin-bottom:10px;font-weight:600;
+    padding-bottom:8px;border-bottom:1px solid rgba(201,168,76,.18);
+  }
+  .sign-card .entity{
+    font-size:9.5pt;color:#E8E0D0;font-weight:500;margin-bottom:4px;
+  }
+  .sign-card .coords{
+    font-size:8pt;color:#9E9080;line-height:1.65;margin-bottom:14px;
+  }
+  .sign-card .fields{
+    display:flex;flex-direction:column;gap:10px;margin-bottom:14px;
+    font-size:8pt;color:#9E9080;
+  }
+  .sign-card .field{
+    display:flex;align-items:baseline;gap:8px;
+    border-bottom:1px dotted rgba(201,168,76,.25);padding:4px 0;
+    min-height:14pt;
+  }
+  .sign-card .field .k{
+    font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;
+    color:#9E9080;min-width:40px;flex-shrink:0;
+  }
+  .sign-card .hint{
+    font-size:7pt;color:#807569;font-style:italic;line-height:1.55;
+    padding:6px 0 8px;
+  }
+  .sign-card .handwritten-zone{
+    flex:1;
+    border:1px dashed rgba(201,168,76,.2);border-radius:2px;
+    min-height:70mm;
+    position:relative;
+    background:
+      linear-gradient(180deg,rgba(201,168,76,.02) 0%,transparent 100%);
+  }
+  .sign-card .handwritten-zone::after{
+    content:'Signature';
+    position:absolute;bottom:6px;right:10px;
+    font-size:6.5pt;letter-spacing:.22em;text-transform:uppercase;
+    color:#4A453E;
+  }
+
+  .sign-mention{
+    text-align:center;margin-top:14px;
+    font-size:8.5pt;color:#B5ABA0;line-height:1.75;
+    padding:10px 20px;
+    border-top:1px solid rgba(201,168,76,.15);
+    border-bottom:1px solid rgba(201,168,76,.15);
+    background:rgba(201,168,76,.03);
+  }
+  .sign-mention strong{color:#E2C97E;font-style:italic;}
+
+  .sign-footer{
+    margin-top:14px;padding-top:10px;
+    border-top:1px solid rgba(201,168,76,.2);
+    text-align:center;
+  }
+  .sign-footer .brand{
+    font-size:8pt;letter-spacing:.05em;color:#E8E0D0;font-weight:500;
+    margin-bottom:3px;
+  }
+  .sign-footer .legal{
+    font-size:6.5pt;letter-spacing:.16em;text-transform:uppercase;
+    color:#6F645A;line-height:1.7;
+  }
+
+  @media print{
+    .sign-head .ttl{font-size:18pt;}
+    .sign-recap{font-size:8.5pt;padding:12px 16px;}
+    .sign-card{min-height:150mm;padding:14px 16px;}
+    .sign-card .handwritten-zone{min-height:68mm;}
+    .sign-mention{font-size:8pt;}
+    .sign-footer .legal{font-size:6pt;}
+  }
+
   @media print{
     html,body{width:210mm;background:#0A0A0A;}
     body{font-size:9pt;line-height:1.55;}
@@ -577,9 +693,14 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
       <p><strong>9.2 Contrat de suivi.</strong> Le Client peut souscrire, à tout moment, un contrat de <strong>suivi et maintenance</strong> couvrant notamment : mises à jour techniques, supervision de la disponibilité, sauvegardes régulières, corrections d'anomalies, ajustements mineurs de contenu et accompagnement fonctionnel. Les modalités (périmètre, heures incluses, délais de réponse, tarif, durée) sont précisées dans un contrat distinct ou un bon de commande spécifique.</p>
       <p><strong>9.3 Durée et reconduction.</strong> Sauf stipulation contraire, le contrat de suivi est conclu pour une durée initiale de <strong>douze (12) mois</strong>, reconductible par tacite reconduction pour des périodes successives de même durée. Chaque partie peut y mettre fin par lettre recommandée avec accusé de réception adressée au moins <strong>trente (30) jours</strong> avant le terme en cours.</p>
       <p><strong>9.4 Hébergement et nom de domaine.</strong> L'hébergement du site et la gestion du nom de domaine constituent des prestations <strong>optionnelles</strong>, facturées séparément et reconductibles annuellement. À défaut de souscription, le Client conserve la charge exclusive de son hébergement et du renouvellement de son nom de domaine. Le Prestataire transfère, sur demande écrite, l'ensemble des accès et codes sources nécessaires à une migration.</p>
-      <p><strong>9.5 Évolutions et demandes complémentaires.</strong> Toute demande excédant le périmètre initial (nouvelles fonctionnalités, refonte de sections, intégrations tierces) fait l'objet d'un <strong>devis complémentaire</strong> facturé au <strong>taux journalier</strong> en vigueur communiqué sur demande.</p>
+    </div>`
+
+  const articlesPartTwo = `
+    <div class="cgv-art">
+      <h5>Art. 9 (suite) - Suivi, maintenance, hébergement et évolutions</h5>
+      <p><strong>9.5 Évolutions et demandes complémentaires.</strong> Toute demande excédant le périmètre initial (nouvelles fonctionnalités, refonte de sections, intégrations tierces) fait l'objet d'un <strong>devis complémentaire</strong> facturé au <strong>taux journalier</strong> en vigueur communiqué sur demande. Les demandes expresses sont traitées par ordre d'arrivée et selon disponibilité du Prestataire.</p>
       <p><strong>9.6 Exclusions.</strong> Ne sont pas couverts par le contrat de suivi, sauf mention expresse : refontes graphiques, migrations technologiques, nouvelles fonctionnalités, interventions consécutives à une modification du livrable par le Client ou un tiers, et incidents imputables à l'hébergeur, aux services tiers ou à une défaillance réseau.</p>
-      <p><strong>9.7 Fin du suivi.</strong> À l'issue du contrat de suivi, quelle qu'en soit la cause, le Prestataire n'est plus tenu à aucune obligation de maintenance ; il remet au Client, sur demande écrite, l'ensemble des éléments nécessaires à la continuité d'exploitation (accès, codes sources, procédures).</p>
+      <p><strong>9.7 Fin du suivi.</strong> À l'issue du contrat de suivi, quelle qu'en soit la cause, le Prestataire n'est plus tenu à aucune obligation de maintenance, de correction ou d'assistance ; il remet au Client, sur demande écrite, l'ensemble des éléments nécessaires à la continuité d'exploitation (accès, codes sources, procédures).</p>
     </div>
 
     <div class="cgv-art">
@@ -591,9 +712,8 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
     <div class="cgv-art">
       <h5>Art. 11 - Réserve de propriété</h5>
       <p>Conformément à la <em>loi n° 80-335 du 12 mai 1980</em>, les livrables demeurent la propriété du Prestataire jusqu'au paiement intégral du prix et de ses accessoires. En cas de non-paiement à l'échéance, le Prestataire se réserve le droit de suspendre l'accès aux livrables ou de les retirer.</p>
-    </div>`
+    </div>
 
-  const articlesPartTwo = `
     <div class="cgv-art">
       <h5>Art. 12 - Confidentialité</h5>
       <p>Chaque partie s'engage à préserver la confidentialité des informations non publiques échangées, pour toute la durée du contrat et pour une durée de <strong>trois (3) ans</strong> suivant son terme, sauf divulgation imposée par la loi ou une décision de justice.</p>
@@ -649,21 +769,9 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
       <p>Les présentes CGV sont soumises au <strong>droit français</strong>. À défaut de résolution amiable ou de médiation, tout litige sera porté devant les <strong>tribunaux compétents de Lille</strong>, y compris en cas de référé, d'appel en garantie ou de pluralité de défendeurs, sous réserve des règles de compétence impératives protectrices du consommateur le cas échéant.</p>
     </div>`
 
-  const signBoxes = `
-  <div class="cgv-sign">
-    <div class="box">
-      <div class="lbl">Prestataire</div>
-      <div class="desc">MAPA Développement - Matis GOUYET<br>Siège : Rue Yves Decugis, 59650 Villeneuve-d'Ascq<br>SIREN 919 461 301 - contact@mapa-developpement.fr</div>
-    </div>
-    <div class="box">
-      <div class="lbl">Client - Bon pour accord</div>
-      <div class="desc">${safe(clientName)}<br>Date : _______________________<br>Signature précédée de la mention « Lu et approuvé, bon pour accord » :</div>
-    </div>
-  </div>`
-
   return `
 <section class="page page-cgv">
-  ${cgvHeader('Page 2/3')}
+  ${cgvHeader('Page 2/4')}
 
   <div class="cgv-preamble">
     <strong>Préambule.</strong> Les présentes conditions générales de vente (ci-après « CGV ») régissent l'ensemble des relations contractuelles entre <strong>MAPA Développement</strong>, exploitée par Matis GOUYET, entrepreneur individuel sous le régime de la micro-entreprise, immatriculée au Registre National des Entreprises sous le numéro SIREN <strong>919 461 301</strong>, dont le siège est sis Rue Yves Decugis, 59650 Villeneuve-d'Ascq (ci-après « le Prestataire »), et toute personne physique ou morale passant commande (ci-après « le Client »). Toute commande emporte adhésion sans réserve aux présentes CGV, qui prévalent sur tout autre document du Client sauf dérogation écrite expresse du Prestataire.
@@ -677,16 +785,72 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
 </section>
 
 <section class="page page-cgv">
-  ${cgvHeader('Page 3/3')}
+  ${cgvHeader('Page 3/4')}
 
   <div class="cgv-body">
     ${articlesPartTwo}
   </div>
 
-  ${signBoxes}
+  <div class="cgv-continued">Signature du devis et des présentes CGV → page suivante</div>
+</section>
 
-  <div class="cgv-footer">
-    MAPA Développement - SIREN 919 461 301 - CGV applicables au devis ${safe(quoteNumber)}
+<section class="page page-sign">
+  <div class="sign-head">
+    <div class="eyebrow">Annexe contractuelle · Page 4/4</div>
+    <div class="ttl">Acceptation du devis et des Conditions Générales de Vente</div>
+    <div class="sub">Devis <strong style="color:#E2C97E">${safe(quoteNumber)}</strong> · ${safe(clientName)}</div>
+  </div>
+
+  <div class="sign-recap">
+    La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis <strong>${safe(quoteNumber)}</strong> émis le ${updatedAt} par <strong>MAPA Développement</strong>, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2 et 3 du présent document. Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>
+  </div>
+
+  <div class="sign-grid">
+    <div class="sign-card">
+      <div class="lbl">Le Prestataire</div>
+      <div class="entity">MAPA Développement</div>
+      <div class="coords">
+        Matis GOUYET, Exploitant<br>
+        Rue Yves Decugis, 59650 Villeneuve-d'Ascq<br>
+        SIREN 919 461 301 · SIRET 919 461 301 00021<br>
+        contact@mapa-developpement.fr
+      </div>
+      <div class="fields">
+        <div class="field"><span class="k">Fait à</span><span>Villeneuve-d'Ascq</span></div>
+        <div class="field"><span class="k">Le</span><span>${updatedAt}</span></div>
+      </div>
+      <div class="hint">Signature précédée de la mention manuscrite<br>« Lu et approuvé, bon pour accord » :</div>
+      <div class="handwritten-zone"></div>
+    </div>
+
+    <div class="sign-card">
+      <div class="lbl">Le Client</div>
+      <div class="entity">${safe(clientName)}</div>
+      <div class="coords">
+        Nom et qualité du signataire :<br>
+        _________________________________________<br>
+        _________________________________________
+      </div>
+      <div class="fields">
+        <div class="field"><span class="k">Fait à</span><span>_________________________</span></div>
+        <div class="field"><span class="k">Le</span><span>_____ / _____ / __________</span></div>
+      </div>
+      <div class="hint">Signature précédée de la mention manuscrite<br>« Lu et approuvé, bon pour accord » :</div>
+      <div class="handwritten-zone"></div>
+    </div>
+  </div>
+
+  <div class="sign-mention">
+    La mention <strong>« Lu et approuvé, bon pour accord »</strong> doit être apposée de la main du signataire, suivie de sa signature.<br>
+    Tout exemplaire non signé ou dont la mention manuscrite ferait défaut ne saurait engager les parties.
+  </div>
+
+  <div class="sign-footer">
+    <div class="brand">MAPA Développement</div>
+    <div class="legal">
+      SIREN 919 461 301 · TVA non applicable, art. 293 B du CGI<br>
+      Rue Yves Decugis, 59650 Villeneuve-d'Ascq · contact@mapa-developpement.fr · +33 6 79 62 39 42
+    </div>
   </div>
 </section>`
 }
