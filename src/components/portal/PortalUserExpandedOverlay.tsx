@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { X, KeyRound, Mail, FolderKanban, Calendar } from 'lucide-react';
 import type { PortalUser, Project } from '../../lib/types';
 import { ClientPortalSection } from '../projects/ClientPortalSection';
+import { PortalAdminInsights } from './PortalAdminInsights';
+import { usePortalAdminProjectData } from '../../hooks/usePortalAdminProjectData';
 import { formatDate } from '../../lib/utils';
 
 interface PortalUserExpandedOverlayProps {
@@ -41,6 +43,13 @@ export function PortalUserExpandedOverlay({
   }, [onClose]);
 
   const linkedProject = projects.find((p) => p.id === user.project_id) ?? null;
+  const {
+    project: fullProject,
+    quotes,
+    invoices,
+    events,
+    checklist,
+  } = usePortalAdminProjectData(user.project_id);
 
   return (
     <div
@@ -157,6 +166,17 @@ export function PortalUserExpandedOverlay({
               </div>
             </div>
           </section>
+
+          {/* Aperçu 360° admin : projet, finances, agenda, checklist */}
+          {user.project_id && (
+            <PortalAdminInsights
+              project={fullProject}
+              quotes={quotes}
+              invoices={invoices}
+              events={events}
+              checklist={checklist}
+            />
+          )}
 
           {/* Contenu principal : étapes + messagerie */}
           {user.project_id ? (
