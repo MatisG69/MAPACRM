@@ -17,6 +17,7 @@ import { QuotesPage } from './pages/QuotesPage';
 import { RelancesPage } from './pages/RelancesPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { DemandesPage } from './pages/DemandesPage';
+import { IdentifiantsPage } from './pages/IdentifiantsPage';
 import { useClients } from './hooks/useClients';
 import { useServiceRequests } from './hooks/useServiceRequests';
 import { useProjects } from './hooks/useProjects';
@@ -397,6 +398,7 @@ function App() {
                 }}
               />
             )}
+            {page === 'identifiants' && <IdentifiantsPage />}
           </>
         )}
       </main>

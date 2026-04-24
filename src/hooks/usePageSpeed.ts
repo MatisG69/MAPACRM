@@ -21,7 +21,7 @@ export interface PageSpeedResult {
   fetchedAt: Date;
 }
 
-const SITE_URL = 'https://website-mapa-d-veloppement.vercel.app';
+const SITE_URL = 'https://mapa-developpement.fr/';
 
 function vitalScore(score: number | null | undefined): VitalScore | null {
   if (score == null) return null;

@@ -17,6 +17,7 @@ const SECTIONS: { label: string; pages: readonly Page[] }[] = [
     pages: ['clients', 'contacts', 'projects', 'pipeline', 'quotes', 'relances', 'tasks'],
   },
   { label: 'Pilotage', pages: ['calendar', 'analytics', 'invoices', 'analyse'] },
+  { label: 'Espace client', pages: ['identifiants'] },
   { label: 'Méthode', pages: ['playbook'] },
 ];
 

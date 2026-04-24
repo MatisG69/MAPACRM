@@ -13,6 +13,7 @@ import {
   BookOpen,
   Inbox,
   LineChart,
+  KeyRound,
   type LucideIcon,
 } from 'lucide-react';
 import { Page } from './types';
@@ -39,4 +40,5 @@ export const MAIN_NAV_ITEMS: NavItemConfig[] = [
   { id: 'playbook', label: 'Guide MAPA', shortLabel: 'Guide', icon: BookOpen },
   { id: 'demandes', label: 'Demandes', shortLabel: 'Demandes', icon: Inbox },
   { id: 'analyse', label: 'Analyse site', shortLabel: 'Analyse', icon: LineChart },
+  { id: 'identifiants', label: 'Identifiants', shortLabel: 'Identifiants', icon: KeyRound },
 ];

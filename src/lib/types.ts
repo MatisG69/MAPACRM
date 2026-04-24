@@ -223,14 +223,16 @@ export type Page =
   | 'relances'
   /** Guide méthode & cadre MAPA (usage interne partenaires) */
   | 'playbook'
-  /** Annuaire enrichi : coordonnées, satisfaction, historique d’échanges */
-  | ‘contacts’
+  /** Annuaire enrichi : coordonnées, satisfaction, historique d'échanges */
+  | 'contacts'
   /** Demandes de prestation reçues depuis le site vitrine */
-  | ‘demandes’
+  | 'demandes'
   /** Analyse de trafic et performances du site vitrine */
-  | ‘analyse’;
+  | 'analyse'
+  /** Identifiants clients pour l'espace suivi projet */
+  | 'identifiants';
 
-export type ServiceRequestStatus = ‘new’ | ‘read’ | ‘in_progress’ | ‘converted’ | ‘archived’;
+export type ServiceRequestStatus = 'new' | 'read' | 'in_progress' | 'converted' | 'archived';
 
 export interface ServiceRequest {
   id: string;
@@ -243,4 +245,48 @@ export interface ServiceRequest {
   source: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/* ─────────────────────────────────────────────
+ * Espace client (portail suivi projet)
+ * ───────────────────────────────────────────── */
+
+export type ProjectStepStatus = 'pending' | 'in_progress' | 'done';
+
+/** Identifiant client permettant l'accès au portail de suivi projet */
+export interface PortalUser {
+  id: string;
+  auth_user_id: string | null;
+  email: string;
+  name: string | null;
+  project_id: string | null;
+  created_at: string;
+  project?: Pick<Project, 'id' | 'name' | 'status'>;
+}
+
+/** Étape de suivi projet visible par le client */
+export interface ProjectStep {
+  id: string;
+  project_id: string;
+  order_index: number;
+  title: string;
+  description: string | null;
+  status: ProjectStepStatus;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PortalMessageSender = 'client' | 'team';
+
+/** Message échangé entre le client et l'équipe via l'espace client */
+export interface PortalMessage {
+  id: string;
+  project_id: string;
+  sender: PortalMessageSender;
+  content: string;
+  read_by_admin: boolean;
+  read_by_client: boolean;
+  created_at: string;
 }

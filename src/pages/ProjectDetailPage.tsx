@@ -7,6 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ProjectForm } from '../components/projects/ProjectForm';
 import { ProjectCardPreview } from '../components/projects/ProjectCardPreview';
+import { ClientPortalSection } from '../components/projects/ClientPortalSection';
 import { TaskForm } from '../components/tasks/TaskForm';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import type {
@@ -281,6 +282,10 @@ export function ProjectDetailPage({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="px-4 md:px-8 pb-8">
+        <ClientPortalSection projectId={project.id} />
       </div>
 
       <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Modifier le projet" size="lg">
