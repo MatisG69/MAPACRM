@@ -440,51 +440,49 @@ export function GenerateDevisModal({
             </label>
             {depositRequested && (
               <div className="space-y-2">
-                <div>
-                  <label className="form-label">Pourcentage</label>
-                  <div className="flex gap-2 items-center">
-                    {[20, 30, 40, 50].map((pct) => (
-                      <button
-                        key={pct}
-                        type="button"
-                        onClick={() => setDepositPercentInput(pct)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border ${
-                          depositPercentInput === pct
-                            ? 'bg-ws-accent/15 border-ws-accent/50 text-ws-accent'
-                            : 'border-ws-line text-ws-mist hover:text-ws-paper hover:border-ws-line'
-                        }`}
-                      >
-                        {pct}%
-                      </button>
-                    ))}
+                <label className="form-label">Pourcentage de l'acompte</label>
+                <div className="flex gap-2 items-center flex-wrap">
+                  {[20, 30, 40, 50].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setDepositPercentInput(pct)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border ${
+                        depositPercentInput === pct
+                          ? 'bg-ws-accent/15 border-ws-accent/50 text-ws-accent'
+                          : 'border-ws-line text-ws-mist hover:text-ws-paper hover:border-ws-line'
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="number"
                       className="input font-mono w-20 text-center"
                       value={depositPercentInput}
                       onChange={(e) =>
-                        setDepositPercentInput(Math.max(0, Math.min(100, Number(e.target.value) || 0)))
+                        setDepositPercentInput(
+                          Math.max(0, Math.min(100, Number(e.target.value) || 0))
+                        )
                       }
                       min={0}
                       max={100}
                       step={5}
-                      title="Pourcentage personnalisé"
+                      aria-label="Pourcentage personnalisé"
                     />
+                    <span className="text-ws-mist text-sm font-mono">%</span>
                   </div>
                 </div>
-                <div>
-                  <label className="form-label">Montant de l'acompte (€)</label>
-                  <input
-                    type="number"
-                    className="input font-mono"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    placeholder="ex : 240"
-                    min={1}
-                  />
-                  <p className="mt-1 text-[10px] font-mono text-ws-mist">
-                    Recalculé automatiquement à {depositPercentInput}% du total ({grandTotal} € HT). Modifiable.
-                  </p>
-                </div>
+                {grandTotal > 0 && depositAmount && (
+                  <div className="rounded-lg bg-ws-deep/40 border border-ws-line px-3 py-2 mt-2">
+                    <p className="text-[11px] font-mono text-ws-mist">
+                      Soit{' '}
+                      <strong className="text-ws-accent tabular-nums">{depositAmount} € HT</strong>{' '}
+                      d'acompte sur {grandTotal} € HT total
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
