@@ -654,17 +654,17 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
 
     <div class="cgv-art">
       <h5>Art. 2 - Devis et formation du contrat</h5>
-      <p>Chaque prestation fait l'objet d'un <strong>devis détaillé</strong>, valable trente (30) jours à compter de son émission. Le contrat est réputé formé à la date de réception par le Prestataire du devis signé ainsi que, le cas échéant, du versement de l'acompte. Toute modification du périmètre en cours d'exécution fera l'objet d'un <strong>avenant écrit</strong> et d'une révision tarifaire si applicable.</p>
+      <p>Chaque prestation fait l'objet d'un <strong>devis détaillé</strong>, valable trente (30) jours à compter de son émission. Le contrat est réputé formé à <strong>la date la plus tardive</strong> entre la réception par le Prestataire du devis signé et le versement effectif de l'acompte. Toute modification du périmètre en cours d'exécution fait l'objet d'un <strong>avenant écrit</strong> et d'une révision tarifaire si applicable.</p>
     </div>
 
     <div class="cgv-art">
       <h5>Art. 3 - Prix et modalités de paiement</h5>
-      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. Sauf stipulation contraire : acompte de <strong>30 %</strong> à la commande, solde à la livraison. Les paiements sont effectués par virement bancaire ; aucun escompte pour paiement anticipé n'est consenti.</p>
+      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. Sauf stipulation contraire au devis : acompte de <strong>trente pour cent (30 %)</strong> à la commande, solde à la livraison. Les paiements sont effectués par virement bancaire sur le compte indiqué sur la facture. Aucun escompte pour paiement anticipé n'est consenti.</p>
     </div>
 
     <div class="cgv-art">
       <h5>Art. 4 - Pénalités de retard et indemnité forfaitaire</h5>
-      <p>Conformément à l'<em>article L. 441-10 du Code de commerce</em>, tout retard de paiement entraîne de plein droit, sans mise en demeure préalable, l'application de pénalités au taux directeur semestriel de la Banque centrale européenne majoré de dix (<strong>10</strong>) points de pourcentage. En application de l'<em>article D. 441-5 du Code de commerce</em>, une <strong>indemnité forfaitaire de 40 €</strong> pour frais de recouvrement est également due, sans préjudice d'une indemnisation complémentaire sur justificatif.</p>
+      <p>Conformément à l'<em>article L. 441-10 du Code de commerce</em>, tout retard de paiement entraîne de plein droit, sans mise en demeure préalable, l'application de pénalités au taux directeur semestriel de la Banque centrale européenne majoré de dix (<strong>10</strong>) points de pourcentage. En application de l'<em>article D. 441-5 du Code de commerce</em>, une <strong>indemnité forfaitaire de quarante euros (40 €)</strong> pour frais de recouvrement est également due, sans préjudice d'une indemnisation complémentaire sur justificatif si les frais réels exposés sont supérieurs.</p>
     </div>
 
     <div class="cgv-art">
@@ -674,7 +674,7 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
 
     <div class="cgv-art">
       <h5>Art. 6 - Obligations du Client</h5>
-      <p>Le Client s'engage à fournir, dans les délais convenus, l'ensemble des éléments nécessaires à l'exécution de la prestation (contenus, visuels, accès techniques, informations légales). Il <strong>garantit le Prestataire</strong> contre toute action fondée sur la méconnaissance de droits de tiers (propriété intellectuelle, droit à l'image, droits voisins) au titre des éléments qu'il transmet. Il désigne un interlocuteur unique disposant du pouvoir de validation.</p>
+      <p>Le Client s'engage à fournir, dans les délais convenus, l'ensemble des éléments nécessaires à l'exécution de la prestation (contenus, visuels, accès techniques, informations légales). Il <strong>garantit le Prestataire</strong> contre toute action fondée sur la méconnaissance de droits de tiers (propriété intellectuelle, droit à l'image, droits voisins, marques) au titre des éléments qu'il transmet, et garantit disposer des autorisations nécessaires au regard du RGPD pour les éventuelles données personnelles communiquées. Il désigne un interlocuteur unique disposant du pouvoir de validation au nom du Client.</p>
     </div>
 
     <div class="cgv-art">
@@ -684,7 +684,7 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
 
     <div class="cgv-art">
       <h5>Art. 8 - Livraison, recette et garantie</h5>
-      <p>Le Client dispose d'un délai de <strong>sept (7) jours calendaires</strong> à compter de la livraison pour émettre, par écrit, ses réserves motivées ; à défaut, la livraison est réputée <strong>acceptée sans réserve</strong>. Le Prestataire garantit la conformité des livrables pendant <strong>trente (30) jours calendaires</strong> à compter de la livraison, à l'exclusion des anomalies résultant d'une utilisation non conforme, d'une intervention de tiers, d'un défaut des éléments fournis par le Client ou d'évolutions technologiques postérieures.</p>
+      <p>Le Client dispose d'un délai de <strong>sept (7) jours calendaires</strong> à compter de la livraison pour émettre, par écrit, ses réserves motivées ; à défaut, la livraison est réputée <strong>acceptée sans réserve</strong>. Le Prestataire garantit la conformité des livrables au périmètre contractuel pendant <strong>trente (30) jours calendaires</strong> à compter de la livraison, à l'exclusion des anomalies résultant d'une utilisation non conforme aux préconisations du Prestataire, d'une intervention de tiers ou du Client sur le livrable, d'un défaut des éléments fournis par le Client ou d'évolutions technologiques postérieures à la livraison.</p>
     </div>
 
     <div class="cgv-art">
@@ -692,41 +692,42 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
       <p><strong>9.1 Prestation de suivi.</strong> La garantie de conformité prévue à l'article 8 ne constitue pas une prestation de maintenance. Au-delà de ce délai, toute intervention (correction, ajout, modification, évolution) fait l'objet d'une <strong>prestation distincte</strong>, sur devis ou dans le cadre d'un contrat de suivi dédié.</p>
       <p><strong>9.2 Contrat de suivi.</strong> Le Client peut souscrire, à tout moment, un contrat de <strong>suivi et maintenance</strong> couvrant notamment : mises à jour techniques, supervision de la disponibilité, sauvegardes régulières, corrections d'anomalies, ajustements mineurs de contenu et accompagnement fonctionnel. Les modalités (périmètre, heures incluses, délais de réponse, tarif, durée) sont précisées dans un contrat distinct ou un bon de commande spécifique.</p>
       <p><strong>9.3 Durée et reconduction.</strong> Sauf stipulation contraire, le contrat de suivi est conclu pour une durée initiale de <strong>douze (12) mois</strong>, reconductible par tacite reconduction pour des périodes successives de même durée. Chaque partie peut y mettre fin par lettre recommandée avec accusé de réception adressée au moins <strong>trente (30) jours</strong> avant le terme en cours.</p>
-      <p><strong>9.4 Hébergement et nom de domaine.</strong> L'hébergement du site et la gestion du nom de domaine constituent des prestations <strong>optionnelles</strong>, facturées séparément et reconductibles annuellement. À défaut de souscription, le Client conserve la charge exclusive de son hébergement et du renouvellement de son nom de domaine. Le Prestataire transfère, sur demande écrite, l'ensemble des accès et codes sources nécessaires à une migration.</p>
+      <p><strong>9.4 Hébergement et nom de domaine.</strong> L'hébergement du site et la gestion du nom de domaine constituent des prestations <strong>optionnelles</strong>, facturées séparément et reconductibles annuellement. À défaut de souscription, le Client conserve la charge exclusive de son hébergement et du renouvellement de son nom de domaine. Le Prestataire transfère, sur demande écrite et sous réserve du paiement intégral des sommes dues, l'ensemble des accès et codes sources nécessaires à une migration.</p>
+      <p><strong>9.5 Évolutions et demandes complémentaires.</strong> Toute demande excédant le périmètre initial (nouvelles fonctionnalités, refonte de sections, intégrations tierces) fait l'objet d'un <strong>devis complémentaire</strong> facturé au <strong>taux journalier</strong> en vigueur communiqué sur demande.</p>
+      <p><strong>9.6 Exclusions.</strong> Ne sont pas couverts par le contrat de suivi, sauf mention expresse : refontes graphiques, migrations technologiques, nouvelles fonctionnalités, interventions consécutives à une modification du livrable par le Client ou un tiers, et incidents imputables à l'hébergeur, aux services tiers, aux opérateurs de télécommunications ou au Client lui-même.</p>
     </div>`
 
   const articlesPartTwo = `
     <div class="cgv-art">
-      <h5>Art. 9 (suite) - Suivi, maintenance, hébergement et évolutions</h5>
-      <p><strong>9.5 Évolutions et demandes complémentaires.</strong> Toute demande excédant le périmètre initial (nouvelles fonctionnalités, refonte de sections, intégrations tierces) fait l'objet d'un <strong>devis complémentaire</strong> facturé au <strong>taux journalier</strong> en vigueur communiqué sur demande. Les demandes expresses sont traitées par ordre d'arrivée et selon disponibilité du Prestataire.</p>
-      <p><strong>9.6 Exclusions.</strong> Ne sont pas couverts par le contrat de suivi, sauf mention expresse : refontes graphiques, migrations technologiques, nouvelles fonctionnalités, interventions consécutives à une modification du livrable par le Client ou un tiers, et incidents imputables à l'hébergeur, aux services tiers ou à une défaillance réseau.</p>
-      <p><strong>9.7 Fin du suivi.</strong> À l'issue du contrat de suivi, quelle qu'en soit la cause, le Prestataire n'est plus tenu à aucune obligation de maintenance, de correction ou d'assistance ; il remet au Client, sur demande écrite, l'ensemble des éléments nécessaires à la continuité d'exploitation (accès, codes sources, procédures).</p>
-    </div>
-
-    <div class="cgv-art">
       <h5>Art. 10 - Propriété intellectuelle</h5>
-      <p>Conformément aux <em>articles L. 111-1 et suivants du Code de la propriété intellectuelle</em>, le Prestataire demeure titulaire des droits d'auteur sur les éléments qu'il crée jusqu'au <strong>paiement intégral</strong> du prix. Le paiement intégral emporte cession, au sens de l'<em>article L. 131-3</em>, des droits patrimoniaux d'exploitation (reproduction, représentation, adaptation) sur les livrables créés spécifiquement pour le Client, pour la France et pour la durée légale de protection, dans la limite de l'usage contractuel.</p>
-      <p>Demeurent la propriété exclusive du Prestataire : les méthodes, le savoir-faire, les outils, les bibliothèques génériques et tout élément antérieur ou indépendant de la prestation. Toute reproduction non autorisée constitue une contrefaçon au sens de l'<em>article L. 335-2</em>.</p>
+      <p><strong>10.1 Éléments préexistants du Prestataire.</strong> Le Prestataire conserve la propriété pleine et entière de tous les éléments préexistants à la prestation : briques techniques, frameworks, librairies, modules, scripts, méthodologies, savoir-faire, outils, gabarits et composants génériques développés en amont ou en parallèle d'autres missions. Ces éléments demeurent la propriété exclusive du Prestataire et ne sont pas transférés au Client.</p>
+      <p><strong>10.2 Éléments spécifiques développés pour le Client.</strong> Sous réserve du paiement intégral du prix convenu, le Prestataire cède au Client, à titre exclusif et pour la durée légale de protection des droits d'auteur, les droits patrimoniaux (reproduction, représentation, adaptation, modification, diffusion) sur les éléments développés spécifiquement pour le Client (chartes graphiques sur mesure, contenus rédactionnels originaux livrés, code spécifique à la solution livrée). La cession est consentie pour le monde entier et pour tout support, dans la limite des finalités du projet décrit au devis.</p>
+      <p><strong>10.3 Outils et briques préexistantes intégrées.</strong> Lorsque la prestation intègre des éléments préexistants du Prestataire (10.1), le Prestataire concède au Client une <strong>licence d'utilisation non exclusive, non transférable, perpétuelle et mondiale</strong> sur ces éléments, dans la stricte mesure nécessaire à l'exploitation normale du livrable.</p>
+      <p><strong>10.4 Licences tierces.</strong> Les composants logiciels tiers intégrés au livrable (open source, librairies, plugins, polices, etc.) demeurent soumis à leurs licences propres, dont le Client s'engage à respecter les termes.</p>
+      <p><strong>10.5 Subordination au paiement.</strong> Tant que le prix n'est pas intégralement réglé, aucune cession ni licence n'est consentie. Le Prestataire conserve l'intégralité des droits sur les livrables et peut, le cas échéant, en exiger la restitution ou la suspension d'exploitation.</p>
+      <p><strong>10.6 Droit moral.</strong> Conformément à l'<em>article L. 121-1 du Code de la propriété intellectuelle</em>, le droit moral de l'auteur (dont le respect du nom et de l'œuvre) demeure inaliénable.</p>
     </div>
 
     <div class="cgv-art">
-      <h5>Art. 11 - Réserve de propriété</h5>
-      <p>Conformément à la <em>loi n° 80-335 du 12 mai 1980</em>, les livrables demeurent la propriété du Prestataire jusqu'au paiement intégral du prix et de ses accessoires. En cas de non-paiement à l'échéance, le Prestataire se réserve le droit de suspendre l'accès aux livrables ou de les retirer.</p>
+      <h5>Art. 11 - Réversibilité et portabilité</h5>
+      <p><strong>11.1 Remise des livrables.</strong> À l'issue de la prestation et sous réserve du paiement intégral, le Prestataire remet au Client, sur demande écrite : le code source, les fichiers de production, les accès aux services associés (hébergement, nom de domaine, comptes tiers configurés au nom du Client), les éventuels identifiants administrateurs et la documentation technique disponible.</p>
+      <p><strong>11.2 Assistance à la migration.</strong> En cas de migration vers un nouveau prestataire, le Prestataire apporte une assistance technique raisonnable, dans la limite de <strong>deux (2) heures incluses</strong>. Au-delà, les heures sont facturées au taux journalier en vigueur communiqué sur demande.</p>
+      <p><strong>11.3 Conservation post-contractuelle.</strong> Le Prestataire conserve une copie d'archive du livrable pour une durée de <strong>six (6) mois</strong> suivant la fin de la prestation, à des fins de continuité de service et de gestion d'éventuelles réclamations. Au-delà, les éléments sont supprimés sauf demande expresse du Client de prolonger la conservation.</p>
     </div>
 
     <div class="cgv-art">
       <h5>Art. 12 - Confidentialité</h5>
-      <p>Chaque partie s'engage à préserver la confidentialité des informations non publiques échangées, pour toute la durée du contrat et pour une durée de <strong>trois (3) ans</strong> suivant son terme, sauf divulgation imposée par la loi ou une décision de justice.</p>
+      <p>Chaque partie s'engage à préserver la confidentialité des informations non publiques échangées dans le cadre de la relation contractuelle, pour toute la durée du contrat et pour une durée de <strong>trois (3) ans</strong> suivant son terme, sauf divulgation imposée par la loi ou une décision de justice.</p>
     </div>
 
     <div class="cgv-art">
       <h5>Art. 13 - Données personnelles (RGPD)</h5>
-      <p>Les traitements de données personnelles sont conduits dans le respect du <em>Règlement (UE) 2016/679</em> et de la <em>loi n° 78-17 du 6 janvier 1978 modifiée</em>. Lorsque le Prestataire traite des données pour le compte du Client (hébergement, formulaires), il agit en qualité de <strong>sous-traitant</strong> au sens de l'<em>article 28 du RGPD</em> ; les modalités font alors l'objet, si nécessaire, d'un accord de sous-traitance distinct.</p>
+      <p>Les traitements de données personnelles sont conduits dans le respect du <em>Règlement (UE) 2016/679</em> (« RGPD ») et de la <em>loi n° 78-17 du 6 janvier 1978 modifiée</em>. Lorsque le Prestataire est amené à traiter des données personnelles pour le compte du Client (hébergement avec formulaire, gestion de bases utilisateurs), il agit en qualité de <strong>sous-traitant</strong> au sens de l'<em>article 28 du RGPD</em>. Un accord de sous-traitance des données (DPA) conforme à l'article 28.3 du RGPD est alors annexé au contrat ou conclu séparément. Pour les données traitées par le Prestataire en tant que responsable du traitement (gestion de la relation client, facturation), il est renvoyé à la politique de confidentialité accessible sur https://www.mapa-developpement.fr.</p>
     </div>
 
     <div class="cgv-art">
       <h5>Art. 14 - Responsabilité</h5>
-      <p>La responsabilité du Prestataire ne peut être engagée que pour les <strong>dommages directs, matériels et prouvés</strong> résultant d'une faute qui lui est personnellement imputable. Sont exclus les dommages indirects (pertes d'exploitation, de clientèle, de données, manque à gagner, atteinte à l'image). Sauf dommages corporels ou faute lourde ou dolosive, la responsabilité globale du Prestataire est plafonnée au <strong>montant hors taxes effectivement perçu</strong> au titre de la prestation concernée.</p>
+      <p>La responsabilité du Prestataire ne peut être engagée que pour les <strong>dommages directs, matériels et prouvés</strong> résultant d'une faute qui lui est personnellement imputable. Sont expressément exclus les dommages indirects (pertes d'exploitation, de clientèle, de données, manque à gagner, atteinte à l'image, préjudice commercial). Sauf dommages corporels ou faute lourde ou dolosive, la responsabilité globale du Prestataire est plafonnée au <strong>montant hors taxes effectivement perçu</strong> au titre de la prestation concernée, tous préjudices et toutes causes confondues.</p>
     </div>
 
     <div class="cgv-art">
@@ -736,37 +737,27 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
 
     <div class="cgv-art">
       <h5>Art. 16 - Résiliation</h5>
-      <p>En cas d'inexécution d'une obligation essentielle et à défaut de régularisation dans un délai de <strong>quinze (15) jours</strong> suivant mise en demeure restée infructueuse, la partie non défaillante peut résilier le contrat de plein droit. La résiliation aux torts du Client emporte exigibilité immédiate de l'ensemble des sommes dues ; l'acompte versé reste acquis au Prestataire à titre de frais engagés.</p>
+      <p>En cas d'inexécution d'une obligation essentielle et à défaut de régularisation dans un délai de <strong>quinze (15) jours</strong> suivant mise en demeure restée infructueuse adressée par lettre recommandée avec accusé de réception, la partie non défaillante peut résilier le contrat de plein droit. La résiliation aux torts du Client emporte exigibilité immédiate de l'ensemble des sommes dues. L'<strong>acompte versé constitue un acompte ferme et définitif</strong> et reste acquis au Prestataire à titre de frais engagés, sans préjudice de toute somme complémentaire correspondant aux travaux exécutés à la date de résiliation.</p>
     </div>
 
     <div class="cgv-art">
-      <h5>Art. 17 - Droit de rétractation (consommateur)</h5>
-      <p>Le Client <em>consommateur</em> bénéficie, conformément à l'<em>article L. 221-18 du Code de la consommation</em>, d'un délai de rétractation de <strong>quatorze (14) jours</strong> à compter de la conclusion du contrat à distance. Ce droit ne s'exerce pas, conformément à l'<em>article L. 221-28, 1°</em>, pour les prestations pleinement exécutées avec accord exprès préalable du Client et renonciation expresse à son droit de rétractation.</p>
+      <h5>Art. 17 - Non-sollicitation</h5>
+      <p>Chaque partie s'engage, pendant l'exécution du contrat et pendant douze (<strong>12</strong>) mois suivant son terme, à ne pas solliciter ni recruter, directement ou indirectement, tout collaborateur ou sous-traitant de l'autre partie ayant participé à la prestation. Tout manquement sera sanctionné par une indemnité équivalant à <strong>six (6) mois de la rémunération brute moyenne</strong> perçue par la personne concernée au cours des douze (12) mois précédant le manquement, sans préjudice du droit pour la partie lésée de solliciter la réparation d'un préjudice complémentaire.</p>
     </div>
 
     <div class="cgv-art">
-      <h5>Art. 18 - Médiation de la consommation</h5>
-      <p>Conformément aux <em>articles L. 611-1 et suivants du Code de la consommation</em>, tout Client consommateur peut recourir gratuitement à un médiateur en cas de litige n'ayant pu être résolu à l'amiable. Plateforme européenne de règlement en ligne : <em>https://ec.europa.eu/consumers/odr</em>.</p>
+      <h5>Art. 18 - Référencement commercial</h5>
+      <p>Sauf opposition expresse et écrite du Client notifiée à la signature du devis, le Prestataire est autorisé à <strong>citer le nom et le logo du Client</strong> ainsi que la nature des prestations réalisées à titre de référence commerciale (portfolio en ligne, dossiers commerciaux, présentations).</p>
     </div>
 
     <div class="cgv-art">
-      <h5>Art. 19 - Non-sollicitation</h5>
-      <p>Chaque partie s'engage, pendant l'exécution du contrat et pendant douze (<strong>12</strong>) mois suivant son terme, à ne pas solliciter ni recruter, directement ou indirectement, tout collaborateur ou sous-traitant de l'autre partie ayant participé à la prestation. Tout manquement sera sanctionné par une indemnité équivalant à six (6) mois de rémunération brute de la personne concernée.</p>
-    </div>
-
-    <div class="cgv-art">
-      <h5>Art. 20 - Référencement commercial</h5>
-      <p>Sauf opposition expresse et écrite du Client, le Prestataire est autorisé à <strong>citer le nom du Client et la nature des prestations réalisées</strong> à titre de référence commerciale (portfolio, dossiers, pitchs).</p>
-    </div>
-
-    <div class="cgv-art">
-      <h5>Art. 21 - Modifications - Nullité partielle</h5>
+      <h5>Art. 19 - Modifications - Nullité partielle</h5>
       <p>Les CGV applicables sont celles en vigueur à la date d'acceptation du devis. La nullité ou l'inapplicabilité de l'une quelconque des stipulations <strong>n'affecte pas la validité des autres</strong> ; les parties s'engagent alors à négocier de bonne foi, au sens de l'<em>article 1104 du Code civil</em>, une stipulation de substitution d'effet économique équivalent.</p>
     </div>
 
     <div class="cgv-art">
-      <h5>Art. 22 - Droit applicable et juridiction</h5>
-      <p>Les présentes CGV sont soumises au <strong>droit français</strong>. À défaut de résolution amiable ou de médiation, tout litige sera porté devant les <strong>tribunaux compétents de Lille</strong>, y compris en cas de référé, d'appel en garantie ou de pluralité de défendeurs, sous réserve des règles de compétence impératives protectrices du consommateur le cas échéant.</p>
+      <h5>Art. 20 - Droit applicable et juridiction</h5>
+      <p>Les présentes CGV sont soumises au <strong>droit français</strong>. À défaut de résolution amiable préalable, tout litige sera porté devant les <strong>tribunaux compétents de Lille</strong>, y compris en cas de référé, d'appel en garantie ou de pluralité de défendeurs. Cette clause attributive de juridiction est applicable même en cas de demande incidente, de pluralité de défendeurs ou d'appel en garantie, conformément à l'<em>article 48 du Code de procédure civile</em>, étant rappelé qu'elle s'applique exclusivement entre commerçants ou parties habilitées à y consentir.</p>
     </div>`
 
   return `
@@ -774,7 +765,7 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
   ${cgvHeader('Page 2/4')}
 
   <div class="cgv-preamble">
-    <strong>Préambule.</strong> Les présentes conditions générales de vente (ci-après « CGV ») régissent l'ensemble des relations contractuelles entre <strong>MAPA Développement</strong>, exploitée par Matis GOUYET, entrepreneur individuel sous le régime de la micro-entreprise, immatriculée au Registre National des Entreprises sous le numéro SIREN <strong>919 461 301</strong>, dont le siège est sis Rue Yves Decugis, 59650 Villeneuve-d'Ascq (ci-après « le Prestataire »), et toute personne physique ou morale passant commande (ci-après « le Client »). Toute commande emporte adhésion sans réserve aux présentes CGV, qui prévalent sur tout autre document du Client sauf dérogation écrite expresse du Prestataire.
+    <strong>Préambule.</strong> Les présentes conditions générales de vente (ci-après « CGV ») régissent l'ensemble des relations contractuelles entre <strong>MAPA Développement</strong>, exploitée par Matis GOUYET, entrepreneur individuel sous le régime de la micro-entreprise, immatriculée au Registre National des Entreprises sous le numéro SIREN <strong>919 461 301</strong>, dont le siège est sis 89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq (ci-après « le Prestataire »), et toute personne morale ou personne physique agissant à des fins entrant dans le cadre de son activité commerciale, industrielle, artisanale, libérale ou agricole, passant commande (ci-après « le Client »). Les présentes CGV sont <strong>exclusivement applicables aux relations entre professionnels</strong> au sens du droit français ; elles ne sauraient s'appliquer à un Client consommateur ou non-professionnel au sens de l'article liminaire du Code de la consommation. Toute commande emporte adhésion sans réserve aux présentes CGV, qui prévalent sur tout autre document du Client (CGA, conditions internes), sauf dérogation écrite expresse du Prestataire.
   </div>
 
   <div class="cgv-body">
@@ -811,7 +802,7 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
       <div class="entity">MAPA Développement</div>
       <div class="coords">
         Matis GOUYET, Exploitant<br>
-        Rue Yves Decugis, 59650 Villeneuve-d'Ascq<br>
+        89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq<br>
         SIREN 919 461 301 · SIRET 919 461 301 00021<br>
         contact@mapa-developpement.fr
       </div>
@@ -824,10 +815,10 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
     </div>
 
     <div class="sign-card">
-      <div class="lbl">Le Client</div>
+      <div class="lbl">Le Client — Bon pour accord</div>
       <div class="entity">${safe(clientName)}</div>
       <div class="coords">
-        Nom et qualité du signataire :<br>
+        Représenté par (Nom, Prénom, Qualité) :<br>
         _________________________________________<br>
         _________________________________________
       </div>
@@ -835,21 +826,20 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
         <div class="field"><span class="k">Fait à</span><span>_________________________</span></div>
         <div class="field"><span class="k">Le</span><span>_____ / _____ / __________</span></div>
       </div>
-      <div class="hint">Signature précédée de la mention manuscrite<br>« Lu et approuvé, bon pour accord » :</div>
+      <div class="hint">Signature précédée de la mention manuscrite<br>« Lu et approuvé, bon pour accord » + cachet de l'entreprise :</div>
       <div class="handwritten-zone"></div>
     </div>
   </div>
 
   <div class="sign-mention">
-    La mention <strong>« Lu et approuvé, bon pour accord »</strong> doit être apposée de la main du signataire, suivie de sa signature.<br>
-    Tout exemplaire non signé ou dont la mention manuscrite ferait défaut ne saurait engager les parties.
+    La mention <strong>« Lu et approuvé, bon pour accord »</strong> doit être apposée de la main du signataire, suivie de sa signature et, le cas échéant, du cachet de l'entreprise. Les <em>paraphes sont recommandés en bas de chaque page</em>. Tout exemplaire non signé ou dont la mention manuscrite ferait défaut ne saurait engager les parties.
   </div>
 
   <div class="sign-footer">
     <div class="brand">MAPA Développement</div>
     <div class="legal">
       SIREN 919 461 301 · TVA non applicable, art. 293 B du CGI<br>
-      Rue Yves Decugis, 59650 Villeneuve-d'Ascq · contact@mapa-developpement.fr · +33 6 79 62 39 42
+      89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq · contact@mapa-developpement.fr · +33 6 79 62 39 42
     </div>
   </div>
 </section>`
