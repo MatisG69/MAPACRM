@@ -46,6 +46,7 @@ const typeOptions: { value: ProjectType; label: string }[] = [
   { value: 'redesign', label: 'Refonte' },
   { value: 'maintenance', label: 'Maintenance' },
   { value: 'seo', label: 'SEO' },
+  { value: 'automation', label: 'Automatisation (logiciel / site)' },
   { value: 'other', label: 'Autre' },
 ];
 

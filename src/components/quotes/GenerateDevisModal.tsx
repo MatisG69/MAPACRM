@@ -41,6 +41,8 @@ export function GenerateDevisModal({
   const [depositRequested, setDepositRequested] = useState(true)
   const [depositAmount, setDepositAmount] = useState<string>('')
   const [includeCGV, setIncludeCGV] = useState(true)
+  /** Projets additionnels du même client à combiner dans le devis */
+  const [additionalProjectIds, setAdditionalProjectIds] = useState<string[]>([])
   const [status, setStatus] = useState<QuoteStatus>('draft')
   const [notes, setNotes] = useState('')
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
@@ -54,10 +56,27 @@ export function GenerateDevisModal({
     ? clients.find((c) => c.id === selectedProject.client_id) ?? null
     : null
 
+  // Projets additionnels candidats : tous les projets du même client (hors projet principal),
+  // pour permettre au commercial de combiner plusieurs prestations dans un seul devis.
+  const candidateProjects = selectedClient
+    ? projects.filter(
+        (p) => p.client_id === selectedClient.id && p.id !== projectId
+      )
+    : []
+  const selectedAdditionalProjects = candidateProjects.filter((p) =>
+    additionalProjectIds.includes(p.id)
+  )
+  const additionalTotal = selectedAdditionalProjects.reduce((s, p) => {
+    const auto = getPriceForProject(p)
+    return s + (auto ?? 0)
+  }, 0)
+
   const autoPrice = selectedProject ? getPriceForProject(selectedProject) : null
   const needsManualPrice = selectedProject && autoPrice == null
   const parsedAmount = Number(amount)
-  const canGenerate = !!selectedClient && parsedAmount > 0 && !!title.trim() && !!quoteNumber.trim()
+  // Montant total = principal + somme des additionnels (chacun à son tarif auto)
+  const grandTotal = parsedAmount + additionalTotal
+  const canGenerate = !!selectedClient && grandTotal > 0 && !!title.trim() && !!quoteNumber.trim()
 
   // Reset on close
   useEffect(() => {
@@ -72,6 +91,7 @@ export function GenerateDevisModal({
       setDepositRequested(true)
       setDepositAmount('')
       setIncludeCGV(true)
+      setAdditionalProjectIds([])
       setStatus('draft')
       setNotes('')
       setPreviewHtml(null)
@@ -105,17 +125,17 @@ export function GenerateDevisModal({
   // Auto-fill clientId from project
   useEffect(() => {
     if (!selectedProject) return
-    if (!clientId) setClientId(selectedProject.client_id)
+    if (!clientId) setClientId(selectedProject.client_id ?? '')
   }, [selectedProject])
 
-  // Auto-compute deposit amount (30%) when amount or depositRequested changes
+  // Auto-compute deposit amount (30%) sur le GRAND TOTAL (principal + projets additionnels)
   useEffect(() => {
-    if (depositRequested && parsedAmount > 0) {
-      setDepositAmount(String(Math.round(parsedAmount * 0.3)))
+    if (depositRequested && grandTotal > 0) {
+      setDepositAmount(String(Math.round(grandTotal * 0.3)))
     } else {
       setDepositAmount('')
     }
-  }, [parsedAmount, depositRequested])
+  }, [grandTotal, depositRequested])
 
   const handleGenerate = async () => {
     if (!selectedClient) return
@@ -128,32 +148,48 @@ export function GenerateDevisModal({
         return d.toISOString().split('T')[0]
       })()
 
+      // Total facturé = principal + projets additionnels combinés
+      const finalAmount = grandTotal
+
+      // Note enrichie si plusieurs projets combinés (traçabilité dans la fiche devis)
+      const combinedNote =
+        selectedAdditionalProjects.length > 0
+          ? `Devis combiné — projets inclus : ${[selectedProject, ...selectedAdditionalProjects]
+              .filter((p): p is Project => !!p)
+              .map((p) => p.name)
+              .join(' / ')}`
+          : null
+
       await onCreateQuote({
         client_id: selectedClient.id,
         project_id: selectedProject?.id ?? null,
         opportunity_id: null,
         title: title.trim(),
         quote_number: quoteNumber.trim(),
-        amount: parsedAmount,
+        amount: finalAmount,
         status,
         valid_until: validUntilFinal,
         deposit_requested: depositRequested,
         deposit_amount: parsedDeposit && parsedDeposit > 0 ? parsedDeposit : null,
         version,
         parent_quote_id: null,
-        notes: notes.trim() || null,
+        notes: [notes.trim() || null, combinedNote].filter(Boolean).join('\n') || null,
         signed_at: null,
       })
 
       const depositPercent =
-        depositRequested && parsedDeposit && parsedAmount
-          ? Math.round((parsedDeposit / parsedAmount) * 100)
+        depositRequested && parsedDeposit && finalAmount
+          ? Math.round((parsedDeposit / finalAmount) * 100)
           : 30
 
       const html = generateDevisHTML({
         client: selectedClient,
         project: selectedProject,
         amount: parsedAmount,
+        additionalLines: selectedAdditionalProjects.map((p) => ({
+          project: p,
+          amount: getPriceForProject(p) ?? 0,
+        })),
         quoteNumber: quoteNumber.trim(),
         validityDays: 30,
         depositPercent,
@@ -251,11 +287,15 @@ export function GenerateDevisModal({
             </select>
           </div>
           <div>
-            <label className="form-label">Projet (optionnel)</label>
+            <label className="form-label">Projet principal (optionnel)</label>
             <select
               className="input"
               value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
+              onChange={(e) => {
+                setProjectId(e.target.value)
+                // Si on change le projet principal, on retire les éventuels duplicates
+                setAdditionalProjectIds((ids) => ids.filter((id) => id !== e.target.value))
+              }}
             >
               <option value="">— Aucun projet —</option>
               {projects
@@ -271,6 +311,76 @@ export function GenerateDevisModal({
             </select>
           </div>
         </div>
+
+        {/* Combinaison de plusieurs projets dans un seul devis (même client) */}
+        {candidateProjects.length > 0 && (
+          <div className="space-y-2 rounded-2xl border border-ws-line bg-ws-deep/30 px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-ws-paper">
+                  Combiner d'autres projets du même client
+                </h4>
+                <p className="text-[10px] font-mono text-ws-mist mt-0.5">
+                  Cochez les projets à inclure : chaque ligne s'ajoute au devis avec son tarif
+                  standard.
+                </p>
+              </div>
+              {selectedAdditionalProjects.length > 0 && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-ws-accent/15 text-ws-accent border border-ws-accent/35">
+                  {selectedAdditionalProjects.length} sélectionné
+                  {selectedAdditionalProjects.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <ul className="space-y-1 max-h-48 overflow-y-auto pr-1">
+              {candidateProjects.map((p) => {
+                const checked = additionalProjectIds.includes(p.id)
+                const auto = getPriceForProject(p)
+                return (
+                  <li key={p.id}>
+                    <label
+                      className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors ${
+                        checked
+                          ? 'bg-ws-accent/10 border border-ws-accent/35'
+                          : 'border border-transparent hover:bg-ws-raised/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded accent-ws-accent flex-shrink-0"
+                          checked={checked}
+                          onChange={(e) => {
+                            setAdditionalProjectIds((ids) =>
+                              e.target.checked
+                                ? [...ids, p.id]
+                                : ids.filter((id) => id !== p.id)
+                            )
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <div className="text-sm text-ws-paper truncate">{p.name}</div>
+                          {p.type && (
+                            <div className="text-[10px] font-mono text-ws-mist uppercase tracking-[0.15em]">
+                              {p.type}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span
+                        className={`text-xs font-mono tabular-nums flex-shrink-0 ${
+                          auto != null ? 'text-ws-accent' : 'text-ws-mist'
+                        }`}
+                      >
+                        {auto != null ? `+ ${auto} €` : 'sur devis'}
+                      </span>
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
 
         {/* Row: Montant + Valide jusqu'au */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -292,6 +402,15 @@ export function GenerateDevisModal({
               placeholder="ex : 800"
               min={1}
             />
+            {selectedAdditionalProjects.length > 0 && (
+              <p className="mt-1.5 text-[11px] font-mono text-ws-mist">
+                <span className="text-ws-ink">+ {additionalTotal} €</span> pour{' '}
+                {selectedAdditionalProjects.length} projet
+                {selectedAdditionalProjects.length > 1 ? 's' : ''} supplémentaire
+                {selectedAdditionalProjects.length > 1 ? 's' : ''} ={' '}
+                <strong className="text-ws-accent tabular-nums">{grandTotal} € HT</strong> total
+              </p>
+            )}
           </div>
           <div>
             <label className="form-label">Valide jusqu'au</label>

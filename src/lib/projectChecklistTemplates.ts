@@ -72,6 +72,16 @@ export function getChecklistTemplate(type: ProjectType | null | undefined): stri
         'Suivi positions (baseline)',
         'Rapport mensuel',
       ];
+    case 'automation':
+      return [
+        'Audit des processus existants',
+        'Cartographie des tâches à automatiser',
+        'Conception du scénario / workflow',
+        'Accès aux outils tiers (API, comptes)',
+        'Développement & tests en environnement de recette',
+        'Mise en production & monitoring',
+        'Documentation & passation au client',
+      ];
     default:
       return [
         'Brief client validé',

@@ -1,6 +1,11 @@
 import type { Client, Project } from './types'
 import { generateQuoteNumber } from './utils'
 
+export interface DevisLine {
+  project: Project
+  amount: number
+}
+
 export interface DevisParams {
   client: Client
   project: Project | null
@@ -11,6 +16,12 @@ export interface DevisParams {
   customNotes?: string
   /** Si true, ajoute les Conditions Générales de Vente sur la page 2 du PDF */
   includeCGV?: boolean
+  /**
+   * Projets additionnels du même client à inclure dans le devis (multi-prestations).
+   * Chaque ligne ajoute une entrée à la table de tarification, et le total s'additionne.
+   * Le `project` racine reste le projet « principal » (référence devis, périmètre par défaut).
+   */
+  additionalLines?: DevisLine[]
 }
 
 const PROJECT_PRICES: Partial<Record<string, number>> = {
@@ -73,6 +84,15 @@ function prestationsForType(project: Project | null): string[] {
         'Sauvegardes régulières & monitoring disponibilité',
         'Support réactif par messagerie — délai garanti 24h',
       ]
+    case 'automation':
+      return [
+        'Audit des processus & cartographie des tâches répétitives',
+        'Conception du workflow d\'automatisation sur mesure',
+        'Intégration aux outils existants (CRM, comptabilité, e-mail, API)',
+        'Scripts, scénarios ou bots déployés en production',
+        'Tests, monitoring & gestion des erreurs',
+        'Documentation & accompagnement à la prise en main',
+      ]
     default:
       return [
         'Analyse du besoin & cadrage de la mission',
@@ -106,6 +126,7 @@ function projectTypeLabel(type: string | null | undefined): string {
     redesign: 'Refonte de site',
     maintenance: 'Maintenance',
     seo: 'Référencement SEO',
+    automation: 'Automatisation',
     other: 'Prestation sur mesure',
   }
   return type ? (map[type] ?? 'Prestation sur mesure') : 'Prestation sur mesure'
@@ -121,12 +142,25 @@ export function generateDevisHTML(params: DevisParams): string {
     depositPercent = 30,
     customNotes,
     includeCGV = false,
+    additionalLines = [],
   } = params
 
-  const deposit = Math.round(amount * depositPercent / 100)
-  const solde = amount - deposit
-  const prestations = prestationsForType(project)
-  const missionTitle = project
+  // Lignes consolidées : projet principal + projets additionnels
+  const allLines: DevisLine[] = [
+    ...(project ? [{ project, amount }] : []),
+    ...additionalLines,
+  ]
+  // Total HT = somme de toutes les lignes (ou amount seul si pas de projet)
+  const totalAmount = allLines.length > 0
+    ? allLines.reduce((s, l) => s + l.amount, 0)
+    : amount
+  const deposit = Math.round(totalAmount * depositPercent / 100)
+  const solde = totalAmount - deposit
+
+  const isMulti = allLines.length > 1
+  const missionTitle = isMulti
+    ? `Prestations combinées (${allLines.length} projets)`
+    : project
     ? `${projectTypeLabel(project.type)} — ${project.name}`
     : 'Prestation digitale sur mesure'
 
@@ -571,9 +605,19 @@ export function generateDevisHTML(params: DevisParams): string {
   </div>
 
   <div class="slabel">Périmètre de la prestation</div>
-  <ul class="prest-list">
-    ${prestations.map((p) => `<li>${p}</li>`).join('\n    ')}
-  </ul>
+  ${isMulti
+    ? allLines.map((l) => `
+    <div style="margin-bottom:6px">
+      <div style="font-size:7pt;color:#C9A84C;font-weight:600;letter-spacing:.04em;margin-bottom:2px">
+        — ${projectTypeLabel(l.project.type)} · ${l.project.name}
+      </div>
+      <ul class="prest-list" style="margin-left:8px">
+        ${prestationsForType(l.project).map((p) => `<li>${p}</li>`).join('\n        ')}
+      </ul>
+    </div>`).join('')
+    : `<ul class="prest-list">
+    ${(project ? prestationsForType(project) : prestationsForType(null)).map((p) => `<li>${p}</li>`).join('\n    ')}
+  </ul>`}
 
   ${customNotes ? `<div class="cond-block" style="margin-top:8px"><strong>Note :</strong> ${customNotes}</div>` : ''}
 
@@ -587,17 +631,25 @@ export function generateDevisHTML(params: DevisParams): string {
       </tr>
     </thead>
     <tbody>
+      ${allLines.length > 0
+        ? allLines.map((l) => `
+      <tr>
+        <td><strong style="color:#E2C97E">${projectTypeLabel(l.project.type)}</strong></td>
+        <td>${l.project.name}</td>
+        <td class="amt">${formatEur(l.amount)}</td>
+      </tr>`).join('')
+        : `
       <tr>
         <td><strong style="color:#E2C97E">${projectTypeLabel(project?.type)}</strong></td>
         <td>${project?.name ?? 'Prestation sur mesure'}</td>
         <td class="amt">${formatEur(amount)}</td>
-      </tr>
+      </tr>`}
     </tbody>
   </table>
   <div class="total-block">
     <div class="tline"><span>Acompte à la commande (${depositPercent}%)</span><span class="val">${formatEur(deposit)}</span></div>
     <div class="tline"><span>Solde à la livraison</span><span class="val">${formatEur(solde)}</span></div>
-    <div class="tline main"><span>Total HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(amount)}</span></div>
+    <div class="tline main"><span>Total HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(totalAmount)}</span></div>
   </div>
 
   <div class="slabel">Conditions</div>

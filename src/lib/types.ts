@@ -15,7 +15,7 @@ export type ClientStatus =
   | 'interested'
   | 'not_interested';
 export type ProjectStatus = 'planning' | 'in_progress' | 'review' | 'completed' | 'on_hold';
-export type ProjectType = 'website' | 'ecommerce' | 'webapp' | 'redesign' | 'maintenance' | 'seo' | 'other';
+export type ProjectType = 'website' | 'ecommerce' | 'webapp' | 'redesign' | 'maintenance' | 'seo' | 'automation' | 'other';
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type InteractionType = 'call' | 'email' | 'meeting' | 'note' | 'demo';
