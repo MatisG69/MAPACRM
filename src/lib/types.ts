@@ -73,6 +73,12 @@ export interface Project {
   end_date: string | null;
   progress: number;
   type: ProjectType | null;
+  /** Le projet inclut un suivi mensuel après-vente (récurrent) */
+  has_recurring_support?: boolean;
+  /** Montant mensuel HT du suivi en euros */
+  recurring_support_amount?: number | null;
+  /** Libellé du suivi (ex. "SEO + statistiques", "Supervision automatisations") */
+  recurring_support_label?: string | null;
   created_at: string;
   updated_at: string;
   client?: Client;

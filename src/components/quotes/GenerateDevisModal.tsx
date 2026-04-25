@@ -39,6 +39,7 @@ export function GenerateDevisModal({
   const [amount, setAmount] = useState<string>('')
   const [validUntil, setValidUntil] = useState('')
   const [depositRequested, setDepositRequested] = useState(true)
+  const [depositPercentInput, setDepositPercentInput] = useState<number>(30)
   const [depositAmount, setDepositAmount] = useState<string>('')
   const [includeCGV, setIncludeCGV] = useState(true)
   /** Projets additionnels du même client à combiner dans le devis */
@@ -89,6 +90,7 @@ export function GenerateDevisModal({
       setAmount('')
       setValidUntil('')
       setDepositRequested(true)
+      setDepositPercentInput(30)
       setDepositAmount('')
       setIncludeCGV(true)
       setAdditionalProjectIds([])
@@ -128,14 +130,14 @@ export function GenerateDevisModal({
     if (!clientId) setClientId(selectedProject.client_id ?? '')
   }, [selectedProject])
 
-  // Auto-compute deposit amount (30%) sur le GRAND TOTAL (principal + projets additionnels)
+  // Auto-compute deposit amount au % choisi sur le GRAND TOTAL (principal + projets additionnels)
   useEffect(() => {
     if (depositRequested && grandTotal > 0) {
-      setDepositAmount(String(Math.round(grandTotal * 0.3)))
+      setDepositAmount(String(Math.round(grandTotal * (depositPercentInput / 100))))
     } else {
       setDepositAmount('')
     }
-  }, [grandTotal, depositRequested])
+  }, [grandTotal, depositRequested, depositPercentInput])
 
   const handleGenerate = async () => {
     if (!selectedClient) return
@@ -437,16 +439,52 @@ export function GenerateDevisModal({
               <span className="text-sm text-ws-paper font-medium">Acompte demandé</span>
             </label>
             {depositRequested && (
-              <div>
-                <label className="form-label">Montant de l'acompte (€)</label>
-                <input
-                  type="number"
-                  className="input font-mono"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder="ex : 240"
-                  min={1}
-                />
+              <div className="space-y-2">
+                <div>
+                  <label className="form-label">Pourcentage</label>
+                  <div className="flex gap-2 items-center">
+                    {[20, 30, 40, 50].map((pct) => (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => setDepositPercentInput(pct)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border ${
+                          depositPercentInput === pct
+                            ? 'bg-ws-accent/15 border-ws-accent/50 text-ws-accent'
+                            : 'border-ws-line text-ws-mist hover:text-ws-paper hover:border-ws-line'
+                        }`}
+                      >
+                        {pct}%
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      className="input font-mono w-20 text-center"
+                      value={depositPercentInput}
+                      onChange={(e) =>
+                        setDepositPercentInput(Math.max(0, Math.min(100, Number(e.target.value) || 0)))
+                      }
+                      min={0}
+                      max={100}
+                      step={5}
+                      title="Pourcentage personnalisé"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">Montant de l'acompte (€)</label>
+                  <input
+                    type="number"
+                    className="input font-mono"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    placeholder="ex : 240"
+                    min={1}
+                  />
+                  <p className="mt-1 text-[10px] font-mono text-ws-mist">
+                    Recalculé automatiquement à {depositPercentInput}% du total ({grandTotal} € HT). Modifiable.
+                  </p>
+                </div>
               </div>
             )}
           </div>

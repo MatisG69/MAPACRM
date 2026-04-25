@@ -73,6 +73,9 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onUpdateCl
     end_date: initial?.end_date || '',
     progress: initial?.progress || 0,
     type: initial?.type || null,
+    has_recurring_support: initial?.has_recurring_support ?? false,
+    recurring_support_amount: initial?.recurring_support_amount ?? null,
+    recurring_support_label: initial?.recurring_support_label ?? null,
   });
 
   // Récupère le client lié (s'il existe) pour pré-remplir les infos contractuelles
@@ -257,6 +260,61 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onUpdateCl
           <label className="form-label">Description</label>
           <textarea className="input resize-none" rows={3} value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Description du projet..." />
         </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────
+          Suivi après-vente mensuel (récurrent)
+          Apparaît dans la section "Tarification mensuelle" du devis PDF
+          ───────────────────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-ws-line bg-ws-deep/30 px-4 py-4 space-y-3">
+        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={!!form.has_recurring_support}
+            onChange={(e) => set('has_recurring_support', e.target.checked)}
+            className="w-4 h-4 rounded accent-ws-accent"
+          />
+          <div>
+            <span className="text-sm text-ws-paper font-medium">Suivi après-vente mensuel</span>
+            <span className="block text-[10px] font-mono text-ws-mist mt-0.5">
+              Ajoute une ligne récurrente HT au devis (cumulable avec les autres projets du même client).
+            </span>
+          </div>
+        </label>
+
+        {form.has_recurring_support && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div>
+              <label className="form-label">Montant mensuel HT (€)</label>
+              <input
+                type="number"
+                className="input font-mono"
+                value={form.recurring_support_amount ?? ''}
+                onChange={(e) =>
+                  set(
+                    'recurring_support_amount',
+                    e.target.value ? Number(e.target.value) : null
+                  )
+                }
+                placeholder="ex : 80"
+                min={0}
+                step={5}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="form-label">Libellé du suivi (facultatif)</label>
+              <input
+                type="text"
+                className="input"
+                value={form.recurring_support_label ?? ''}
+                onChange={(e) =>
+                  set('recurring_support_label', e.target.value || null)
+                }
+                placeholder="ex : SEO + statistiques · Supervision automatisations"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─────────────────────────────────────────────────────────

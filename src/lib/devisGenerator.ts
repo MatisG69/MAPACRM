@@ -138,6 +138,31 @@ function formatISODate(iso: string | null | undefined): string | null {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+/** Met le nom de famille en MAJUSCULES (dernier mot du nom complet) — convention française */
+function upperLastName(fullName: string | null | undefined): string {
+  if (!fullName) return ''
+  const parts = fullName.trim().split(/\s+/)
+  if (parts.length === 0) return ''
+  if (parts.length === 1) return parts[0].toUpperCase()
+  const last = parts.pop()!.toUpperCase()
+  return parts.join(' ') + ' ' + last
+}
+
+/** Libellé par défaut du suivi mensuel selon le type de projet */
+function defaultRecurringLabel(type: string | null | undefined): string {
+  const map: Record<string, string> = {
+    website: 'SEO, modifications mineures, statistiques',
+    redesign: 'SEO, modifications mineures, statistiques',
+    ecommerce: 'Maintenance technique, mises à jour catalogue',
+    webapp: 'Maintenance technique, supervision, mises à jour',
+    automation: 'Supervision, corrections, ajustements',
+    seo: 'Suivi positions, reporting mensuel',
+    maintenance: 'Maintenance corrective et préventive',
+    other: 'Suivi mensuel',
+  }
+  return type ? map[type] ?? 'Suivi mensuel' : 'Suivi mensuel'
+}
+
 function projectTypeLabel(type: string | null | undefined): string {
   const map: Record<string, string> = {
     website: 'Site vitrine',
@@ -165,6 +190,26 @@ export function generateDevisHTML(params: DevisParams): string {
     includeCGV = false,
     additionalLines = [],
   } = params
+
+  // Lignes récurrentes (suivi mensuel HT) issues du projet principal et des projets additionnels
+  const recurringLines: { project: Project; amount: number; label: string }[] = []
+  if (project?.has_recurring_support && project.recurring_support_amount && project.recurring_support_amount > 0) {
+    recurringLines.push({
+      project,
+      amount: project.recurring_support_amount,
+      label: project.recurring_support_label || defaultRecurringLabel(project.type),
+    })
+  }
+  for (const l of additionalLines) {
+    if (l.project.has_recurring_support && l.project.recurring_support_amount && l.project.recurring_support_amount > 0) {
+      recurringLines.push({
+        project: l.project,
+        amount: l.project.recurring_support_amount,
+        label: l.project.recurring_support_label || defaultRecurringLabel(l.project.type),
+      })
+    }
+  }
+  const totalRecurring = recurringLines.reduce((s, l) => s + l.amount, 0)
 
   // Date de validité affichée : prioritairement la date explicitement choisie au form,
   // sinon repli sur today + validityDays.
@@ -609,13 +654,13 @@ export function generateDevisHTML(params: DevisParams): string {
   <div class="grid2">
     <div class="info-block">
       <div class="key">Client</div>
-      <div class="val">${client.company || client.name}</div>
+      <div class="val">${client.company || upperLastName(client.name)}</div>
       <div class="line">
         ${client.legal_form ? `${client.legal_form}<br>` : ''}
         ${client.address ? `${client.address}${client.city ? ', ' : '<br>'}` : ''}${client.city ? `${client.city}<br>` : ''}
         ${client.siret ? `SIRET : ${client.siret}<br>` : ''}
         ${client.vat_number ? `TVA : ${client.vat_number}<br>` : ''}
-        ${client.name && client.company && client.name !== client.company ? `<br><strong style="color:#C8BFB0">Contact :</strong> ${client.name}${client.contact_role ? `, ${client.contact_role}` : ''}<br>` : ''}
+        ${client.name && client.company && client.name !== client.company ? `<br><strong style="color:#C8BFB0">Contact :</strong> ${upperLastName(client.name)}${client.contact_role ? `, ${client.contact_role}` : ''}<br>` : ''}
         ${client.email ? `${client.email}<br>` : ''}
         ${client.phone ? `${client.phone}` : ''}
       </div>
@@ -679,6 +724,33 @@ export function generateDevisHTML(params: DevisParams): string {
     <div class="tline main"><span>Total HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(totalAmount)}</span></div>
   </div>
 
+  ${recurringLines.length > 0 ? `
+  <div class="slabel">Tarification mensuelle (récurrent)</div>
+  <table class="price-table">
+    <thead>
+      <tr>
+        <th>Prestation</th>
+        <th>Description</th>
+        <th style="text-align:right">Montant mensuel</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${recurringLines.map((l) => `
+      <tr>
+        <td><strong style="color:#E2C97E">Suivi · ${projectTypeLabel(l.project.type)}</strong></td>
+        <td>${l.label}</td>
+        <td class="amt">${formatEur(l.amount)} HT/mois</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+  <div class="total-block" style="margin-top:4px">
+    <div class="tline main"><span>Total mensuel récurrent HT</span><span class="val">${formatEur(totalRecurring)} HT/mois</span></div>
+  </div>
+  <p style="margin-top:4px;font-size:6.5pt;color:#9E9080;font-style:italic;line-height:1.5">
+    Prestations facturées mensuellement, à compter de la livraison. Font l'objet d'un contrat de suivi distinct, conformément à l'article 9.2 des CGV.
+  </p>
+  ` : ''}
+
   ${includeCGV
     ? `<p style="margin-top:8px;text-align:center;font-size:6.5pt;letter-spacing:.18em;text-transform:uppercase;color:#9E9080;">
         Conditions générales de vente détaillées en pages 2 à 4 · Signature en page 5
@@ -695,8 +767,11 @@ export function generateDevisHTML(params: DevisParams): string {
 
   <div class="footer">
     <div class="diamond-row">♦</div>
-    <div class="brand">MAPA Développement</div>
-    <div class="name">Matis Gouyet</div>
+    <div class="brand">MAPA Développement · Matis Gouyet</div>
+    <div class="name" style="font-style:normal;font-family:'Inter',sans-serif;font-size:6.5pt;letter-spacing:.05em;color:#9E9080;line-height:1.55;margin-top:3px">
+      89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq · SIREN 919 461 301<br>
+      contact@mapa-developpement.fr · +33 6 79 62 39 42
+    </div>
   </div>
 
 </section>
@@ -716,7 +791,7 @@ ${includeCGV ? renderCGVPage({ quoteNumber, client }) : ''}
    ═══════════════════════════════════════════════════════════ */
 function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
   const { quoteNumber, client } = ctx
-  const clientName = client.company || client.name
+  const clientName = client.company || upperLastName(client.name)
   const updatedAt = today()
   const safe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -736,7 +811,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
   const articlesPartOne = `
     <div class="cgv-art">
       <h5>Art. 1 - Objet</h5>
-      <p>Les présentes CGV ont pour objet de définir les conditions dans lesquelles le Prestataire fournit au Client des prestations de conception, développement, intégration, maintenance et hébergement de sites internet, d'applications web et de logiciels sur mesure, sur la base d'un devis préalablement accepté.</p>
+      <p>Les présentes CGV ont pour objet de définir les conditions dans lesquelles le Prestataire fournit au Client des prestations de <strong>conception, développement, intégration, automatisation de processus métier, paramétrage d'agents d'intelligence artificielle, maintenance et hébergement</strong> de sites internet, d'applications web, de logiciels sur mesure et de solutions digitales associées, sur la base d'un devis préalablement accepté.</p>
     </div>
 
     <div class="cgv-art">
@@ -751,7 +826,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
 
     <div class="cgv-art">
       <h5>Art. 4 - Pénalités de retard et indemnité forfaitaire</h5>
-      <p>Conformément à l'<em>article L. 441-10 du Code de commerce</em>, tout retard de paiement entraîne de plein droit, sans mise en demeure préalable, l'application de pénalités au taux directeur semestriel de la Banque centrale européenne majoré de dix (<strong>10</strong>) points de pourcentage. En application de l'<em>article D. 441-5 du Code de commerce</em>, une <strong>indemnité forfaitaire de quarante euros (40 €)</strong> pour frais de recouvrement est également due, sans préjudice d'une indemnisation complémentaire sur justificatif si les frais réels exposés sont supérieurs.</p>
+      <p>Conformément à l'<em>article L. 441-10 du Code de commerce</em>, tout retard de paiement entraîne de plein droit, sans mise en demeure préalable, l'application de pénalités au <strong>taux d'intérêt appliqué par la Banque centrale européenne à son opération de refinancement la plus récente, majoré de dix (10) points de pourcentage</strong>. En application de l'<em>article D. 441-5 du Code de commerce</em>, une <strong>indemnité forfaitaire de quarante euros (40 €)</strong> pour frais de recouvrement est également due, sans préjudice d'une indemnisation complémentaire sur justificatif si les frais réels exposés sont supérieurs.</p>
     </div>
 
     <div class="cgv-art">
@@ -811,8 +886,12 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
     </div>
 
     <div class="cgv-art">
-      <h5>Art. 13 - Données personnelles (RGPD)</h5>
-      <p>Les traitements de données personnelles sont conduits dans le respect du <em>Règlement (UE) 2016/679</em> (« RGPD ») et de la <em>loi n° 78-17 du 6 janvier 1978 modifiée</em>. Lorsque le Prestataire est amené à traiter des données personnelles pour le compte du Client (hébergement avec formulaire, gestion de bases utilisateurs), il agit en qualité de <strong>sous-traitant</strong> au sens de l'<em>article 28 du RGPD</em>. Un accord de sous-traitance des données (DPA) conforme à l'article 28.3 du RGPD est alors annexé au contrat ou conclu séparément. Pour les données traitées par le Prestataire en tant que responsable du traitement (gestion de la relation client, facturation), il est renvoyé à la politique de confidentialité accessible sur https://www.mapa-developpement.fr.</p>
+      <h5>Art. 13 - Données personnelles (RGPD) et données protégées</h5>
+      <p><strong>13.1 Cadre général.</strong> Les traitements de données personnelles sont conduits dans le respect du <em>Règlement (UE) 2016/679</em> (« RGPD ») et de la <em>loi n° 78-17 du 6 janvier 1978 modifiée</em>. Lorsque le Prestataire est amené à traiter des données personnelles pour le compte du Client (hébergement avec formulaire, gestion de bases utilisateurs, automatisations connectées à des outils tiers), il agit en qualité de <strong>sous-traitant</strong> au sens de l'<em>article 28 du RGPD</em>.</p>
+      <p><strong>13.2 Accord de sous-traitance des données (DPA).</strong> Un <strong>accord de sous-traitance conforme à l'article 28.3 du RGPD est obligatoirement signé concomitamment au présent contrat</strong> dès lors que la prestation implique l'accès, le traitement ou le transfert de données personnelles pour le compte du Client. Cet accord précise notamment l'objet, la durée, la nature et la finalité du traitement, les catégories de données et de personnes concernées, les obligations du sous-traitant et les mesures techniques et organisationnelles de sécurité mises en œuvre.</p>
+      <p><strong>13.3 Sous-traitants ultérieurs.</strong> Le Prestataire peut faire appel à des sous-traitants ultérieurs (hébergeur, fournisseurs d'intelligence artificielle, services tiers d'authentification, de signature électronique, de stockage, etc.). La liste de ces sous-traitants ultérieurs et leurs garanties (clauses contractuelles types, certification Data Privacy Framework, etc.) est annexée au DPA. Tout changement de sous-traitant ultérieur fait l'objet d'une information préalable du Client, qui dispose d'un droit d'opposition motivé.</p>
+      <p><strong>13.4 Données couvertes par le secret professionnel.</strong> Lorsque le Client exerce une activité réglementée soumise à un secret professionnel (notamment <em>article 66-5 de la loi n° 71-1130 du 31 décembre 1971</em> pour les avocats, secret médical, secret bancaire, etc.), le Prestataire s'engage à mettre en œuvre des mesures de sécurité renforcées (chiffrement, restriction d'accès, journalisation) et à respecter strictement la confidentialité de ces données, étant rappelé que sa qualité de sous-traitant ne lève en aucun cas le secret protégeant les données du Client.</p>
+      <p><strong>13.5 Responsable du traitement.</strong> Pour les données traitées par le Prestataire en tant que responsable du traitement (gestion de la relation client, facturation, prospection), il est renvoyé à la politique de confidentialité accessible sur <em>https://www.mapa-developpement.fr</em>.</p>
     </div>
 
     <div class="cgv-art">
@@ -922,8 +1001,8 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
         ${client.vat_number ? `TVA ${safe(client.vat_number)}<br>` : ''}
         ${client.address ? `${safe(client.address)}${client.city ? ', ' : '<br>'}` : ''}${client.city ? `${safe(client.city)}<br>` : ''}
         <br>
-        Représenté par : ${client.name && client.name !== clientName ? `<strong style="color:#C8BFB0">${safe(client.name)}</strong>` : '_____________________________'}${client.contact_role ? `, ${safe(client.contact_role)}` : ''}<br>
-        ${!client.name || client.name === clientName ? '_________________________________________<br>' : ''}
+        Représenté par : ${client.name && upperLastName(client.name) !== clientName ? `<strong style="color:#C8BFB0">${safe(upperLastName(client.name))}</strong>` : '_____________________________'}${client.contact_role ? `, ${safe(client.contact_role)}` : ''}<br>
+        ${!client.name || upperLastName(client.name) === clientName ? '_________________________________________<br>' : ''}
         ${client.email ? `<span style="color:#9E9080">${safe(client.email)}</span>` : ''}${client.email && client.phone ? ' · ' : ''}${client.phone ? `<span style="color:#9E9080">${safe(client.phone)}</span>` : ''}
       </div>
       <div class="fields">
