@@ -368,44 +368,33 @@ export function generateDevisHTML(params: DevisParams): string {
   }
   .tline.main .val{font-size:12pt;}
 
-  /* ── Bloc récurrent compact (suivi mensuel) ── */
-  .recurring-block{
+  /* ── Bandeau récurrent ultra-compact (1 ligne) ── */
+  .recurring-strip{
     margin-top:8px;
     border:1px solid rgba(201,168,76,.22);
     background:rgba(201,168,76,.04);
     border-radius:2px;
-    padding:7px 10px 6px;
+    padding:5px 10px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    font-size:7pt;color:#C8BFB0;line-height:1.45;
   }
-  .recurring-head{
-    display:flex;align-items:baseline;justify-content:space-between;
-    border-bottom:1px solid rgba(201,168,76,.18);
-    padding-bottom:4px;margin-bottom:4px;
+  .recurring-strip .r-label{
+    font-size:5.4pt;letter-spacing:.2em;text-transform:uppercase;
+    font-weight:600;color:#C9A84C;white-space:nowrap;
   }
-  .recurring-label{
-    font-size:5.5pt;letter-spacing:.22em;text-transform:uppercase;
-    font-weight:600;color:#C9A84C;
+  .recurring-strip .r-items{
+    flex:1;text-align:center;color:#C8BFB0;font-size:6.8pt;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .recurring-total{
+  .recurring-strip .r-items strong{color:#E2C97E;font-weight:500;}
+  .recurring-strip .r-total{
     font-family:'JetBrains Mono',monospace;
-    font-size:8pt;font-weight:600;color:#E2C97E;
+    font-size:7.8pt;font-weight:600;color:#E2C97E;white-space:nowrap;
   }
-  .recurring-list{list-style:none;margin:0;padding:0;}
-  .recurring-list li{
-    display:flex;align-items:baseline;justify-content:space-between;gap:10px;
-    padding:2.5px 0;
-    font-size:7pt;color:#C8BFB0;
-    border-bottom:1px dotted rgba(201,168,76,.12);
-  }
-  .recurring-list li:last-child{border-bottom:none;}
-  .r-name strong{color:#E2C97E;font-weight:500;}
-  .r-desc{color:#9E9080;font-size:6.5pt;margin-left:4px;}
-  .r-amt{
-    font-family:'JetBrains Mono',monospace;
-    color:#C9A84C;font-weight:500;white-space:nowrap;
-  }
-  .recurring-footnote{
-    margin-top:3px;
-    font-size:5.5pt;color:#9E9080;font-style:italic;line-height:1.4;
+  .recurring-foot{
+    margin-top:2px;
+    font-size:5.2pt;color:#9E9080;font-style:italic;line-height:1.3;
+    text-align:center;
   }
 
   /* ── Conditions ── */
@@ -659,14 +648,12 @@ export function generateDevisHTML(params: DevisParams): string {
     .cond-block{padding:10px 12px;font-size:8.5pt;line-height:1.7;}
     .footer{padding-top:8px;}
 
-    /* Bloc récurrent en print : resserrement maximum */
-    .recurring-block{margin-top:6px;padding:5px 9px 5px;}
-    .recurring-head{padding-bottom:3px;margin-bottom:3px;}
-    .recurring-label{font-size:5.2pt;}
-    .recurring-total{font-size:7.5pt;}
-    .recurring-list li{padding:1.8px 0;font-size:6.7pt;}
-    .r-desc{font-size:6.2pt;}
-    .recurring-footnote{font-size:5.2pt;margin-top:2px;}
+    /* Bandeau récurrent en print : monoligne, taille minimale */
+    .recurring-strip{margin-top:6px;padding:4px 9px;font-size:6.8pt;}
+    .recurring-strip .r-label{font-size:5pt;}
+    .recurring-strip .r-items{font-size:6.4pt;}
+    .recurring-strip .r-total{font-size:7.4pt;}
+    .recurring-foot{font-size:5pt;margin-top:1.5px;}
   }
 
   @media screen{
@@ -774,22 +761,12 @@ export function generateDevisHTML(params: DevisParams): string {
   </div>
 
   ${recurringLines.length > 0 ? `
-  <div class="recurring-block">
-    <div class="recurring-head">
-      <span class="recurring-label">Tarification mensuelle récurrente</span>
-      <span class="recurring-total">${formatEur(totalRecurring)} HT/mois</span>
-    </div>
-    <ul class="recurring-list">
-      ${recurringLines.map((l) => `
-      <li>
-        <span class="r-name"><strong>Suivi · ${projectTypeLabel(l.project.type)}</strong> <span class="r-desc">${l.label}</span></span>
-        <span class="r-amt">${formatEur(l.amount)} HT/mois</span>
-      </li>`).join('')}
-    </ul>
-    <p class="recurring-footnote">
-      Facturées mensuellement à compter de la livraison · contrat de suivi distinct (art. 9.2 CGV).
-    </p>
+  <div class="recurring-strip">
+    <span class="r-label">Suivi mensuel HT</span>
+    <span class="r-items">${recurringLines.map((l) => `<strong>${projectTypeLabel(l.project.type)}</strong> ${formatEur(l.amount)}/mois`).join(' · ')}</span>
+    <span class="r-total">Total ${formatEur(totalRecurring)} HT/mois</span>
   </div>
+  <p class="recurring-foot">Facturé mensuellement à compter de la livraison · contrat de suivi distinct (art. 9.2 CGV).</p>
   ` : ''}
 
   ${includeCGV
