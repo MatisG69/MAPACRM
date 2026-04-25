@@ -24,6 +24,7 @@ export interface DevisParams {
   additionalLines?: DevisLine[]
 }
 
+/** Tarifs catalogue par type (utilisés en repli si aucun budget n'est saisi sur le projet) */
 const PROJECT_PRICES: Partial<Record<string, number>> = {
   website: 600,
   redesign: 600,
@@ -31,8 +32,16 @@ const PROJECT_PRICES: Partial<Record<string, number>> = {
   ecommerce: 1000,
 }
 
+/**
+ * Prix à proposer pour un projet :
+ *  1. Le budget saisi sur la fiche projet (priorité absolue — c'est le tarif négocié)
+ *  2. À défaut, le tarif catalogue selon le type
+ *  3. À défaut, null (devis manuel)
+ */
 export function getPriceForProject(project: Project | null): number | null {
-  if (!project?.type) return null
+  if (!project) return null
+  if (typeof project.budget === 'number' && project.budget > 0) return project.budget
+  if (!project.type) return null
   return PROJECT_PRICES[project.type] ?? null
 }
 
