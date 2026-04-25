@@ -368,6 +368,46 @@ export function generateDevisHTML(params: DevisParams): string {
   }
   .tline.main .val{font-size:12pt;}
 
+  /* ── Bloc récurrent compact (suivi mensuel) ── */
+  .recurring-block{
+    margin-top:8px;
+    border:1px solid rgba(201,168,76,.22);
+    background:rgba(201,168,76,.04);
+    border-radius:2px;
+    padding:7px 10px 6px;
+  }
+  .recurring-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:1px solid rgba(201,168,76,.18);
+    padding-bottom:4px;margin-bottom:4px;
+  }
+  .recurring-label{
+    font-size:5.5pt;letter-spacing:.22em;text-transform:uppercase;
+    font-weight:600;color:#C9A84C;
+  }
+  .recurring-total{
+    font-family:'JetBrains Mono',monospace;
+    font-size:8pt;font-weight:600;color:#E2C97E;
+  }
+  .recurring-list{list-style:none;margin:0;padding:0;}
+  .recurring-list li{
+    display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+    padding:2.5px 0;
+    font-size:7pt;color:#C8BFB0;
+    border-bottom:1px dotted rgba(201,168,76,.12);
+  }
+  .recurring-list li:last-child{border-bottom:none;}
+  .r-name strong{color:#E2C97E;font-weight:500;}
+  .r-desc{color:#9E9080;font-size:6.5pt;margin-left:4px;}
+  .r-amt{
+    font-family:'JetBrains Mono',monospace;
+    color:#C9A84C;font-weight:500;white-space:nowrap;
+  }
+  .recurring-footnote{
+    margin-top:3px;
+    font-size:5.5pt;color:#9E9080;font-style:italic;line-height:1.4;
+  }
+
   /* ── Conditions ── */
   .cond-block{
     background:#111;border-left:2px solid #C9A84C;
@@ -595,29 +635,38 @@ export function generateDevisHTML(params: DevisParams): string {
 
   @media print{
     html,body{width:210mm;background:#0A0A0A;}
-    body{font-size:9pt;line-height:1.55;}
+    body{font-size:8.5pt;line-height:1.5;}
     .page{
       width:210mm;height:297mm;min-height:297mm;
-      padding:14mm 16mm;
+      padding:11mm 14mm;
       overflow:hidden;
     }
-    .logo{font-size:24pt;}
-    .agency{font-size:6pt;}
-    .doc-title{font-size:13pt;}
-    .header{padding-bottom:12px;margin-bottom:14px;}
-    .slabel{font-size:6pt;margin-top:12px;margin-bottom:10px;}
-    .info-block{padding:12px 14px;}
-    .info-block .val{font-size:9.5pt;}
-    .info-block .line{font-size:8.5pt;line-height:1.75;}
-    .prest-list li{padding:6px 0;font-size:9pt;}
-    .price-table th{padding:6px 8px;font-size:6pt;}
-    .price-table td{padding:8px 8px;font-size:9pt;}
-    .total-block{padding:12px 14px;margin-top:10px;}
-    .tline{padding:4px 0;font-size:9pt;}
-    .tline.main{font-size:11pt;padding-top:8px;}
-    .tline.main .val{font-size:13pt;}
+    .logo{font-size:22pt;}
+    .agency{font-size:5.8pt;}
+    .doc-title{font-size:12pt;}
+    .header{padding-bottom:8px;margin-bottom:9px;}
+    .slabel{font-size:5.6pt;margin-top:8px;margin-bottom:6px;}
+    .info-block{padding:9px 12px;}
+    .info-block .val{font-size:8.5pt;}
+    .info-block .line{font-size:7.5pt;line-height:1.6;}
+    .prest-list li{padding:3.5px 0;font-size:8pt;}
+    .price-table th{padding:4px 8px;font-size:5.5pt;}
+    .price-table td{padding:5px 8px;font-size:8pt;}
+    .total-block{padding:9px 12px;margin-top:7px;}
+    .tline{padding:3px 0;font-size:8.5pt;}
+    .tline.main{font-size:10.5pt;padding-top:6px;}
+    .tline.main .val{font-size:12.5pt;}
     .cond-block{padding:10px 12px;font-size:8.5pt;line-height:1.7;}
-    .footer{padding-top:10px;}
+    .footer{padding-top:8px;}
+
+    /* Bloc récurrent en print : resserrement maximum */
+    .recurring-block{margin-top:6px;padding:5px 9px 5px;}
+    .recurring-head{padding-bottom:3px;margin-bottom:3px;}
+    .recurring-label{font-size:5.2pt;}
+    .recurring-total{font-size:7.5pt;}
+    .recurring-list li{padding:1.8px 0;font-size:6.7pt;}
+    .r-desc{font-size:6.2pt;}
+    .recurring-footnote{font-size:5.2pt;margin-top:2px;}
   }
 
   @media screen{
@@ -725,30 +774,22 @@ export function generateDevisHTML(params: DevisParams): string {
   </div>
 
   ${recurringLines.length > 0 ? `
-  <div class="slabel">Tarification mensuelle (récurrent)</div>
-  <table class="price-table">
-    <thead>
-      <tr>
-        <th>Prestation</th>
-        <th>Description</th>
-        <th style="text-align:right">Montant mensuel</th>
-      </tr>
-    </thead>
-    <tbody>
+  <div class="recurring-block">
+    <div class="recurring-head">
+      <span class="recurring-label">Tarification mensuelle récurrente</span>
+      <span class="recurring-total">${formatEur(totalRecurring)} HT/mois</span>
+    </div>
+    <ul class="recurring-list">
       ${recurringLines.map((l) => `
-      <tr>
-        <td><strong style="color:#E2C97E">Suivi · ${projectTypeLabel(l.project.type)}</strong></td>
-        <td>${l.label}</td>
-        <td class="amt">${formatEur(l.amount)} HT/mois</td>
-      </tr>`).join('')}
-    </tbody>
-  </table>
-  <div class="total-block" style="margin-top:4px">
-    <div class="tline main"><span>Total mensuel récurrent HT</span><span class="val">${formatEur(totalRecurring)} HT/mois</span></div>
+      <li>
+        <span class="r-name"><strong>Suivi · ${projectTypeLabel(l.project.type)}</strong> <span class="r-desc">${l.label}</span></span>
+        <span class="r-amt">${formatEur(l.amount)} HT/mois</span>
+      </li>`).join('')}
+    </ul>
+    <p class="recurring-footnote">
+      Facturées mensuellement à compter de la livraison · contrat de suivi distinct (art. 9.2 CGV).
+    </p>
   </div>
-  <p style="margin-top:4px;font-size:6.5pt;color:#9E9080;font-style:italic;line-height:1.5">
-    Prestations facturées mensuellement, à compter de la livraison. Font l'objet d'un contrat de suivi distinct, conformément à l'article 9.2 des CGV.
-  </p>
   ` : ''}
 
   ${includeCGV
