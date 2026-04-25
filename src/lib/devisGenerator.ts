@@ -34,7 +34,7 @@ const PROJECT_PRICES: Partial<Record<string, number>> = {
 
 /**
  * Prix à proposer pour un projet :
- *  1. Le budget saisi sur la fiche projet (priorité absolue — c'est le tarif négocié)
+ *  1. Le budget saisi sur la fiche projet (priorité absolue - c'est le tarif négocié)
  *  2. À défaut, le tarif catalogue selon le type
  *  3. À défaut, null (devis manuel)
  */
@@ -51,47 +51,47 @@ function prestationsForType(project: Project | null): string[] {
     case 'website':
     case 'redesign':
       return [
-        'Design sur mesure — maquette validée avant intégration',
-        'Intégration responsive — mobile, tablette, desktop',
+        'Design sur mesure - maquette validée avant intégration',
+        'Intégration responsive - mobile, tablette, desktop',
         'Structure & contenus fournis par le client intégrés',
-        'Référencement local SEO de base — balises, métadonnées',
+        'Référencement local SEO de base - balises, métadonnées',
         'Mise en ligne, nom de domaine & hébergement configurés',
-        'Accompagnement post-livraison inclus — 30 jours',
+        'Accompagnement post-livraison inclus - 30 jours',
       ]
     case 'webapp':
       return [
-        'Design sur mesure — maquette validée avant intégration',
-        'Intégration responsive — mobile, tablette, desktop',
+        'Design sur mesure - maquette validée avant intégration',
+        'Intégration responsive - mobile, tablette, desktop',
         'Système de réservation ou de gestion intégré',
         'Base de données & back-office d\'administration',
-        'Référencement local SEO de base — balises, métadonnées',
+        'Référencement local SEO de base - balises, métadonnées',
         'Mise en ligne, configuration serveur & domaine',
-        'Accompagnement post-livraison inclus — 30 jours',
+        'Accompagnement post-livraison inclus - 30 jours',
       ]
     case 'ecommerce':
       return [
-        'Design sur mesure — maquette validée avant intégration',
-        'Boutique en ligne — catalogue, fiches produits, panier',
-        'Système de paiement sécurisé — Stripe ou équivalent',
+        'Design sur mesure - maquette validée avant intégration',
+        'Boutique en ligne - catalogue, fiches produits, panier',
+        'Système de paiement sécurisé - Stripe ou équivalent',
         'Gestion des commandes & tableau de bord vendeur',
         'Référencement SEO produits & pages catégories',
         'Mise en ligne, configuration serveur & domaine',
-        'Accompagnement post-livraison inclus — 30 jours',
+        'Accompagnement post-livraison inclus - 30 jours',
       ]
     case 'seo':
       return [
-        'Audit SEO complet — analyse positionnement actuel',
-        'Optimisation on-page — balises, structure, mots-clés',
-        'Optimisation technique — vitesse, Core Web Vitals',
+        'Audit SEO complet - analyse positionnement actuel',
+        'Optimisation on-page - balises, structure, mots-clés',
+        'Optimisation technique - vitesse, Core Web Vitals',
         'Création ou optimisation de la fiche Google Business',
-        'Rapport de suivi mensuel — positions & recommandations',
+        'Rapport de suivi mensuel - positions & recommandations',
       ]
     case 'maintenance':
       return [
-        'Maintenance corrective — correction des anomalies',
+        'Maintenance corrective - correction des anomalies',
         'Mises à jour CMS, plugins et dépendances',
         'Sauvegardes régulières & monitoring disponibilité',
-        'Support réactif par messagerie — délai garanti 24h',
+        'Support réactif par messagerie - délai garanti 24h',
       ]
     case 'automation':
       return [
@@ -108,7 +108,7 @@ function prestationsForType(project: Project | null): string[] {
         'Conception & développement sur mesure',
         'Tests & recette en collaboration avec le client',
         'Livraison, déploiement & documentation',
-        'Accompagnement post-livraison inclus — 30 jours',
+        'Accompagnement post-livraison inclus - 30 jours',
       ]
   }
 }
@@ -170,14 +170,14 @@ export function generateDevisHTML(params: DevisParams): string {
   const missionTitle = isMulti
     ? `Prestations combinées (${allLines.length} projets)`
     : project
-    ? `${projectTypeLabel(project.type)} — ${project.name}`
+    ? `${projectTypeLabel(project.type)} - ${project.name}`
     : 'Prestation digitale sur mesure'
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Devis ${quoteNumber} — ${client.name}</title>
+<title>Devis ${quoteNumber} - ${client.name}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -266,7 +266,7 @@ export function generateDevisHTML(params: DevisParams): string {
     border-bottom:1px solid #161616;font-size:7.5pt;color:#C8BFB0;
   }
   .prest-list li:last-child{border-bottom:none;}
-  .prest-list li::before{content:'—';color:#C9A84C;flex-shrink:0;}
+  .prest-list li::before{content:'-';color:#C9A84C;flex-shrink:0;}
 
   /* ── Tableau tarif ── */
   .price-table{width:100%;border-collapse:collapse;margin-top:6px;}
@@ -327,7 +327,7 @@ export function generateDevisHTML(params: DevisParams): string {
   }
 
   /* ══════════════════════════════════════════════
-     CGV — 2 pages A4, typographie lisible (cabinet d'avocats)
+     CGV - 2 pages A4, typographie lisible (cabinet d'avocats)
      Flow vertical classique (plus de column-count qui débordait)
      ══════════════════════════════════════════════ */
   .cgv-head{
@@ -367,7 +367,7 @@ export function generateDevisHTML(params: DevisParams): string {
   }
   .cgv-art p{margin-bottom:3px;color:#BAB0A0;}
   .cgv-art ul{margin:3px 0 4px 14px;padding:0;}
-  .cgv-art li{margin-bottom:2px;list-style:'—  ';padding-left:2px;color:#A89D8D;}
+  .cgv-art li{margin-bottom:2px;list-style:'-  ';padding-left:2px;color:#A89D8D;}
   .cgv-art strong{color:#E2C97E;font-weight:500;}
   .cgv-art em{font-style:italic;color:#C8BFB0;}
 
@@ -401,21 +401,23 @@ export function generateDevisHTML(params: DevisParams): string {
   }
 
   @media print{
-    .cgv-head .ttl{font-size:16pt;}
-    .cgv-head .eyebrow{font-size:6pt;}
-    .cgv-head .meta{font-size:6.8pt;}
-    .cgv-preamble{font-size:7.5pt;line-height:1.6;padding:9px 12px;margin-bottom:10px;}
-    .cgv-body{font-size:7.2pt;line-height:1.58;}
-    .cgv-art h5{font-size:6.8pt;margin-bottom:3px;}
-    .cgv-art{margin-bottom:7px;}
+    .cgv-head{padding-bottom:7px;margin-bottom:9px;}
+    .cgv-head .ttl{font-size:14pt;}
+    .cgv-head .eyebrow{font-size:5.8pt;}
+    .cgv-head .meta{font-size:6.5pt;}
+    .cgv-preamble{font-size:7pt;line-height:1.5;padding:7px 10px;margin-bottom:8px;}
+    .cgv-body{font-size:6.9pt;line-height:1.5;}
+    .cgv-art h5{font-size:6.6pt;margin-bottom:2px;}
+    .cgv-art{margin-bottom:5px;}
+    .cgv-art p{margin-bottom:2px;}
     .cgv-sign .box{min-height:50px;padding:9px 12px;}
     .cgv-sign .box .desc{font-size:6.8pt;}
-    .cgv-footer{font-size:5.8pt;}
-    .cgv-continued{font-size:6pt;}
+    .cgv-footer{font-size:5.5pt;padding-top:4px;margin-top:6px;}
+    .cgv-continued{font-size:5.8pt;padding-top:6px;}
   }
 
   /* ══════════════════════════════════════════════
-     PAGE 4 — Signatures (page dédiée, respiration max)
+     PAGE 4 - Signatures (page dédiée, respiration max)
      ══════════════════════════════════════════════ */
   .page-sign{justify-content:space-between;}
   .sign-head{
@@ -608,7 +610,7 @@ export function generateDevisHTML(params: DevisParams): string {
       <div class="line">
         Émis le ${today()}<br>
         Valable jusqu'au ${validUntil(validityDays)}<br>
-        ${project?.name ? `Projet : ${project.name}` : 'MAPA Développement — Matis Gouyet'}
+        ${project?.name ? `Projet : ${project.name}` : 'MAPA Développement - Matis Gouyet'}
       </div>
     </div>
   </div>
@@ -618,7 +620,7 @@ export function generateDevisHTML(params: DevisParams): string {
     ? allLines.map((l) => `
     <div style="margin-bottom:6px">
       <div style="font-size:7pt;color:#C9A84C;font-weight:600;letter-spacing:.04em;margin-bottom:2px">
-        — ${projectTypeLabel(l.project.type)} · ${l.project.name}
+        - ${projectTypeLabel(l.project.type)} · ${l.project.name}
       </div>
       <ul class="prest-list" style="margin-left:8px">
         ${prestationsForType(l.project).map((p) => `<li>${p}</li>`).join('\n        ')}
@@ -661,13 +663,15 @@ export function generateDevisHTML(params: DevisParams): string {
     <div class="tline main"><span>Total HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(totalAmount)}</span></div>
   </div>
 
-  <div class="slabel">Conditions</div>
+  ${includeCGV ? `<div class="cond-block" style="margin-top:6px;font-size:7.5pt;padding:8px 12px;line-height:1.6">
+    <strong>Modalités</strong> - Acompte ${depositPercent}% (${formatEur(deposit)}) à la signature, solde (${formatEur(solde)}) à la livraison. Devis valable 30 jours. Conditions complètes en pages suivantes (CGV).
+  </div>` : `<div class="slabel">Conditions</div>
   <div class="cond-block">
-    <strong>Acompte</strong> — ${depositPercent}% du montant total (${formatEur(deposit)}) à la signature du devis, avant démarrage des travaux.<br>
-    <strong>Solde</strong> — ${formatEur(solde)} à réception de la livraison finale, après validation du client.<br>
-    <strong>Validité</strong> — Ce devis est valable 30 jours à compter de sa date d'émission.<br>
-    <strong>Propriété</strong> — Les éléments livrés deviennent propriété du client après règlement intégral.
-  </div>
+    <strong>Acompte</strong> - ${depositPercent}% du montant total (${formatEur(deposit)}) à la signature du devis, avant démarrage des travaux.<br>
+    <strong>Solde</strong> - ${formatEur(solde)} à réception de la livraison finale, après validation du client.<br>
+    <strong>Validité</strong> - Ce devis est valable 30 jours à compter de sa date d'émission.<br>
+    <strong>Propriété</strong> - Les éléments livrés deviennent propriété du client après règlement intégral.
+  </div>`}
 
   </div><!-- /devis-body -->
 
@@ -686,7 +690,7 @@ ${includeCGV ? renderCGVPage({ quoteNumber, client }) : ''}
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PAGE 2 — Conditions Générales de Vente
+   PAGE 2 - Conditions Générales de Vente
    Rédigées pour une présentation à un cabinet d'avocats :
    fondements légaux explicites (Code de commerce, Code civil,
    Code de la propriété intellectuelle, Code de la consommation,
@@ -750,8 +754,9 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
     <div class="cgv-art">
       <h5>Art. 8 - Livraison, recette et garantie</h5>
       <p>Le Client dispose d'un délai de <strong>sept (7) jours calendaires</strong> à compter de la livraison pour émettre, par écrit, ses réserves motivées ; à défaut, la livraison est réputée <strong>acceptée sans réserve</strong>. Le Prestataire garantit la conformité des livrables au périmètre contractuel pendant <strong>trente (30) jours calendaires</strong> à compter de la livraison, à l'exclusion des anomalies résultant d'une utilisation non conforme aux préconisations du Prestataire, d'une intervention de tiers ou du Client sur le livrable, d'un défaut des éléments fournis par le Client ou d'évolutions technologiques postérieures à la livraison.</p>
-    </div>
+    </div>`
 
+  const articlesPartTwo = `
     <div class="cgv-art">
       <h5>Art. 9 - Suivi, maintenance, hébergement et évolutions</h5>
       <p><strong>9.1 Prestation de suivi.</strong> La garantie de conformité prévue à l'article 8 ne constitue pas une prestation de maintenance. Au-delà de ce délai, toute intervention (correction, ajout, modification, évolution) fait l'objet d'une <strong>prestation distincte</strong>, sur devis ou dans le cadre d'un contrat de suivi dédié.</p>
@@ -760,9 +765,8 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
       <p><strong>9.4 Hébergement et nom de domaine.</strong> L'hébergement du site et la gestion du nom de domaine constituent des prestations <strong>optionnelles</strong>, facturées séparément et reconductibles annuellement. À défaut de souscription, le Client conserve la charge exclusive de son hébergement et du renouvellement de son nom de domaine. Le Prestataire transfère, sur demande écrite et sous réserve du paiement intégral des sommes dues, l'ensemble des accès et codes sources nécessaires à une migration.</p>
       <p><strong>9.5 Évolutions et demandes complémentaires.</strong> Toute demande excédant le périmètre initial (nouvelles fonctionnalités, refonte de sections, intégrations tierces) fait l'objet d'un <strong>devis complémentaire</strong> facturé au <strong>taux journalier</strong> en vigueur communiqué sur demande.</p>
       <p><strong>9.6 Exclusions.</strong> Ne sont pas couverts par le contrat de suivi, sauf mention expresse : refontes graphiques, migrations technologiques, nouvelles fonctionnalités, interventions consécutives à une modification du livrable par le Client ou un tiers, et incidents imputables à l'hébergeur, aux services tiers, aux opérateurs de télécommunications ou au Client lui-même.</p>
-    </div>`
+    </div>
 
-  const articlesPartTwo = `
     <div class="cgv-art">
       <h5>Art. 10 - Propriété intellectuelle</h5>
       <p><strong>10.1 Éléments préexistants du Prestataire.</strong> Le Prestataire conserve la propriété pleine et entière de tous les éléments préexistants à la prestation : briques techniques, frameworks, librairies, modules, scripts, méthodologies, savoir-faire, outils, gabarits et composants génériques développés en amont ou en parallèle d'autres missions. Ces éléments demeurent la propriété exclusive du Prestataire et ne sont pas transférés au Client.</p>
@@ -778,8 +782,9 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
       <p><strong>11.1 Remise des livrables.</strong> À l'issue de la prestation et sous réserve du paiement intégral, le Prestataire remet au Client, sur demande écrite : le code source, les fichiers de production, les accès aux services associés (hébergement, nom de domaine, comptes tiers configurés au nom du Client), les éventuels identifiants administrateurs et la documentation technique disponible.</p>
       <p><strong>11.2 Assistance à la migration.</strong> En cas de migration vers un nouveau prestataire, le Prestataire apporte une assistance technique raisonnable, dans la limite de <strong>deux (2) heures incluses</strong>. Au-delà, les heures sont facturées au taux journalier en vigueur communiqué sur demande.</p>
       <p><strong>11.3 Conservation post-contractuelle.</strong> Le Prestataire conserve une copie d'archive du livrable pour une durée de <strong>six (6) mois</strong> suivant la fin de la prestation, à des fins de continuité de service et de gestion d'éventuelles réclamations. Au-delà, les éléments sont supprimés sauf demande expresse du Client de prolonger la conservation.</p>
-    </div>
+    </div>`
 
+  const articlesPartThree = `
     <div class="cgv-art">
       <h5>Art. 12 - Confidentialité</h5>
       <p>Chaque partie s'engage à préserver la confidentialité des informations non publiques échangées dans le cadre de la relation contractuelle, pour toute la durée du contrat et pour une durée de <strong>trois (3) ans</strong> suivant son terme, sauf divulgation imposée par la loi ou une décision de justice.</p>
@@ -827,7 +832,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
 
   return `
 <section class="page page-cgv">
-  ${cgvHeader('Page 2/4')}
+  ${cgvHeader('Page 2/5')}
 
   <div class="cgv-preamble">
     <strong>Préambule.</strong> Les présentes conditions générales de vente (ci-après « CGV ») régissent l'ensemble des relations contractuelles entre <strong>MAPA Développement</strong>, exploitée par Matis GOUYET, entrepreneur individuel sous le régime de la micro-entreprise, immatriculée au Registre National des Entreprises sous le numéro SIREN <strong>919 461 301</strong>, dont le siège est sis 89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq (ci-après « le Prestataire »), et toute personne morale ou personne physique agissant à des fins entrant dans le cadre de son activité commerciale, industrielle, artisanale, libérale ou agricole, passant commande (ci-après « le Client »). Les présentes CGV sont <strong>exclusivement applicables aux relations entre professionnels</strong> au sens du droit français ; elles ne sauraient s'appliquer à un Client consommateur ou non-professionnel au sens de l'article liminaire du Code de la consommation. Toute commande emporte adhésion sans réserve aux présentes CGV, qui prévalent sur tout autre document du Client (CGA, conditions internes), sauf dérogation écrite expresse du Prestataire.
@@ -841,10 +846,20 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
 </section>
 
 <section class="page page-cgv">
-  ${cgvHeader('Page 3/4')}
+  ${cgvHeader('Page 3/5')}
 
   <div class="cgv-body">
     ${articlesPartTwo}
+  </div>
+
+  <div class="cgv-continued">Suite page suivante →</div>
+</section>
+
+<section class="page page-cgv">
+  ${cgvHeader('Page 4/5')}
+
+  <div class="cgv-body">
+    ${articlesPartThree}
   </div>
 
   <div class="cgv-continued">Signature du devis et des présentes CGV → page suivante</div>
@@ -852,13 +867,13 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
 
 <section class="page page-sign">
   <div class="sign-head">
-    <div class="eyebrow">Annexe contractuelle · Page 4/4</div>
+    <div class="eyebrow">Annexe contractuelle · Page 5/5</div>
     <div class="ttl">Acceptation du devis et des Conditions Générales de Vente</div>
     <div class="sub">Devis <strong style="color:#E2C97E">${safe(quoteNumber)}</strong> · ${safe(clientName)}</div>
   </div>
 
   <div class="sign-recap">
-    La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis <strong>${safe(quoteNumber)}</strong> émis le ${updatedAt} par <strong>MAPA Développement</strong>, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2 et 3 du présent document. Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>
+    La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis <strong>${safe(quoteNumber)}</strong> émis le ${updatedAt} par <strong>MAPA Développement</strong>, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document. Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>
   </div>
 
   <div class="sign-grid">
@@ -880,7 +895,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
     </div>
 
     <div class="sign-card">
-      <div class="lbl">Le Client — Bon pour accord</div>
+      <div class="lbl">Le Client - Bon pour accord</div>
       <div class="entity">${safe(clientName)}</div>
       <div class="coords">
         ${client.legal_form ? `${safe(client.legal_form)}` : ''}${client.legal_form && client.siret ? ' · ' : ''}${client.siret ? `SIRET ${safe(client.siret)}` : ''}${(client.legal_form || client.siret) ? '<br>' : ''}
