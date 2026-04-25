@@ -192,6 +192,7 @@ export function GenerateDevisModal({
         })),
         quoteNumber: quoteNumber.trim(),
         validityDays: 30,
+        validUntilISO: validUntilFinal,
         depositPercent,
         customNotes: notes.trim() || undefined,
         includeCGV,

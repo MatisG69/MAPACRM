@@ -116,6 +116,11 @@ export function QuotesPage({
           notes: null,
           satisfaction_rating: null,
           feedback: null,
+          profession: null,
+          legal_form: null,
+          siret: null,
+          vat_number: null,
+          contact_role: null,
           avatar_color: q.client.avatar_color,
           created_at: '',
           updated_at: '',
@@ -136,8 +141,10 @@ export function QuotesPage({
       amount: q.amount,
       quoteNumber: q.quote_number ?? undefined,
       validityDays: 30,
+      validUntilISO: q.valid_until,
       depositPercent,
       customNotes: q.notes ?? undefined,
+      includeCGV: true,
     })
     setPreviewQuote({ html, filename: `devis-${q.quote_number ?? q.id}.pdf` })
   }

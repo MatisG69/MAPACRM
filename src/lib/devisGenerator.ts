@@ -11,7 +11,10 @@ export interface DevisParams {
   project: Project | null
   amount: number
   quoteNumber?: string
+  /** Nombre de jours de validité (utilisé en repli si validUntilISO n'est pas fourni) */
   validityDays?: number
+  /** Date d'expiration explicite au format ISO (YYYY-MM-DD) — prioritaire sur validityDays */
+  validUntilISO?: string | null
   depositPercent?: number
   customNotes?: string
   /** Si true, ajoute les Conditions Générales de Vente sur la page 2 du PDF */
@@ -127,6 +130,14 @@ function validUntil(days: number): string {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+/** Formate une date ISO (YYYY-MM-DD) en français long ; null/invalide → null */
+function formatISODate(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return null
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 function projectTypeLabel(type: string | null | undefined): string {
   const map: Record<string, string> = {
     website: 'Site vitrine',
@@ -148,11 +159,16 @@ export function generateDevisHTML(params: DevisParams): string {
     amount,
     quoteNumber = generateQuoteNumber(),
     validityDays = 30,
+    validUntilISO,
     depositPercent = 30,
     customNotes,
     includeCGV = false,
     additionalLines = [],
   } = params
+
+  // Date de validité affichée : prioritairement la date explicitement choisie au form,
+  // sinon repli sur today + validityDays.
+  const validUntilDisplay = formatISODate(validUntilISO) ?? validUntil(validityDays)
 
   // Lignes consolidées : projet principal + projets additionnels
   const allLines: DevisLine[] = [
@@ -609,7 +625,7 @@ export function generateDevisHTML(params: DevisParams): string {
       <div class="val">${quoteNumber}</div>
       <div class="line">
         Émis le ${today()}<br>
-        Valable jusqu'au ${validUntil(validityDays)}<br>
+        Valable jusqu'au ${validUntilDisplay}<br>
         ${project?.name ? `Projet : ${project.name}` : 'MAPA Développement - Matis Gouyet'}
       </div>
     </div>
