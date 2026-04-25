@@ -663,9 +663,11 @@ export function generateDevisHTML(params: DevisParams): string {
     <div class="tline main"><span>Total HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(totalAmount)}</span></div>
   </div>
 
-  ${includeCGV ? `<div class="cond-block" style="margin-top:6px;font-size:7.5pt;padding:8px 12px;line-height:1.6">
-    <strong>Modalités</strong> - Acompte ${depositPercent}% (${formatEur(deposit)}) à la signature, solde (${formatEur(solde)}) à la livraison. Devis valable 30 jours. Conditions complètes en pages suivantes (CGV).
-  </div>` : `<div class="slabel">Conditions</div>
+  ${includeCGV
+    ? `<p style="margin-top:8px;text-align:center;font-size:6.5pt;letter-spacing:.18em;text-transform:uppercase;color:#9E9080;">
+        Conditions générales de vente détaillées en pages 2 à 4 · Signature en page 5
+      </p>`
+    : `<div class="slabel">Conditions</div>
   <div class="cond-block">
     <strong>Acompte</strong> - ${depositPercent}% du montant total (${formatEur(deposit)}) à la signature du devis, avant démarrage des travaux.<br>
     <strong>Solde</strong> - ${formatEur(solde)} à réception de la livraison finale, après validation du client.<br>
