@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Project, ProjectStatus, ProjectType, Task } from '../../lib/types';
 import { Client } from '../../lib/types';
 import { normalizeSiteUrl } from '../../lib/sitePreview';
@@ -6,12 +6,28 @@ import { Button } from '../ui/Button';
 
 type FormData = Omit<Project, 'id' | 'created_at' | 'updated_at' | 'client'>;
 
+/** Champs juridiques + contact décisionnaire saisis dans le projet et persistés sur le client lié */
+interface ClientLegalFields {
+  name: string;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  address: string | null;
+  city: string | null;
+  legal_form: string | null;
+  siret: string | null;
+  vat_number: string | null;
+  contact_role: string | null;
+}
+
 interface ProjectFormProps {
   initial?: Partial<Project>;
   clients: Client[];
   /** Pour masquer le curseur manuel quand des tâches pilotent déjà l’avancement */
   tasks?: Task[];
   onSubmit: (data: FormData) => Promise<void>;
+  /** Si fourni, permet de sauvegarder dans la même opération les infos contractuelles du client lié */
+  onUpdateClient?: (clientId: string, partial: Partial<Client>) => Promise<Client | unknown>;
   onCancel: () => void;
 }
 
@@ -33,7 +49,7 @@ const typeOptions: { value: ProjectType; label: string }[] = [
   { value: 'other', label: 'Autre' },
 ];
 
-export function ProjectForm({ initial, clients, tasks = [], onSubmit, onCancel }: ProjectFormProps) {
+export function ProjectForm({ initial, clients, tasks = [], onSubmit, onUpdateClient, onCancel }: ProjectFormProps) {
   const linkedTasks = useMemo(
     () => (initial?.id ? tasks.filter((t) => t.project_id === initial.id) : []),
     [initial?.id, tasks]
@@ -57,10 +73,51 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onCancel }
     progress: initial?.progress || 0,
     type: initial?.type || null,
   });
+
+  // Récupère le client lié (s'il existe) pour pré-remplir les infos contractuelles
+  const linkedClient = useMemo(
+    () => (form.client_id ? clients.find((c) => c.id === form.client_id) ?? null : null),
+    [form.client_id, clients]
+  );
+
+  // État local pour les champs juridiques et contact (édité depuis la fiche projet)
+  const [legalForm, setLegalForm] = useState<ClientLegalFields>({
+    name: '',
+    email: null,
+    phone: null,
+    company: null,
+    address: null,
+    city: null,
+    legal_form: null,
+    siret: null,
+    vat_number: null,
+    contact_role: null,
+  });
+
+  // Synchronise quand on change de client (pré-remplit les champs juridiques)
+  useEffect(() => {
+    if (linkedClient) {
+      setLegalForm({
+        name: linkedClient.name ?? '',
+        email: linkedClient.email,
+        phone: linkedClient.phone,
+        company: linkedClient.company,
+        address: linkedClient.address,
+        city: linkedClient.city,
+        legal_form: linkedClient.legal_form ?? null,
+        siret: linkedClient.siret ?? null,
+        vat_number: linkedClient.vat_number ?? null,
+        contact_role: linkedClient.contact_role ?? null,
+      });
+    }
+  }, [linkedClient]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const set = <K extends keyof FormData>(key: K, value: FormData[K]) => setForm((f) => ({ ...f, [key]: value }));
+  const setLegal = <K extends keyof ClientLegalFields>(key: K, value: ClientLegalFields[K]) =>
+    setLegalForm((f) => ({ ...f, [key]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +136,30 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onCancel }
         await onSubmit(rest);
       } else {
         await onSubmit(base);
+      }
+
+      // Si un client est lié et qu'un callback est fourni, on persiste les infos contractuelles
+      if (form.client_id && onUpdateClient && linkedClient) {
+        const trim = (v: string | null) => (v && v.trim() ? v.trim() : null);
+        const patch: Partial<Client> = {
+          name: legalForm.name.trim() || linkedClient.name,
+          email: trim(legalForm.email),
+          phone: trim(legalForm.phone),
+          company: trim(legalForm.company),
+          address: trim(legalForm.address),
+          city: trim(legalForm.city),
+          legal_form: trim(legalForm.legal_form),
+          siret: trim(legalForm.siret),
+          vat_number: trim(legalForm.vat_number),
+          contact_role: trim(legalForm.contact_role),
+        };
+        // Ne déclenche l'update que si au moins un champ a changé
+        const changed = (Object.keys(patch) as (keyof typeof patch)[]).some(
+          (k) => patch[k] !== (linkedClient as unknown as Record<string, unknown>)[k]
+        );
+        if (changed) {
+          await onUpdateClient(form.client_id, patch);
+        }
       }
     } catch (err) {
       setError((err as Error).message);
@@ -176,6 +257,124 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onCancel }
           <textarea className="input resize-none" rows={3} value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Description du projet..." />
         </div>
       </div>
+
+      {/* ─────────────────────────────────────────────────────────
+          Informations contractuelles du client
+          Persistées sur la fiche client (devis + CGV utilisent ces données)
+          ───────────────────────────────────────────────────────── */}
+      {form.client_id && onUpdateClient && (
+        <div className="rounded-2xl border border-ws-line bg-ws-deep/30 px-4 py-4 space-y-3">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <div>
+              <h4 className="text-sm font-semibold text-ws-paper">Informations contractuelles du client</h4>
+              <p className="text-[10px] font-mono text-ws-mist mt-0.5">
+                Reprises automatiquement dans le devis et les CGV générés.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="form-label">Dénomination sociale</label>
+              <input
+                className="input"
+                value={legalForm.company ?? ''}
+                onChange={(e) => setLegal('company', e.target.value || null)}
+                placeholder="Cabinet Dupont & Associés"
+              />
+            </div>
+            <div>
+              <label className="form-label">Forme juridique</label>
+              <input
+                className="input"
+                value={legalForm.legal_form ?? ''}
+                onChange={(e) => setLegal('legal_form', e.target.value || null)}
+                placeholder="SAS, SARL, SCP, EI…"
+              />
+            </div>
+            <div>
+              <label className="form-label">SIRET</label>
+              <input
+                className="input font-mono text-sm"
+                value={legalForm.siret ?? ''}
+                onChange={(e) => setLegal('siret', e.target.value || null)}
+                placeholder="123 456 789 00012"
+                inputMode="numeric"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="form-label">Adresse du siège</label>
+              <input
+                className="input"
+                value={legalForm.address ?? ''}
+                onChange={(e) => setLegal('address', e.target.value || null)}
+                placeholder="12 rue de la République"
+              />
+            </div>
+            <div>
+              <label className="form-label">Ville</label>
+              <input
+                className="input"
+                value={legalForm.city ?? ''}
+                onChange={(e) => setLegal('city', e.target.value || null)}
+                placeholder="59000 Lille"
+              />
+            </div>
+            <div>
+              <label className="form-label">N° TVA intracommunautaire</label>
+              <input
+                className="input font-mono text-sm"
+                value={legalForm.vat_number ?? ''}
+                onChange={(e) => setLegal('vat_number', e.target.value || null)}
+                placeholder="FR12345678901"
+              />
+            </div>
+
+            <div className="col-span-2 mt-2 pt-3 border-t border-ws-line">
+              <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-ws-mist mb-2">
+                Contact / décisionnaire
+              </p>
+            </div>
+            <div>
+              <label className="form-label">Nom du contact</label>
+              <input
+                className="input"
+                value={legalForm.name}
+                onChange={(e) => setLegal('name', e.target.value)}
+                placeholder="Jean Dupont"
+              />
+            </div>
+            <div>
+              <label className="form-label">Fonction</label>
+              <input
+                className="input"
+                value={legalForm.contact_role ?? ''}
+                onChange={(e) => setLegal('contact_role', e.target.value || null)}
+                placeholder="Gérant, Responsable communication…"
+              />
+            </div>
+            <div>
+              <label className="form-label">Email du contact</label>
+              <input
+                className="input"
+                type="email"
+                value={legalForm.email ?? ''}
+                onChange={(e) => setLegal('email', e.target.value || null)}
+                placeholder="jean@dupont.fr"
+              />
+            </div>
+            <div>
+              <label className="form-label">Téléphone du contact</label>
+              <input
+                className="input font-mono text-sm"
+                value={legalForm.phone ?? ''}
+                onChange={(e) => setLegal('phone', e.target.value || null)}
+                placeholder="+33 6 12 34 56 78"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-3 pt-2">
         <Button type="button" variant="secondary" className="flex-1 normal-case tracking-normal" onClick={onCancel}>Annuler</Button>

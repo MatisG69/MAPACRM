@@ -256,6 +256,7 @@ function App() {
                 tasks={tasksHook.tasks}
                 onCreate={projectsHook.createProject}
                 onUpdate={projectsHook.updateProject}
+                onUpdateClient={clientsHook.updateClient}
                 onDelete={projectsHook.deleteProject}
                 onSelect={(id) => navigate('project-detail', id)}
               />
@@ -276,6 +277,7 @@ function App() {
                 onBack={() => navigate('projects')}
                 onNavigate={navigate}
                 onUpdateProject={projectsHook.updateProject}
+                onUpdateClient={clientsHook.updateClient}
                 onDeleteProject={projectsHook.deleteProject}
                 onCreateTask={tasksHook.createTask}
               />

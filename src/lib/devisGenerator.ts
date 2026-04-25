@@ -548,10 +548,13 @@ export function generateDevisHTML(params: DevisParams): string {
   <div class="grid2">
     <div class="info-block">
       <div class="key">Client</div>
-      <div class="val">${client.name}</div>
+      <div class="val">${client.company || client.name}</div>
       <div class="line">
-        ${client.company && client.company !== client.name ? `${client.company}<br>` : ''}
-        ${client.city ? `${client.address ? client.address + ', ' : ''}${client.city}<br>` : ''}
+        ${client.legal_form ? `${client.legal_form}<br>` : ''}
+        ${client.address ? `${client.address}${client.city ? ', ' : '<br>'}` : ''}${client.city ? `${client.city}<br>` : ''}
+        ${client.siret ? `SIRET : ${client.siret}<br>` : ''}
+        ${client.vat_number ? `TVA : ${client.vat_number}<br>` : ''}
+        ${client.name && client.company && client.name !== client.company ? `<br><strong style="color:#C8BFB0">Contact :</strong> ${client.name}${client.contact_role ? `, ${client.contact_role}` : ''}<br>` : ''}
         ${client.email ? `${client.email}<br>` : ''}
         ${client.phone ? `${client.phone}` : ''}
       </div>
@@ -615,7 +618,7 @@ export function generateDevisHTML(params: DevisParams): string {
 
 </section>
 
-${includeCGV ? renderCGVPage({ quoteNumber, clientName: client.name }) : ''}
+${includeCGV ? renderCGVPage({ quoteNumber, client }) : ''}
 
 </body>
 </html>`
@@ -628,8 +631,9 @@ ${includeCGV ? renderCGVPage({ quoteNumber, clientName: client.name }) : ''}
    Code de la propriété intellectuelle, Code de la consommation,
    RGPD), structure ordonnée, zéro clause floue.
    ═══════════════════════════════════════════════════════════ */
-function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string {
-  const { quoteNumber, clientName } = ctx
+function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
+  const { quoteNumber, client } = ctx
+  const clientName = client.company || client.name
   const updatedAt = today()
   const safe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -818,12 +822,16 @@ function renderCGVPage(ctx: { quoteNumber: string; clientName: string }): string
       <div class="lbl">Le Client — Bon pour accord</div>
       <div class="entity">${safe(clientName)}</div>
       <div class="coords">
-        Représenté par (Nom, Prénom, Qualité) :<br>
-        _________________________________________<br>
-        _________________________________________
+        ${client.legal_form ? `${safe(client.legal_form)}` : ''}${client.legal_form && client.siret ? ' · ' : ''}${client.siret ? `SIRET ${safe(client.siret)}` : ''}${(client.legal_form || client.siret) ? '<br>' : ''}
+        ${client.vat_number ? `TVA ${safe(client.vat_number)}<br>` : ''}
+        ${client.address ? `${safe(client.address)}${client.city ? ', ' : '<br>'}` : ''}${client.city ? `${safe(client.city)}<br>` : ''}
+        <br>
+        Représenté par : ${client.name && client.name !== clientName ? `<strong style="color:#C8BFB0">${safe(client.name)}</strong>` : '_____________________________'}${client.contact_role ? `, ${safe(client.contact_role)}` : ''}<br>
+        ${!client.name || client.name === clientName ? '_________________________________________<br>' : ''}
+        ${client.email ? `<span style="color:#9E9080">${safe(client.email)}</span>` : ''}${client.email && client.phone ? ' · ' : ''}${client.phone ? `<span style="color:#9E9080">${safe(client.phone)}</span>` : ''}
       </div>
       <div class="fields">
-        <div class="field"><span class="k">Fait à</span><span>_________________________</span></div>
+        <div class="field"><span class="k">Fait à</span><span>${client.city ? safe(client.city) : '_________________________'}</span></div>
         <div class="field"><span class="k">Le</span><span>_____ / _____ / __________</span></div>
       </div>
       <div class="hint">Signature précédée de la mention manuscrite<br>« Lu et approuvé, bon pour accord » + cachet de l'entreprise :</div>

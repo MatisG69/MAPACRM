@@ -410,6 +410,7 @@ export function ClientDetailPage({
             await onCreateProject(data);
             setShowProject(false);
           }}
+          onUpdateClient={onUpdateClient}
           onCancel={() => setShowProject(false)}
         />
       </Modal>

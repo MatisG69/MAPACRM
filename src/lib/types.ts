@@ -39,6 +39,14 @@ export interface Client {
   feedback: string | null;
   /** Secteur d'activité ou métier du client — ex: Restaurant, Charpentier */
   profession: string | null;
+  /** Forme juridique — SAS, SARL, EI, EURL, association, etc. */
+  legal_form: string | null;
+  /** N° SIRET (14 chiffres) */
+  siret: string | null;
+  /** N° TVA intracommunautaire — ex. FR12345678901 */
+  vat_number: string | null;
+  /** Fonction du décisionnaire — ex. Gérant, DG, Responsable communication */
+  contact_role: string | null;
   avatar_color: string;
   /** Champs enrichissement scraping — optionnels, définis uniquement pour les leads importés via Apify */
   is_scraped?: boolean;

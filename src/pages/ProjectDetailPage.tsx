@@ -38,6 +38,7 @@ interface ProjectDetailPageProps {
   onBack: () => void;
   onNavigate: (page: Page, id?: string) => void;
   onUpdateProject: (id: string, data: Partial<Project>) => Promise<Project>;
+  onUpdateClient?: (id: string, data: Partial<Client>) => Promise<Client | unknown>;
   onDeleteProject: (id: string) => Promise<void>;
   onCreateTask: (data: Omit<Task, 'id' | 'created_at' | 'updated_at' | 'project'>) => Promise<Task>;
 }
@@ -55,6 +56,7 @@ export function ProjectDetailPage({
   onBack,
   onNavigate,
   onUpdateProject,
+  onUpdateClient,
   onDeleteProject,
   onCreateTask,
 }: ProjectDetailPageProps) {
@@ -297,6 +299,7 @@ export function ProjectDetailPage({
             await onUpdateProject(project.id, data);
             setShowEdit(false);
           }}
+          onUpdateClient={onUpdateClient}
           onCancel={() => setShowEdit(false)}
         />
       </Modal>

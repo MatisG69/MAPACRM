@@ -45,6 +45,7 @@ interface ProjectsPageProps {
   tasks: Task[];
   onCreate: (data: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'client'>) => Promise<Project>;
   onUpdate: (id: string, data: Partial<Project>) => Promise<Project>;
+  onUpdateClient?: (id: string, data: Partial<Client>) => Promise<Client | unknown>;
   onDelete: (id: string) => Promise<void>;
   onSelect: (id: string) => void;
 }
@@ -87,6 +88,7 @@ export function ProjectsPage({
   tasks,
   onCreate,
   onUpdate,
+  onUpdateClient,
   onDelete,
   onSelect,
 }: ProjectsPageProps) {
@@ -281,6 +283,7 @@ export function ProjectsPage({
             await onCreate(data);
             setShowCreate(false);
           }}
+          onUpdateClient={onUpdateClient}
           onCancel={() => setShowCreate(false)}
         />
       </Modal>
@@ -295,6 +298,7 @@ export function ProjectsPage({
               await onUpdate(editProject.id, data);
               setEditProject(null);
             }}
+            onUpdateClient={onUpdateClient}
             onCancel={() => setEditProject(null)}
           />
         )}
