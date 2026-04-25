@@ -777,14 +777,16 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
       <p><strong>10.6 Droit moral.</strong> Conformément à l'<em>article L. 121-1 du Code de la propriété intellectuelle</em>, le droit moral de l'auteur (dont le respect du nom et de l'œuvre) demeure inaliénable.</p>
     </div>
 
+  `
+
+  const articlesPartThree = `
     <div class="cgv-art">
       <h5>Art. 11 - Réversibilité et portabilité</h5>
       <p><strong>11.1 Remise des livrables.</strong> À l'issue de la prestation et sous réserve du paiement intégral, le Prestataire remet au Client, sur demande écrite : le code source, les fichiers de production, les accès aux services associés (hébergement, nom de domaine, comptes tiers configurés au nom du Client), les éventuels identifiants administrateurs et la documentation technique disponible.</p>
       <p><strong>11.2 Assistance à la migration.</strong> En cas de migration vers un nouveau prestataire, le Prestataire apporte une assistance technique raisonnable, dans la limite de <strong>deux (2) heures incluses</strong>. Au-delà, les heures sont facturées au taux journalier en vigueur communiqué sur demande.</p>
       <p><strong>11.3 Conservation post-contractuelle.</strong> Le Prestataire conserve une copie d'archive du livrable pour une durée de <strong>six (6) mois</strong> suivant la fin de la prestation, à des fins de continuité de service et de gestion d'éventuelles réclamations. Au-delà, les éléments sont supprimés sauf demande expresse du Client de prolonger la conservation.</p>
-    </div>`
+    </div>
 
-  const articlesPartThree = `
     <div class="cgv-art">
       <h5>Art. 12 - Confidentialité</h5>
       <p>Chaque partie s'engage à préserver la confidentialité des informations non publiques échangées dans le cadre de la relation contractuelle, pour toute la durée du contrat et pour une durée de <strong>trois (3) ans</strong> suivant son terme, sauf divulgation imposée par la loi ou une décision de justice.</p>
