@@ -7,8 +7,16 @@ const STORAGE_KEY = 'mapa.appleCalendarUrl';
 const DEFAULT_URL =
   ((import.meta.env.VITE_APPLE_CALENDAR_URL as string | undefined)?.trim()) || '';
 
-/** URL du proxy CORS — Edge Function Supabase déployée à `/functions/v1/ics-proxy`. */
+/**
+ * URL du proxy CORS Edge Function. Trois sources, ordre de priorité :
+ *   1. VITE_ICS_PROXY_URL — override complet (ex. quand Supabase auto-génère
+ *      un slug différent du nom de fonction comme `clever-service`)
+ *   2. VITE_SUPABASE_URL + /functions/v1/ics-proxy — convention par défaut
+ *   3. '' — désactivé
+ */
 function getProxyEndpoint(): string {
+  const override = (import.meta.env.VITE_ICS_PROXY_URL as string | undefined)?.trim();
+  if (override) return override.replace(/\/$/, '');
   const base = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() || '';
   if (!base) return '';
   return base.replace(/\/$/, '') + '/functions/v1/ics-proxy';
