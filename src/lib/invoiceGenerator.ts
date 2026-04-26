@@ -329,22 +329,51 @@ function buildInvoicePage(params: InvoiceParams): string {
     <tbody>
       ${kind === 'acompte' ? `
       <tr>
-        <td><strong style="color:#E2C97E">Acompte ${depositPercent}%</strong></td>
-        <td>Sur prestation : ${project ? `${projectTypeLabel(project.type)} - ${project.name}` : 'Prestation sur mesure'}<br>
-            <span style="color:#9E9080;font-size:6.5pt">Total prestation HT : ${formatEur(totalAmount)} · Acompte ${depositPercent}% : ${formatEur(acompteAmount)} · Solde restant : ${formatEur(soldeAmount)}</span></td>
-        <td class="amt">${formatEur(acompteAmount)}</td>
+        <td style="vertical-align:top"><strong style="color:#E2C97E">Acompte ${depositPercent}%</strong></td>
+        <td>
+          <div style="margin-bottom:4px">${
+            isMulti
+              ? `Acompte ${depositPercent}% sur prestations combinées :`
+              : `Acompte ${depositPercent}% sur prestation :`
+          }</div>
+          ${
+            allLines.length > 0
+              ? `<ul style="margin:0 0 4px 14px;padding:0;color:#C8BFB0;font-size:7pt;line-height:1.55">${allLines
+                  .map(
+                    (l) =>
+                      `<li><strong style="color:#E2C97E">${projectTypeLabel(l.project.type)}</strong> · ${l.project.name} <span style="color:#9E9080">(${formatEur(l.amount)} HT)</span></li>`
+                  )
+                  .join('')}</ul>`
+              : `<div style="color:#9E9080;margin-bottom:4px">Prestation sur mesure</div>`
+          }
+          <div style="color:#9E9080;font-size:6.5pt;line-height:1.5;margin-top:4px;border-top:1px dotted rgba(201,168,76,.18);padding-top:4px">
+            Total prestation HT : <strong style="color:#C8BFB0">${formatEur(totalAmount)}</strong>
+            · Acompte ${depositPercent}% : <strong style="color:#E2C97E">${formatEur(acompteAmount)}</strong>
+            · Solde restant à régler : <strong style="color:#C8BFB0">${formatEur(soldeAmount)}</strong>
+            ${sourceQuoteRef ? `<br>Détail au devis <strong style="color:#C8BFB0">${sourceQuoteRef}</strong>${sourceQuoteSignedISO ? ` du ${formatISODateLong(sourceQuoteSignedISO)}` : ''}.` : ''}
+          </div>
+        </td>
+        <td class="amt" style="vertical-align:top">${formatEur(acompteAmount)}</td>
       </tr>
       ` : kind === 'solde' ? `
       ${allLines.length > 0
         ? allLines.map((l) => `
       <tr>
         <td><strong style="color:#E2C97E">${projectTypeLabel(l.project.type)}</strong></td>
-        <td>${l.project.name}</td>
+        <td>${l.project.name}${sourceQuoteRef ? ` <span style="color:#9E9080;font-size:6.5pt">(devis ${sourceQuoteRef}${sourceQuoteSignedISO ? ` du ${formatISODateLong(sourceQuoteSignedISO)}` : ''})</span>` : ''}</td>
         <td class="amt">${formatEur(l.amount)}</td>
       </tr>`).join('')
         : `<tr><td colspan="3">Prestation</td></tr>`}
+      <tr>
+        <td colspan="2" style="color:#9E9080;font-style:italic;font-size:6.8pt;padding-top:6px;border-top:1px dotted rgba(201,168,76,.2)">
+          Sous-total prestation HT
+        </td>
+        <td class="amt" style="color:#C8BFB0;border-top:1px dotted rgba(201,168,76,.2)">${formatEur(totalAmount)}</td>
+      </tr>
       <tr style="background:rgba(201,168,76,.04)">
-        <td colspan="2" style="color:#9E9080;font-style:italic">Acompte déjà perçu (facture ${acompteInvoiceRef ?? '—'})</td>
+        <td colspan="2" style="color:#9E9080;font-style:italic">
+          Acompte déjà perçu — facture <strong style="color:#C8BFB0">${acompteInvoiceRef ?? '—'}</strong>${acompteInvoiceDateISO ? ` du ${formatISODateLong(acompteInvoiceDateISO)}` : ''}
+        </td>
         <td class="amt" style="color:#9E9080">- ${formatEur(acompteAmount)}</td>
       </tr>
       ` : `
@@ -352,7 +381,7 @@ function buildInvoicePage(params: InvoiceParams): string {
         ? allLines.map((l) => `
       <tr>
         <td><strong style="color:#E2C97E">${projectTypeLabel(l.project.type)}</strong></td>
-        <td>${l.project.name}</td>
+        <td>${l.project.name}${sourceQuoteRef ? ` <span style="color:#9E9080;font-size:6.5pt">(devis ${sourceQuoteRef}${sourceQuoteSignedISO ? ` du ${formatISODateLong(sourceQuoteSignedISO)}` : ''})</span>` : ''}</td>
         <td class="amt">${formatEur(l.amount)}</td>
       </tr>`).join('')
         : `<tr><td colspan="3">Prestation</td></tr>`}
@@ -434,7 +463,10 @@ function wrapHtml(pages: string, title: string): string {
   .page:last-child{page-break-after:auto;break-after:auto;}
 
   .header,.footer{flex-shrink:0;}
-  .invoice-body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-start;gap:10px;}
+  /* min-height:0 + overflow:hidden : empêche le contenu interne de pousser le footer
+     hors page lorsque la facture est dense (cas typique : facture de solde avec
+     ligne de déduction d'acompte). Le footer reste collé en bas de la page A4. */
+  .invoice-body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-start;gap:10px;min-height:0;}
 
   .header{
     text-align:center;
@@ -537,23 +569,33 @@ function wrapHtml(pages: string, title: string): string {
   @media print{
     html,body{width:210mm;background:#0A0A0A;}
     body{font-size:8.5pt;line-height:1.5;}
-    .page{width:210mm;height:297mm;min-height:297mm;padding:11mm 14mm;overflow:hidden;}
-    .doc-title{font-size:12pt;}
-    .header{padding-bottom:8px;margin-bottom:9px;}
-    .slabel{font-size:5.6pt;margin-top:8px;margin-bottom:6px;}
-    .info-block{padding:9px 12px;}
-    .info-block .val{font-size:8.5pt;}
-    .info-block .line{font-size:7pt;line-height:1.55;}
-    .price-table th{padding:4px 8px;font-size:5.5pt;}
-    .price-table td{padding:5px 8px;font-size:8pt;}
-    .total-block{padding:9px 12px;margin-top:7px;}
-    .tline{padding:3px 0;font-size:8.5pt;}
-    .tline.main{font-size:10.5pt;padding-top:6px;}
-    .tline.main .val{font-size:12.5pt;}
-    .pay-block{padding:9px 12px;}
-    .cond-block{padding:8px 12px;font-size:7pt;line-height:1.55;}
-    .footer{padding-top:8px;}
-    .stamp{top:11mm;right:14mm;}
+    .page{
+      width:210mm;height:297mm;min-height:297mm;max-height:297mm;
+      padding:10mm 14mm;
+      overflow:hidden;
+      display:flex;flex-direction:column;
+    }
+    .invoice-body{flex:1 1 auto;min-height:0;overflow:hidden;gap:7px;}
+    .doc-title{font-size:11.5pt;}
+    .doc-kind{font-size:5.8pt;letter-spacing:.35em;}
+    .header{padding-bottom:7px;margin-bottom:8px;}
+    .slabel{font-size:5.4pt;margin-top:6px;margin-bottom:5px;}
+    .info-block{padding:8px 11px;}
+    .info-block .val{font-size:8pt;}
+    .info-block .line{font-size:6.8pt;line-height:1.5;}
+    .price-table th{padding:3.5px 7px;font-size:5.4pt;}
+    .price-table td{padding:4.5px 7px;font-size:7.6pt;line-height:1.45;}
+    .total-block{padding:7px 11px;margin-top:6px;}
+    .tline{padding:2.5px 0;font-size:8pt;}
+    .tline.main{font-size:10pt;padding-top:5px;}
+    .tline.main .val{font-size:12pt;}
+    .pay-block{padding:7px 11px;}
+    .pay-block .row{padding:2px 0;font-size:7pt;}
+    .cond-block{padding:7px 10px;font-size:6.6pt;line-height:1.5;}
+    .footer{padding-top:7px;font-size:6.2pt;}
+    .footer .brand{font-size:7pt;}
+    .footer .legal{font-size:6pt;line-height:1.5;}
+    .stamp{top:10mm;right:14mm;padding:4px 10px;font-size:6pt;}
   }
 
   @media screen{

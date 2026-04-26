@@ -34,6 +34,8 @@ export function QuoteForm({ initial, clients, projects, opportunities, onSubmit,
     valid_until: initial?.valid_until ?? null,
     deposit_requested: initial?.deposit_requested ?? false,
     deposit_amount: initial?.deposit_amount ?? null,
+    expected_acompte_date: initial?.expected_acompte_date ?? null,
+    expected_delivery_date: initial?.expected_delivery_date ?? null,
     version: initial?.version ?? 1,
     parent_quote_id: initial?.parent_quote_id ?? null,
     notes: initial?.notes ?? null,
@@ -72,6 +74,8 @@ export function QuoteForm({ initial, clients, projects, opportunities, onSubmit,
         quote_number: form.quote_number || generateQuoteNumber(),
         valid_until: form.valid_until || null,
         deposit_amount: form.deposit_requested ? form.deposit_amount ?? null : null,
+        expected_acompte_date: form.expected_acompte_date || null,
+        expected_delivery_date: form.expected_delivery_date || null,
         notes: form.notes?.trim() || null,
         signed_at: form.signed_at || null,
         parent_quote_id: form.parent_quote_id || null,
@@ -183,6 +187,30 @@ export function QuoteForm({ initial, clients, projects, opportunities, onSubmit,
           />
         </div>
       </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="form-label">Date prévue d'acompte</label>
+          <input
+            className="input"
+            type="date"
+            value={form.expected_acompte_date || ''}
+            onChange={(e) => set('expected_acompte_date', e.target.value || null)}
+          />
+          <p className="text-[10px] text-ws-mist/70 mt-1">Reportée sur la facture d'acompte.</p>
+        </div>
+        <div>
+          <label className="form-label">Date prévue de livraison</label>
+          <input
+            className="input"
+            type="date"
+            value={form.expected_delivery_date || ''}
+            onChange={(e) => set('expected_delivery_date', e.target.value || null)}
+          />
+          <p className="text-[10px] text-ws-mist/70 mt-1">Reportée sur la facture de solde.</p>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <input
           type="checkbox"

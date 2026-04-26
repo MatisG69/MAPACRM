@@ -38,6 +38,10 @@ export function GenerateDevisModal({
   const [projectId, setProjectId] = useState('')
   const [amount, setAmount] = useState<string>('')
   const [validUntil, setValidUntil] = useState('')
+  /** Date prévue d'encaissement de l'acompte (= date de signature pratique) */
+  const [acompteDate, setAcompteDate] = useState('')
+  /** Date prévue de livraison du projet */
+  const [deliveryDate, setDeliveryDate] = useState('')
   const [depositRequested, setDepositRequested] = useState(true)
   const [depositPercentInput, setDepositPercentInput] = useState<number>(30)
   const [depositAmount, setDepositAmount] = useState<string>('')
@@ -89,6 +93,8 @@ export function GenerateDevisModal({
       setProjectId('')
       setAmount('')
       setValidUntil('')
+      setAcompteDate('')
+      setDeliveryDate('')
       setDepositRequested(true)
       setDepositPercentInput(30)
       setDepositAmount('')
@@ -100,10 +106,15 @@ export function GenerateDevisModal({
     } else {
       // Auto-generate quote number on open
       setQuoteNumber(generateQuoteNumber())
-      // Default validity: 30 days from today
-      const d = new Date()
-      d.setDate(d.getDate() + 30)
-      setValidUntil(d.toISOString().split('T')[0])
+      // Defaults : validity 30j, acompte aujourd'hui, livraison +45j (ajustable)
+      const today = new Date()
+      const validity = new Date()
+      validity.setDate(validity.getDate() + 30)
+      const delivery = new Date()
+      delivery.setDate(delivery.getDate() + 45)
+      setValidUntil(validity.toISOString().split('T')[0])
+      setAcompteDate(today.toISOString().split('T')[0])
+      setDeliveryDate(delivery.toISOString().split('T')[0])
     }
   }, [isOpen])
 
@@ -173,6 +184,8 @@ export function GenerateDevisModal({
         valid_until: validUntilFinal,
         deposit_requested: depositRequested,
         deposit_amount: parsedDeposit && parsedDeposit > 0 ? parsedDeposit : null,
+        expected_acompte_date: acompteDate || null,
+        expected_delivery_date: deliveryDate || null,
         version,
         parent_quote_id: null,
         notes: [notes.trim() || null, combinedNote].filter(Boolean).join('\n') || null,
@@ -195,6 +208,8 @@ export function GenerateDevisModal({
         quoteNumber: quoteNumber.trim(),
         validityDays: 30,
         validUntilISO: validUntilFinal,
+        acompteDateISO: acompteDate || null,
+        deliveryDateISO: deliveryDate || null,
         depositPercent,
         customNotes: notes.trim() || undefined,
         includeCGV,
@@ -423,6 +438,39 @@ export function GenerateDevisModal({
               value={validUntil}
               onChange={(e) => setValidUntil(e.target.value)}
             />
+          </div>
+        </div>
+
+        {/* Calendrier prévisionnel : acompte + livraison annoncés au client */}
+        <div className="rounded-2xl border border-ws-line bg-ws-deep/40 p-4">
+          <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist mb-3">
+            Calendrier prévisionnel (sur le devis et les factures à venir)
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Date prévue d'encaissement de l'acompte</label>
+              <input
+                type="date"
+                className="input font-mono"
+                value={acompteDate}
+                onChange={(e) => setAcompteDate(e.target.value)}
+              />
+              <p className="text-[10px] text-ws-mist/70 mt-1 leading-snug">
+                Avant démarrage des travaux. Sert aussi de date de prestation sur la facture d'acompte.
+              </p>
+            </div>
+            <div>
+              <label className="form-label">Date prévue de livraison du projet</label>
+              <input
+                type="date"
+                className="input font-mono"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+              />
+              <p className="text-[10px] text-ws-mist/70 mt-1 leading-snug">
+                Fin de prestation. Sert de date d'émission et date de prestation pour la facture de solde.
+              </p>
+            </div>
           </div>
         </div>
 

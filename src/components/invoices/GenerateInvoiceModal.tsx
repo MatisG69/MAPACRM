@@ -62,8 +62,12 @@ export function GenerateInvoiceModal({
   const [amount, setAmount] = useState<string>('')
   const [issueDate, setIssueDate] = useState(todayISO())
   const [dueDate, setDueDate] = useState(plusDaysISO(30))
-  /** Date de prestation / livraison — obligation art. 242 nonies A CGI */
+  /** Date de prestation (mode facture unique sans acompte) — art. 242 nonies A CGI */
   const [serviceDate, setServiceDate] = useState(todayISO())
+  /** Date d'encaissement de l'acompte — affichée sur la page 1 du PDF */
+  const [acompteServiceDate, setAcompteServiceDate] = useState(todayISO())
+  /** Date de livraison de la prestation — affichée sur la page 2 du PDF */
+  const [deliveryDate, setDeliveryDate] = useState(plusDaysISO(45))
   const [hasDeposit, setHasDeposit] = useState(false)
   const [depositPercent, setDepositPercent] = useState<number>(40)
   const [acompteNumber, setAcompteNumber] = useState('')
@@ -129,6 +133,8 @@ export function GenerateInvoiceModal({
       setIssueDate(todayISO())
       setDueDate(plusDaysISO(30))
       setServiceDate(todayISO())
+      setAcompteServiceDate(todayISO())
+      setDeliveryDate(plusDaysISO(45))
       setHasDeposit(false)
       setDepositPercent(40)
       setAcompteNumber('')
@@ -169,7 +175,7 @@ export function GenerateInvoiceModal({
     }
   }, [selectedProject, autoPrice, amount])
 
-  // Pré-remplir depuis devis source : montant + acompte si présent
+  // Pré-remplir depuis devis source : montant, acompte, calendrier prévisionnel
   const handlePickQuote = (quoteId: string) => {
     setSourceQuoteId(quoteId)
     if (!quoteId) return
@@ -183,6 +189,16 @@ export function GenerateInvoiceModal({
       setDepositPercent(Math.round((q.deposit_amount / q.amount) * 100))
     } else {
       setHasDeposit(false)
+    }
+    // Reporte le calendrier prévisionnel saisi sur le devis vers la facture
+    if (q.expected_acompte_date) {
+      setAcompteServiceDate(q.expected_acompte_date)
+      // Date d'émission de la facture d'acompte = date d'encaissement prévue
+      setIssueDate(q.expected_acompte_date)
+    }
+    if (q.expected_delivery_date) {
+      setDeliveryDate(q.expected_delivery_date)
+      setServiceDate(q.expected_delivery_date)
     }
     if (!notes.trim()) {
       setNotes(`Facture émise en exécution du devis ${q.quote_number ?? q.title}${q.signed_at ? ` signé le ${new Date(q.signed_at).toLocaleDateString('fr-FR')}` : ''}.`)
@@ -219,7 +235,9 @@ export function GenerateInvoiceModal({
         acompteNumber: acompteNumber.trim(),
         soldeNumber: soldeNumber.trim(),
         acompteIssueDateISO: issueDate,
-        acompteServiceDateISO: serviceDate,
+        soldeIssueDateISO: deliveryDate, // la facture de solde sera émise à la livraison
+        acompteServiceDateISO: acompteServiceDate,
+        soldeServiceDateISO: deliveryDate,
       })
     }
 
@@ -227,6 +245,7 @@ export function GenerateInvoiceModal({
       ...shared,
       invoiceNumber: singleNumber.trim(),
       kind: 'full',
+      serviceDateISO: serviceDate,
     })
   }
 
@@ -547,29 +566,72 @@ export function GenerateInvoiceModal({
         </div>
 
         {/* Dates */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="form-label">Date d'émission</label>
+            <label className="form-label">Date d'émission (page 1)</label>
             <input
               type="date"
               className="input font-mono"
               value={issueDate}
               onChange={(e) => setIssueDate(e.target.value)}
             />
+            <p className="text-[10px] text-ws-mist/70 mt-1">
+              Date sur la facture {hasDeposit ? "d'acompte" : ''}
+            </p>
           </div>
           <div>
-            <label className="form-label">Date d'échéance</label>
+            <label className="form-label">Échéance de paiement</label>
             <input
               type="date"
               className="input font-mono"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
             />
+            <p className="text-[10px] text-ws-mist/70 mt-1">
+              Date limite de règlement de l'acompte
+            </p>
           </div>
+        </div>
+
+        {hasDeposit ? (
+          <div className="rounded-2xl border border-ws-line bg-ws-deep/40 p-4 space-y-3">
+            <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist">
+              Calendrier de prestation (art. 242 nonies A CGI)
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Date d'encaissement de l'acompte (page 1) *</label>
+                <input
+                  type="date"
+                  className="input font-mono"
+                  value={acompteServiceDate}
+                  onChange={(e) => setAcompteServiceDate(e.target.value)}
+                />
+                <p className="text-[10px] text-ws-mist/70 mt-1 leading-snug">
+                  Avant le démarrage du projet — généralement la date de signature / virement de l'acompte
+                </p>
+              </div>
+              <div>
+                <label className="form-label">Date de livraison du projet (page 2) *</label>
+                <input
+                  type="date"
+                  className="input font-mono"
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
+                />
+                <p className="text-[10px] text-ws-mist/70 mt-1 leading-snug">
+                  Fin de prestation — sert aussi de date d'émission de la facture de solde
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
           <div>
             <label className="form-label">
               Date de prestation *
-              <span className="ml-1 text-[10px] font-normal text-ws-mist">(art. 242 nonies A CGI)</span>
+              <span className="ml-1 text-[10px] font-normal text-ws-mist">
+                (art. 242 nonies A CGI)
+              </span>
             </label>
             <input
               type="date"
@@ -577,8 +639,11 @@ export function GenerateInvoiceModal({
               value={serviceDate}
               onChange={(e) => setServiceDate(e.target.value)}
             />
+            <p className="text-[10px] text-ws-mist/70 mt-1">
+              Date à laquelle la prestation est rendue ou la marchandise livrée
+            </p>
           </div>
-        </div>
+        )}
 
         {/* Récap calculé */}
         <div className="rounded-xl border border-ws-line bg-ws-deep/40 p-3.5 space-y-1 text-xs font-mono">
@@ -622,6 +687,32 @@ export function GenerateInvoiceModal({
             placeholder="ex : Facture émise en exécution du devis DEV-2026-001 signé le 15/03/2026."
           />
         </div>
+
+        {/* Warning : conformité légale du client (art. 242 nonies A CGI) */}
+        {selectedClient && (() => {
+          const missing: string[] = []
+          if (!selectedClient.address?.trim()) missing.push('adresse')
+          if (!selectedClient.city?.trim()) missing.push('ville')
+          if (!selectedClient.siret?.trim()) missing.push('SIRET')
+          if (missing.length === 0) return null
+          return (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-[11px] leading-relaxed">
+              <FileText size={14} className="mt-0.5 flex-shrink-0" />
+              <div>
+                <strong>Données client incomplètes</strong> — il manque sur la fiche de{' '}
+                <span className="font-mono">
+                  {selectedClient.company || selectedClient.name}
+                </span>{' '}
+                :{' '}
+                <span className="font-medium">{missing.join(', ')}</span>.
+                <br />
+                L'art. 242 nonies A du CGI impose l'adresse complète du client (et son SIRET en
+                B2B) sur toute facture. La facture sera générée mais peut être contestée. Complète
+                la fiche client avant d'envoyer la version officielle.
+              </div>
+            </div>
+          )
+        })()}
 
         <label className="flex items-center gap-2 text-xs text-ws-ink cursor-pointer select-none">
           <input

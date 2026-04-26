@@ -25,6 +25,14 @@ export interface DevisParams {
    * Le `project` racine reste le projet « principal » (référence devis, périmètre par défaut).
    */
   additionalLines?: DevisLine[]
+  /**
+   * Calendrier prévisionnel annoncé au client.
+   * Ces dates ne sont pas obligatoires sur un devis mais cadrent l'engagement
+   * du prestataire et serviront de date de prestation sur les factures
+   * (facture d'acompte = acompteDateISO, facture de solde = deliveryDateISO).
+   */
+  acompteDateISO?: string | null
+  deliveryDateISO?: string | null
 }
 
 /** Tarifs catalogue par type (utilisés en repli si aucun budget n'est saisi sur le projet) */
@@ -228,7 +236,13 @@ export function generateDevisHTML(params: DevisParams): string {
     customNotes,
     includeCGV = false,
     additionalLines = [],
+    acompteDateISO,
+    deliveryDateISO,
   } = params
+
+  const acompteDateDisplay = formatISODate(acompteDateISO) ?? null
+  const deliveryDateDisplay = formatISODate(deliveryDateISO) ?? null
+  const hasSchedule = !!(acompteDateDisplay || deliveryDateDisplay)
 
   // Lignes récurrentes (suivi mensuel HT) issues du projet principal et des projets additionnels
   const recurringLines: { project: Project; amount: number; label: string }[] = []
@@ -410,6 +424,36 @@ export function generateDevisHTML(params: DevisParams): string {
     color:#C9A84C;
   }
   .tline.main .val{font-size:12pt;}
+
+  /* ── Calendrier prévisionnel (acompte + livraison) ── */
+  .schedule-block{
+    margin-top:8px;
+    border:1px solid rgba(201,168,76,.18);
+    background:rgba(201,168,76,.03);
+    border-radius:2px;
+    padding:8px 12px;
+  }
+  .schedule-label{
+    font-size:5.4pt;letter-spacing:.22em;text-transform:uppercase;
+    font-weight:600;color:#C9A84C;margin-bottom:6px;
+  }
+  .schedule-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  }
+  .schedule-cell{
+    background:#111;border:1px solid rgba(201,168,76,.12);
+    border-radius:2px;padding:6px 10px;
+  }
+  .schedule-key{
+    font-size:5.4pt;letter-spacing:.18em;text-transform:uppercase;
+    color:#9E9080;margin-bottom:2px;
+  }
+  .schedule-val{
+    color:#E2C97E;font-size:8pt;font-weight:500;
+  }
+  .schedule-sub{
+    font-size:5.6pt;color:#9E9080;font-style:italic;margin-top:1px;
+  }
 
   /* ── Bandeau récurrent ultra-compact (1 ligne, centrage vertical strict) ── */
   .recurring-strip{
@@ -704,6 +748,12 @@ export function generateDevisHTML(params: DevisParams): string {
     .footer{padding-top:8px;}
 
     /* Bandeau récurrent en print : monoligne, padding symétrique pour centrage vertical */
+    .schedule-block{margin-top:6px;padding:6px 10px;}
+    .schedule-label{font-size:5.2pt;margin-bottom:4px;}
+    .schedule-cell{padding:5px 9px;}
+    .schedule-key{font-size:5.2pt;}
+    .schedule-val{font-size:7.5pt;}
+    .schedule-sub{font-size:5.2pt;}
     .recurring-strip{margin-top:6px;padding:7px 9px;}
     .recurring-strip .r-label{font-size:5pt;}
     .recurring-strip .r-items{font-size:6.4pt;}
@@ -813,10 +863,30 @@ export function generateDevisHTML(params: DevisParams): string {
     </tbody>
   </table>
   <div class="total-block">
-    <div class="tline"><span>Acompte à la commande (${depositPercent}%)</span><span class="val">${formatEur(deposit)}</span></div>
-    <div class="tline"><span>Solde à la livraison</span><span class="val">${formatEur(solde)}</span></div>
+    <div class="tline"><span>Acompte à la commande (${depositPercent}%)${acompteDateDisplay ? ` <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:4px">— ${acompteDateDisplay}</span>` : ''}</span><span class="val">${formatEur(deposit)}</span></div>
+    <div class="tline"><span>Solde à la livraison${deliveryDateDisplay ? ` <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:4px">— ${deliveryDateDisplay}</span>` : ''}</span><span class="val">${formatEur(solde)}</span></div>
     <div class="tline main"><span>Total HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(totalAmount)}</span></div>
   </div>
+
+  ${hasSchedule ? `
+  <div class="schedule-block">
+    <div class="schedule-label">Calendrier prévisionnel</div>
+    <div class="schedule-grid">
+      ${acompteDateDisplay ? `
+      <div class="schedule-cell">
+        <div class="schedule-key">Encaissement de l'acompte</div>
+        <div class="schedule-val">${acompteDateDisplay}</div>
+        <div class="schedule-sub">Avant démarrage des travaux</div>
+      </div>` : ''}
+      ${deliveryDateDisplay ? `
+      <div class="schedule-cell">
+        <div class="schedule-key">Livraison du projet</div>
+        <div class="schedule-val">${deliveryDateDisplay}</div>
+        <div class="schedule-sub">Émission de la facture de solde</div>
+      </div>` : ''}
+    </div>
+  </div>
+  ` : ''}
 
   ${recurringLines.length > 0 ? `
   <div class="recurring-strip">

@@ -200,6 +200,10 @@ export interface Quote {
   valid_until: string | null;
   deposit_requested: boolean;
   deposit_amount: number | null;
+  /** Date prévue d'encaissement de l'acompte (ISO YYYY-MM-DD) — démarrage projet */
+  expected_acompte_date: string | null;
+  /** Date prévue de livraison (ISO YYYY-MM-DD) — émission facture de solde */
+  expected_delivery_date: string | null;
   version: number;
   parent_quote_id: string | null;
   notes: string | null;
