@@ -58,7 +58,7 @@ function prestationsForType(project: Project | null): string[] {
         'Intégration responsive - mobile, tablette, desktop',
         'Structure & contenus fournis par le client intégrés',
         'Référencement local SEO de base - balises, métadonnées',
-        'Mise en ligne, nom de domaine & hébergement configurés',
+        'Configuration de l\'hébergement et du nom de domaine fournis par le Client',
         'Accompagnement post-livraison inclus - 30 jours',
       ]
     case 'webapp':
@@ -68,7 +68,7 @@ function prestationsForType(project: Project | null): string[] {
         'Système de réservation ou de gestion intégré',
         'Base de données & back-office d\'administration',
         'Référencement local SEO de base - balises, métadonnées',
-        'Mise en ligne, configuration serveur & domaine',
+        'Configuration serveur et nom de domaine fournis par le Client',
         'Accompagnement post-livraison inclus - 30 jours',
       ]
     case 'ecommerce':
@@ -78,7 +78,7 @@ function prestationsForType(project: Project | null): string[] {
         'Système de paiement sécurisé - Stripe ou équivalent',
         'Gestion des commandes & tableau de bord vendeur',
         'Référencement SEO produits & pages catégories',
-        'Mise en ligne, configuration serveur & domaine',
+        'Configuration serveur et nom de domaine fournis par le Client',
         'Accompagnement post-livraison inclus - 30 jours',
       ]
     case 'seo':
@@ -146,6 +146,45 @@ function upperLastName(fullName: string | null | undefined): string {
   if (parts.length === 1) return parts[0].toUpperCase()
   const last = parts.pop()!.toUpperCase()
   return parts.join(' ') + ' ' + last
+}
+
+/** Convertit un entier 0-100 en lettres françaises (orthographe contractuelle) */
+function numberToFrenchWords(n: number): string {
+  const i = Math.max(0, Math.min(100, Math.round(n)))
+  if (i === 0) return 'zéro'
+  if (i === 100) return 'cent'
+  const units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf']
+  const teens = ['dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf']
+  const tens: Record<number, string> = { 2: 'vingt', 3: 'trente', 4: 'quarante', 5: 'cinquante', 6: 'soixante' }
+  if (i < 10) return units[i]
+  if (i < 20) return teens[i - 10]
+  if (i < 70) {
+    const t = Math.floor(i / 10), u = i % 10
+    if (u === 0) return tens[t]
+    if (u === 1) return `${tens[t]} et un`
+    return `${tens[t]}-${units[u]}`
+  }
+  if (i < 80) {
+    const u = i - 60
+    if (u === 11) return 'soixante et onze'
+    if (u < 10) return `soixante-${units[u]}`
+    return `soixante-${teens[u - 10]}`
+  }
+  if (i < 100) {
+    const u = i - 80
+    if (u === 0) return 'quatre-vingts'
+    if (u < 10) return `quatre-vingt-${units[u]}`
+    return `quatre-vingt-${teens[u - 10]}`
+  }
+  return String(i)
+}
+
+/** Phrase légale dynamique pour la modalité d'acompte (article 3 CGV) */
+function depositClauseLegal(depositPercent: number): string {
+  const p = Math.max(0, Math.min(100, Math.round(depositPercent)))
+  if (p === 0) return 'Sauf stipulation contraire au devis : <strong>paiement intégral à la livraison</strong>, sans acompte requis.'
+  if (p === 100) return 'Sauf stipulation contraire au devis : <strong>paiement intégral à la commande</strong> avant démarrage des travaux.'
+  return `Sauf stipulation contraire au devis : acompte de <strong>${numberToFrenchWords(p)} pour cent (${p} %)</strong> à la commande, solde à la livraison.`
 }
 
 /** Libellé par défaut du suivi mensuel selon le type de projet */
@@ -228,6 +267,8 @@ export function generateDevisHTML(params: DevisParams): string {
   const solde = totalAmount - deposit
 
   const isMulti = allLines.length > 1
+  const hostingTypes = new Set(['website', 'redesign', 'webapp', 'ecommerce'])
+  const needsHostingNote = allLines.some((l) => l.project?.type && hostingTypes.has(l.project.type))
   const missionTitle = isMulti
     ? `Prestations combinées (${allLines.length} projets)`
     : project
@@ -399,6 +440,13 @@ export function generateDevisHTML(params: DevisParams): string {
     margin-top:2px;
     font-size:5.2pt;color:#9E9080;font-style:italic;line-height:1.3;
     text-align:center;
+  }
+  .hosting-note{
+    margin-top:6px;
+    font-size:5.6pt;color:#9E9080;font-style:italic;line-height:1.45;
+    padding:4px 9px;
+    border-left:2px solid rgba(201,168,76,.22);
+    background:rgba(201,168,76,.03);
   }
 
   /* ── Conditions ── */
@@ -658,6 +706,7 @@ export function generateDevisHTML(params: DevisParams): string {
     .recurring-strip .r-items{font-size:6.4pt;}
     .recurring-strip .r-total{font-size:7.4pt;}
     .recurring-foot{font-size:5pt;margin-top:1.5px;}
+    .hosting-note{margin-top:5px;padding:3px 8px;font-size:5.4pt;line-height:1.4;}
   }
 
   @media screen{
@@ -731,6 +780,8 @@ export function generateDevisHTML(params: DevisParams): string {
     ${(project ? prestationsForType(project) : prestationsForType(null)).map((p) => `<li>${p}</li>`).join('\n    ')}
   </ul>`}
 
+  ${needsHostingNote ? `<p class="hosting-note">L'hébergement et le nom de domaine sont fournis par le Client. À défaut, ces prestations peuvent être souscrites séparément auprès du Prestataire et sont alors facturées annuellement (art. 9.4 CGV).</p>` : ''}
+
   ${customNotes ? `<div class="cond-block" style="margin-top:8px"><strong>Note :</strong> ${customNotes}</div>` : ''}
 
   <div class="slabel">Tarification</div>
@@ -770,7 +821,7 @@ export function generateDevisHTML(params: DevisParams): string {
     <span class="r-items">${recurringLines.map((l) => `<strong>${projectTypeLabel(l.project.type)}</strong> ${formatEur(l.amount)}/mois`).join(' · ')}</span>
     <span class="r-total">Total ${formatEur(totalRecurring)} HT/mois</span>
   </div>
-  <p class="recurring-foot">Facturé mensuellement à compter de la livraison · contrat de suivi distinct (art. 9.2 CGV).</p>
+  <p class="recurring-foot">La souscription au suivi mensuel sera confirmée par un bon de commande spécifique signé à la livraison, conformément à l'art. 9.2 des CGV. Engagement initial de 12 mois reconductible.</p>
   ` : ''}
 
   ${includeCGV
@@ -798,7 +849,7 @@ export function generateDevisHTML(params: DevisParams): string {
 
 </section>
 
-${includeCGV ? renderCGVPage({ quoteNumber, client }) : ''}
+${includeCGV ? renderCGVPage({ quoteNumber, client, depositPercent }) : ''}
 
 </body>
 </html>`
@@ -811,8 +862,8 @@ ${includeCGV ? renderCGVPage({ quoteNumber, client }) : ''}
    Code de la propriété intellectuelle, Code de la consommation,
    RGPD), structure ordonnée, zéro clause floue.
    ═══════════════════════════════════════════════════════════ */
-function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
-  const { quoteNumber, client } = ctx
+function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercent: number }): string {
+  const { quoteNumber, client, depositPercent } = ctx
   const clientName = client.company || upperLastName(client.name)
   const updatedAt = today()
   const safe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -843,7 +894,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
 
     <div class="cgv-art">
       <h5>Art. 3 - Prix et modalités de paiement</h5>
-      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. Sauf stipulation contraire au devis : acompte de <strong>trente pour cent (30 %)</strong> à la commande, solde à la livraison. Les paiements sont effectués par virement bancaire sur le compte indiqué sur la facture. Aucun escompte pour paiement anticipé n'est consenti.</p>
+      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. ${depositClauseLegal(depositPercent)} Les paiements sont effectués par virement bancaire sur le compte indiqué sur la facture. Aucun escompte pour paiement anticipé n'est consenti.</p>
     </div>
 
     <div class="cgv-art">
@@ -874,7 +925,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
   const articlesPartTwo = `
     <div class="cgv-art">
       <h5>Art. 9 - Suivi, maintenance, hébergement et évolutions</h5>
-      <p><strong>9.1 Prestation de suivi.</strong> La garantie de conformité prévue à l'article 8 ne constitue pas une prestation de maintenance. Au-delà de ce délai, toute intervention (correction, ajout, modification, évolution) fait l'objet d'une <strong>prestation distincte</strong>, sur devis ou dans le cadre d'un contrat de suivi dédié.</p>
+      <p><strong>9.1 Prestation de suivi.</strong> La garantie de conformité prévue à l'article 8 ne constitue pas une prestation de maintenance. Au‑delà de ce délai, toute intervention (correction, ajout, modification, évolution) fait l'objet d'une <strong>prestation distincte</strong>, sur devis ou dans le cadre d'un contrat de suivi dédié.</p>
       <p><strong>9.2 Contrat de suivi.</strong> Le Client peut souscrire, à tout moment, un contrat de <strong>suivi et maintenance</strong> couvrant notamment : mises à jour techniques, supervision de la disponibilité, sauvegardes régulières, corrections d'anomalies, ajustements mineurs de contenu et accompagnement fonctionnel. Les modalités (périmètre, heures incluses, délais de réponse, tarif, durée) sont précisées dans un contrat distinct ou un bon de commande spécifique.</p>
       <p><strong>9.3 Durée et reconduction.</strong> Sauf stipulation contraire, le contrat de suivi est conclu pour une durée initiale de <strong>douze (12) mois</strong>, reconductible par tacite reconduction pour des périodes successives de même durée. Chaque partie peut y mettre fin par lettre recommandée avec accusé de réception adressée au moins <strong>trente (30) jours</strong> avant le terme en cours.</p>
       <p><strong>9.4 Hébergement et nom de domaine.</strong> L'hébergement du site et la gestion du nom de domaine constituent des prestations <strong>optionnelles</strong>, facturées séparément et reconductibles annuellement. À défaut de souscription, le Client conserve la charge exclusive de son hébergement et du renouvellement de son nom de domaine. Le Prestataire transfère, sur demande écrite et sous réserve du paiement intégral des sommes dues, l'ensemble des accès et codes sources nécessaires à une migration.</p>
@@ -898,8 +949,8 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
     <div class="cgv-art">
       <h5>Art. 11 - Réversibilité et portabilité</h5>
       <p><strong>11.1 Remise des livrables.</strong> À l'issue de la prestation et sous réserve du paiement intégral, le Prestataire remet au Client, sur demande écrite : le code source, les fichiers de production, les accès aux services associés (hébergement, nom de domaine, comptes tiers configurés au nom du Client), les éventuels identifiants administrateurs et la documentation technique disponible.</p>
-      <p><strong>11.2 Assistance à la migration.</strong> En cas de migration vers un nouveau prestataire, le Prestataire apporte une assistance technique raisonnable, dans la limite de <strong>deux (2) heures incluses</strong>. Au-delà, les heures sont facturées au taux journalier en vigueur communiqué sur demande.</p>
-      <p><strong>11.3 Conservation post-contractuelle.</strong> Le Prestataire conserve une copie d'archive du livrable pour une durée de <strong>six (6) mois</strong> suivant la fin de la prestation, à des fins de continuité de service et de gestion d'éventuelles réclamations. Au-delà, les éléments sont supprimés sauf demande expresse du Client de prolonger la conservation.</p>
+      <p><strong>11.2 Assistance à la migration.</strong> En cas de migration vers un nouveau prestataire, le Prestataire apporte une assistance technique raisonnable, dans la limite de <strong>deux (2) heures incluses</strong>. Au‑delà, les heures sont facturées au taux journalier en vigueur communiqué sur demande.</p>
+      <p><strong>11.3 Conservation post-contractuelle.</strong> Le Prestataire conserve une copie d'archive du livrable pour une durée de <strong>six (6) mois</strong> suivant la fin de la prestation, à des fins de continuité de service et de gestion d'éventuelles réclamations. Au‑delà, les éléments sont supprimés sauf demande expresse du Client de prolonger la conservation.</p>
     </div>
 
     <div class="cgv-art">
@@ -923,7 +974,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
 
     <div class="cgv-art">
       <h5>Art. 15 - Force majeure</h5>
-      <p>Aucune partie ne saurait voir sa responsabilité engagée en cas de force majeure au sens de l'<em>article 1218 du Code civil</em>. Si un tel événement se prolonge au-delà de <strong>soixante (60) jours</strong>, chaque partie peut résilier le contrat sans indemnité par lettre recommandée avec accusé de réception.</p>
+      <p>Aucune partie ne saurait voir sa responsabilité engagée en cas de force majeure au sens de l'<em>article 1218 du Code civil</em>. Si un tel événement se prolonge au‑delà de <strong>soixante (60) jours</strong>, chaque partie peut résilier le contrat sans indemnité par lettre recommandée avec accusé de réception.</p>
     </div>
 
     <div class="cgv-art">
@@ -1005,7 +1056,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client }): string {
         Matis GOUYET, Exploitant<br>
         89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq<br>
         SIREN 919 461 301 · SIRET 919 461 301 00021<br>
-        contact@mapa-developpement.fr
+        contact@mapa-developpement.fr · +33 6 79 62 39 42
       </div>
       <div class="fields">
         <div class="field"><span class="k">Fait à</span><span>Villeneuve-d'Ascq</span></div>
