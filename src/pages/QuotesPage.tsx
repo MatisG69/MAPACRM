@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Pencil, Trash2, FileInput, FileText, Eye } from 'lucide-react';
+import { Pencil, Trash2, FileInput, FileText, Eye, Check, Loader2 } from 'lucide-react';
+import { useBulkSelection } from '../hooks/useBulkSelection';
+import { BulkActionBar } from '../components/ui/BulkActionBar';
 import { Header } from '../components/layout/Header';
 import type { AppNotification } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
@@ -64,6 +66,54 @@ export function QuotesPage({
       );
     });
   }, [quotes, clients, searchQuery]);
+
+  const visibleIds = useMemo(() => filteredQuotes.map((q) => q.id), [filteredQuotes]);
+  const selection = useBulkSelection(visibleIds);
+
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
+  const bulkMarkSigned = async () => {
+    setBulkBusy(true);
+    try {
+      const today = new Date().toISOString();
+      for (const id of selection.selectedIds) {
+        const q = quotes.find((qq) => qq.id === id);
+        if (!q || q.status === 'signed') continue;
+        await onUpdate(id, { status: 'signed', signed_at: today });
+      }
+      selection.clear();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkMarkSent = async () => {
+    setBulkBusy(true);
+    try {
+      for (const id of selection.selectedIds) {
+        const q = quotes.find((qq) => qq.id === id);
+        if (!q || q.status === 'sent' || q.status === 'signed') continue;
+        await onUpdate(id, { status: 'sent' });
+      }
+      selection.clear();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    try {
+      for (const id of selection.selectedIds) {
+        await onDelete(id);
+      }
+      selection.clear();
+      setConfirmBulkDelete(false);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const notifications = useMemo<AppNotification[]>(() => {
     const today = new Date();
@@ -217,12 +267,36 @@ export function QuotesPage({
           </p>
         ) : (
           <div className="space-y-2">
+            <label className="flex items-center gap-2 px-2 text-xs text-ws-mist font-mono cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={selection.allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = selection.someSelected;
+                }}
+                onChange={() => selection.toggleAll()}
+                className="w-4 h-4 accent-ws-accent"
+              />
+              Tout sélectionner ({filteredQuotes.length})
+            </label>
             {filteredQuotes.map((q) => (
               <div
                 key={q.id}
-                className="ws-card rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-ws-line/80"
+                className={`ws-card rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border transition-colors ${
+                  selection.has(q.id)
+                    ? 'border-ws-accent/50 bg-ws-accent/5'
+                    : 'border-ws-line/80'
+                }`}
               >
-                <div className="min-w-0">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selection.has(q.id)}
+                    onChange={() => selection.toggle(q.id)}
+                    className="mt-1 w-4 h-4 accent-ws-accent flex-shrink-0"
+                    aria-label={`Sélectionner devis ${q.quote_number || q.title}`}
+                  />
+                  <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <p className="font-medium text-ws-paper">{q.title}</p>
                     <Badge value={q.status} />
@@ -243,6 +317,7 @@ export function QuotesPage({
                       Acompte : {formatCurrency(q.deposit_amount)}
                     </p>
                   )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -374,6 +449,50 @@ export function QuotesPage({
         description="Action définitive."
         loading={deleteLoading}
       />
+
+      <ConfirmDialog
+        isOpen={confirmBulkDelete}
+        onClose={() => setConfirmBulkDelete(false)}
+        onConfirm={bulkDelete}
+        title={`Supprimer ${selection.count} devis ?`}
+        description="Action définitive — tous les devis sélectionnés seront supprimés."
+        loading={bulkBusy}
+      />
+
+      <BulkActionBar
+        count={selection.count}
+        itemLabel="devis"
+        onClear={() => selection.clear()}
+      >
+        <Button
+          variant="secondary"
+          icon={bulkBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+          onClick={() => void bulkMarkSigned()}
+          disabled={bulkBusy}
+          className="normal-case tracking-normal text-xs py-1.5"
+        >
+          Marquer signés
+        </Button>
+        <Button
+          variant="secondary"
+          icon={
+            bulkBusy ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />
+          }
+          onClick={() => void bulkMarkSent()}
+          disabled={bulkBusy}
+          className="normal-case tracking-normal text-xs py-1.5"
+        >
+          Marquer envoyés
+        </Button>
+        <Button
+          icon={<Trash2 size={14} />}
+          onClick={() => setConfirmBulkDelete(true)}
+          disabled={bulkBusy}
+          className="normal-case tracking-normal text-xs py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 border-red-500/40"
+        >
+          Supprimer
+        </Button>
+      </BulkActionBar>
 
       <GenerateDevisModal
         isOpen={modal === 'devis'}

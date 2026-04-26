@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ProjectForm } from '../components/projects/ProjectForm';
 import { ProjectCardPreview } from '../components/projects/ProjectCardPreview';
 import { ClientPortalSection } from '../components/projects/ClientPortalSection';
+import { ClientDocumentsManager } from '../components/projects/ClientDocumentsManager';
 import { TaskForm } from '../components/tasks/TaskForm';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import type {
@@ -289,6 +290,12 @@ export function ProjectDetailPage({
       <div className="px-4 md:px-8 pb-8">
         <ClientPortalSection projectId={project.id} />
       </div>
+
+      {project.client_id && (
+        <div className="px-4 md:px-8 pb-8">
+          <ClientDocumentsManager clientId={project.client_id} projectId={project.id} />
+        </div>
+      )}
 
       <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Modifier le projet" size="lg">
         <ProjectForm

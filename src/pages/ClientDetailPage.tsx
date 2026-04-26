@@ -23,6 +23,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ClientForm } from '../components/clients/ClientForm';
 import { InteractionForm } from '../components/interactions/InteractionForm';
 import { ProjectForm } from '../components/projects/ProjectForm';
+import { ClientDocumentsManager } from '../components/projects/ClientDocumentsManager';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { Client, Interaction, Invoice, Project } from '../lib/types';
 import { Page } from '../lib/types';
@@ -375,6 +376,11 @@ export function ClientDetailPage({
               ))}
             </div>
           )}
+        </section>
+
+        <section>
+          <h2 className="font-display text-lg font-bold text-ws-paper mb-4">Documents partagés</h2>
+          <ClientDocumentsManager clientId={client.id} compact />
         </section>
       </div>
 

@@ -35,8 +35,70 @@ interface ComputedDesk {
   paidCount: number;
   recentPaid: Invoice[];
   totalSixMonth: number;
+  prevMonth: number;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Mini sparkline area chart : SVG pur, pas de dépendance, ~5 mois
+   ───────────────────────────────────────────────────────────────── */
+function Sparkline({ values, currentIndex }: { values: number[]; currentIndex: number }) {
+  if (values.length === 0)
+    return (
+      <div className="h-16 w-full flex items-center justify-center text-[10px] font-mono text-ws-mist">
+        —
+      </div>
+    );
+
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  const W = 100;
+  const H = 28;
+  const step = values.length > 1 ? W / (values.length - 1) : W;
+
+  const points = values.map((v, i) => {
+    const x = i * step;
+    const y = H - ((v - min) / range) * H;
+    return [x, y] as const;
+  });
+
+  const pathLine = points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+  const pathArea = `${pathLine} L${W},${H} L0,${H} Z`;
+
+  return (
+    <div className="relative w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-16 w-full overflow-visible">
+        <defs>
+          <linearGradient id="rev-spark-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(201,168,76,0.35)" />
+            <stop offset="100%" stopColor="rgba(201,168,76,0)" />
+          </linearGradient>
+        </defs>
+        <path d={pathArea} fill="url(#rev-spark-fill)" />
+        <path d={pathLine} fill="none" stroke="rgba(212,185,106,0.85)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        {points.map(([x, y], i) => {
+          const isCurrent = i === currentIndex;
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r={isCurrent ? 1.7 : 1}
+              fill={isCurrent ? 'rgba(232,224,208,1)' : 'rgba(212,185,106,0.7)'}
+              stroke={isCurrent ? 'rgba(212,185,106,0.9)' : 'none'}
+              strokeWidth="0.7"
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Vue plein écran (inchangée — déjà bien dimensionnée)
+   ───────────────────────────────────────────────────────────────── */
 function RevenueExpandedOverlay({
   onClose,
   title,
@@ -111,7 +173,6 @@ function RevenueExpandedOverlay({
       </header>
 
       <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-4 sm:py-6 md:px-8 md:py-10 md:pb-10">
-        {/* Hero chiffres */}
         <div className="mb-6 grid gap-3 sm:mb-8 sm:gap-4 md:mb-10 md:grid-cols-2 md:gap-6">
           <div className="relative overflow-hidden rounded-2xl border border-ws-accent/25 bg-gradient-to-br from-ws-accent-dim/40 via-ws-deep/80 to-ws-void p-4 shadow-glow sm:p-6 md:p-8">
             <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ws-gold sm:text-[11px] sm:tracking-[0.25em]">
@@ -154,7 +215,9 @@ function RevenueExpandedOverlay({
               <p className="mt-1.5 break-words text-sm font-semibold tabular-nums leading-tight text-ws-paper sm:mt-2 sm:text-lg md:text-xl">
                 {cell.v}
               </p>
-              <p className="mt-0.5 text-[9px] uppercase tracking-wide text-ws-ink sm:mt-1 sm:text-[10px]">{cell.hint}</p>
+              <p className="mt-0.5 text-[9px] uppercase tracking-wide text-ws-ink sm:mt-1 sm:text-[10px]">
+                {cell.hint}
+              </p>
             </div>
           ))}
         </div>
@@ -211,7 +274,11 @@ function RevenueExpandedOverlay({
                                   up ? 'text-ws-accent-soft' : 'text-ws-bear'
                                 }`}
                               >
-                                {up ? <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ArrowDownRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                                {up ? (
+                                  <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                ) : (
+                                  <ArrowDownRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                )}
                                 {Math.abs(delta).toFixed(1)}%
                               </span>
                             )}
@@ -230,7 +297,8 @@ function RevenueExpandedOverlay({
                       </td>
                       <td className="px-3 py-2.5 text-right align-top text-[9px] uppercase leading-snug text-ws-mist sm:px-5 sm:py-3 sm:text-[10px]">
                         <span className="hidden sm:inline">
-                          {paidCount} facture{paidCount > 1 ? 's' : ''} payée{paidCount > 1 ? 's' : ''}
+                          {paidCount} facture{paidCount > 1 ? 's' : ''} payée
+                          {paidCount > 1 ? 's' : ''}
                         </span>
                         <span className="sm:hidden">
                           {paidCount} payée{paidCount > 1 ? 's' : ''}
@@ -254,7 +322,9 @@ function RevenueExpandedOverlay({
             </div>
             <div className="max-h-[min(340px,42dvh)] overflow-y-auto overflow-x-auto overscroll-contain sm:max-h-[min(480px,48vh)] md:max-h-[min(520px,50vh)] [-webkit-overflow-scrolling:touch]">
               {recentPaid.length === 0 ? (
-                <p className="px-4 py-10 text-center text-xs text-ws-mist sm:px-5 sm:py-12 sm:text-sm">Aucun encaissement</p>
+                <p className="px-4 py-10 text-center text-xs text-ws-mist sm:px-5 sm:py-12 sm:text-sm">
+                  Aucun encaissement
+                </p>
               ) : (
                 <table className="w-full min-w-[280px] border-collapse font-mono text-xs sm:min-w-0 sm:text-sm">
                   <thead className="sticky top-0 z-[1] border-b border-white/[0.06] bg-ws-deep text-[9px] uppercase tracking-wider text-ws-mist sm:text-[10px]">
@@ -277,7 +347,10 @@ function RevenueExpandedOverlay({
                         <td className="max-w-[3.5rem] truncate px-2 py-2 text-ws-mist sm:max-w-none sm:px-3 sm:py-3">
                           {inv.invoice_number || '—'}
                         </td>
-                        <td className="max-w-[100px] truncate px-2 py-2 text-ws-paper sm:max-w-[200px] sm:px-3 sm:py-3" title={inv.client?.name || ''}>
+                        <td
+                          className="max-w-[100px] truncate px-2 py-2 text-ws-paper sm:max-w-[200px] sm:px-3 sm:py-3"
+                          title={inv.client?.name || ''}
+                        >
                           {inv.client?.name || '—'}
                         </td>
                         <td className="whitespace-nowrap px-2 py-2 text-right text-sm font-semibold tabular-nums text-ws-gold sm:px-4 sm:py-3 sm:text-base">
@@ -300,12 +373,18 @@ function RevenueExpandedOverlay({
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Vue compacte — REFONTE UI/UX
+   Pattern « financial desk minimal » : un chiffre vedette, une
+   variation, une mini-tendance, une liste compacte des règlements.
+   ───────────────────────────────────────────────────────────────── */
 export function RevenueDesk({
   monthlyRows,
   invoices,
   title = "Chiffre d'affaires",
-  subtitle = 'Encaissements réalisés — série, variations et journal des règlements.',
+  subtitle,
 }: RevenueDeskProps) {
+  void subtitle;
   const [expanded, setExpanded] = useState(false);
   const now = new Date();
   const cy = now.getFullYear();
@@ -337,6 +416,7 @@ export function RevenueDesk({
     });
 
     const sixSum = monthlyRows.reduce((s, r) => s + r.value, 0);
+    const prev = monthlyRows.length >= 2 ? monthlyRows[monthlyRows.length - 2].value : 0;
 
     return {
       mtd: mtdVal,
@@ -344,15 +424,15 @@ export function RevenueDesk({
       pendingTotal: pend,
       overdueTotal: ovd,
       paidCount: paid.length,
-      recentPaid: ledger.slice(0, 10),
+      recentPaid: ledger.slice(0, 5),
       totalSixMonth: sixSum,
+      prevMonth: prev,
     };
   }, [invoices, monthlyRows, cm, cy]);
 
-  const { mtd, ytd, pendingTotal, overdueTotal, paidCount, recentPaid, totalSixMonth } = computed;
-  const rollLabel = monthlyRows.length === 1 ? '1 mois' : `${monthlyRows.length} mois`;
-
-  const currentMonthRowIndex = monthlyRows.length > 0 ? monthlyRows.length - 1 : -1;
+  const { mtd, ytd, pendingTotal, overdueTotal, recentPaid, prevMonth } = computed;
+  const delta = pctChange(mtd, prevMonth);
+  const up = delta !== null && delta >= 0;
 
   const updatedLabel = now.toLocaleString('fr-FR', {
     day: '2-digit',
@@ -361,6 +441,14 @@ export function RevenueDesk({
     minute: '2-digit',
   });
   const updatedIso = now.toISOString();
+
+  const monthLabel = new Date(cy, cm, 1).toLocaleDateString('fr-FR', {
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const sparkValues = monthlyRows.map((r) => r.value);
+  const currentSparkIndex = sparkValues.length > 0 ? sparkValues.length - 1 : -1;
 
   const openExpanded = useCallback(() => setExpanded(true), []);
   const closeExpanded = useCallback(() => setExpanded(false), []);
@@ -376,228 +464,173 @@ export function RevenueDesk({
   return (
     <>
       <section
-        className="ws-card relative min-w-0 overflow-hidden rounded-[1.35rem]"
+        className="ws-card relative min-w-0 overflow-hidden rounded-2xl"
         aria-labelledby="revenue-desk-title"
       >
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.06]"
-          aria-hidden
-          style={{
-            backgroundImage: `linear-gradient(rgba(175, 112, 55, 0.35) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(175, 112, 55, 0.28) 1px, transparent 1px)`,
-            backgroundSize: '28px 28px',
-          }}
-        />
-
-        <div
-          className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 opacity-[0.2]"
-          aria-hidden
-        >
-          <svg viewBox="0 0 160 160" className="h-full w-full text-ws-accent">
-            <circle cx="80" cy="80" r="72" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.9" />
-            <circle cx="80" cy="80" r="52" fill="none" stroke="currentColor" strokeWidth="0.35" opacity="0.5" />
-          </svg>
-        </div>
-
-        <div className="relative border-b border-white/[0.07] bg-ws-deep/50 px-4 py-3 pr-14 md:px-5 md:pr-16">
+        {/* Header sobre — un seul niveau de titre, un seul bouton */}
+        <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-ws-accent/30 bg-ws-accent-dim/60">
+              <Landmark className="h-4 w-4 text-ws-accent-soft" strokeWidth={2} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.22em] text-ws-mist">
+                Trésorerie
+              </p>
+              <h2
+                id="revenue-desk-title"
+                className="font-display text-lg font-semibold tracking-tight text-ws-paper md:text-xl"
+              >
+                {title}
+              </h2>
+            </div>
+          </div>
           <button
             type="button"
             onClick={openExpanded}
-            className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.1] bg-ws-panel/70 text-ws-gold shadow-sm transition-all hover:border-ws-accent/40 hover:bg-ws-accent-dim/40 hover:text-ws-paper touch-manipulation md:right-4 md:top-3.5"
-            aria-label="Agrandir la vue chiffre d'affaires"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-ws-panel/60 text-ws-mist transition-all hover:border-ws-accent/40 hover:bg-ws-accent-dim/30 hover:text-ws-paper touch-manipulation"
+            aria-label="Vue plein écran du chiffre d'affaires"
             title="Vue plein écran"
           >
-            <Maximize2 size={18} strokeWidth={2} />
+            <Maximize2 size={15} strokeWidth={2} />
           </button>
+        </header>
 
-          <div className="h-px w-full max-w-[200px] bg-gradient-to-r from-ws-accent/60 via-ws-gold/40 to-transparent mb-3" />
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl border border-ws-accent/30 bg-ws-accent-dim shadow-glow-sm">
-                <Landmark className="h-[18px] w-[18px] text-ws-accent-soft" strokeWidth={2} />
+        {/* HERO : chiffre vedette + variation + sparkline */}
+        <div className="px-5 pb-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-6 md:items-end">
+            {/* Bloc gauche : chiffre + variation */}
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-ws-mist">
+                  Mois en cours
+                </span>
+                <span className="text-[10px] font-mono text-ws-ink capitalize">{monthLabel}</span>
               </div>
-              <div>
-                <p className="ws-section-title mb-1">Trésorerie & encaissements</p>
-                <h2 id="revenue-desk-title" className="font-display text-base font-bold tracking-tight text-ws-paper md:text-lg">
-                  {title}
-                </h2>
-                <p className="mt-0.5 max-w-xl text-[11px] leading-relaxed text-ws-ink">{subtitle}</p>
+              <p className="mt-1.5 font-display text-3xl font-bold tabular-nums leading-none tracking-tight text-ws-paper md:text-4xl">
+                {formatCurrency(mtd)}
+              </p>
+              <div className="mt-2 flex items-center gap-3 text-[11px] font-mono">
+                {delta === null ? (
+                  <span className="text-ws-mist">— vs mois précédent</span>
+                ) : (
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold ${
+                      up
+                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                        : 'border-red-500/30 bg-red-500/10 text-red-300'
+                    }`}
+                  >
+                    {up ? <ArrowUpRight size={11} strokeWidth={2.5} /> : <ArrowDownRight size={11} strokeWidth={2.5} />}
+                    {up ? '+' : '−'}
+                    {Math.abs(delta).toFixed(1)}%
+                  </span>
+                )}
+                <span className="text-ws-mist">vs mois précédent</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-ws-panel/60 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.15em] text-ws-gold">
-              <Sparkles className="h-3.5 w-3.5 text-ws-accent-soft" strokeWidth={2} />
-              Synthèse
+
+            {/* Bloc droite : sparkline avec libellé */}
+            <div className="min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-ws-mist">
+                  Tendance {monthlyRows.length} mois
+                </span>
+                <Sparkles className="h-3 w-3 text-ws-accent-soft/70" strokeWidth={2} />
+              </div>
+              <Sparkline values={sparkValues} currentIndex={currentSparkIndex} />
+              <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-wide text-ws-mist mt-0.5">
+                <span>{monthlyRows[0]?.label ?? ''}</span>
+                <span>{monthlyRows[monthlyRows.length - 1]?.label ?? ''}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="relative grid grid-cols-2 border-b border-white/[0.06] bg-ws-deep/30 font-mono lg:grid-cols-4">
+        {/* KPIs secondaires : compactes, lisibles, hiérarchie claire */}
+        <div className="grid grid-cols-3 border-y border-white/[0.06]">
           {[
-            { k: 'MTD', v: formatCurrency(mtd), hint: 'Mois en cours' },
-            { k: 'YTD', v: formatCurrency(ytd), hint: `Cumul ${cy}` },
-            { k: 'À encaisser', v: formatCurrency(pendingTotal), hint: 'Factures envoyées' },
-            { k: 'Retard', v: formatCurrency(overdueTotal), hint: 'Échéance dépassée' },
-          ].map((cell) => (
+            { k: 'Cumul annuel', v: formatCurrency(ytd), tone: 'paper' as const },
+            { k: 'À encaisser', v: formatCurrency(pendingTotal), tone: 'gold' as const },
+            { k: 'En retard', v: formatCurrency(overdueTotal), tone: overdueTotal > 0 ? 'red' : 'mist' as const },
+          ].map((cell, idx) => (
             <div
               key={cell.k}
-              className="border-b border-white/[0.05] px-3 py-2.5 lg:border-b-0 lg:border-r lg:border-white/[0.06] lg:last:border-r-0"
+              className={`px-5 py-3 ${idx < 2 ? 'border-r border-white/[0.06]' : ''}`}
             >
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-ws-mist">{cell.k}</p>
-              <p className="mt-1 tabular-nums text-sm font-semibold tracking-tight text-ws-paper">{cell.v}</p>
-              <p className="mt-0.5 text-[9px] uppercase tracking-wide text-ws-ink">{cell.hint}</p>
+              <p className="text-[9px] font-mono font-semibold uppercase tracking-[0.18em] text-ws-mist">
+                {cell.k}
+              </p>
+              <p
+                className={`mt-1 font-mono text-base font-semibold tabular-nums tracking-tight ${
+                  cell.tone === 'gold'
+                    ? 'text-ws-gold'
+                    : cell.tone === 'red'
+                      ? 'text-red-300'
+                      : cell.tone === 'mist'
+                        ? 'text-ws-mist'
+                        : 'text-ws-paper'
+                }`}
+              >
+                {cell.v}
+              </p>
             </div>
           ))}
         </div>
 
-        <div className="relative grid min-w-0 max-w-full gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,300px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:divide-x lg:divide-white/[0.06]">
-          <div className="@container min-w-0 max-w-full space-y-4 overflow-hidden border-b border-white/[0.06] pb-4 lg:border-b-0 lg:pb-0">
-            <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-ws-deep/20">
-              <div className="overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-ws">
-              <table className="w-full min-w-0 table-fixed border-collapse text-left font-mono text-xs">
-                <thead>
-                  <tr className="ws-table-header">
-                    <th className="w-[32%] px-2 py-2.5 sm:px-3">Période</th>
-                    <th className="w-[38%] px-2 py-2.5 text-right sm:px-3">Net encaissé</th>
-                    <th className="w-[30%] px-2 py-2.5 text-right sm:px-3">Δ m/m</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {monthlyRows.map((row, idx) => {
-                    const prev = idx > 0 ? monthlyRows[idx - 1].value : 0;
-                    const delta = pctChange(row.value, prev);
-                    const up = delta !== null && delta >= 0;
-                    const flat = delta === null || delta === 0;
-                    const isCurrentMonth = idx === currentMonthRowIndex;
-
-                    return (
-                      <tr
-                        key={row.label}
-                        className={`border-b border-white/[0.04] transition-colors hover:bg-ws-raised/50 ${
-                          isCurrentMonth ? 'bg-ws-accent-dim/25 ring-1 ring-inset ring-ws-accent/25' : ''
-                        } ${idx % 2 === 1 && !isCurrentMonth ? 'bg-black/10' : ''}`}
-                      >
-                        <td className="px-2 py-2.5 align-top sm:px-3">
-                          <span className="font-semibold text-ws-paper">{row.label}</span>
-                          {isCurrentMonth && (
-                            <span className="mt-1 inline-block w-fit rounded-full border border-ws-accent/40 bg-ws-accent-dim px-1.5 py-px text-[8px] font-bold uppercase tracking-wider text-ws-accent-soft sm:ml-2 sm:mt-0 sm:inline-block">
-                              Courant
-                            </span>
-                          )}
-                        </td>
-                        <td className="break-words px-2 py-2.5 text-right text-[11px] tabular-nums font-semibold leading-snug text-ws-gold sm:px-3 sm:text-xs">
-                          {formatCurrency(row.value)}
-                        </td>
-                        <td className="px-2 py-2.5 text-right text-[11px] tabular-nums sm:px-3 sm:text-xs">
-                          {delta === null ? (
-                            <span className="text-ws-mist">—</span>
-                          ) : flat ? (
-                            <span className="text-ws-mist">0,0%</span>
-                          ) : (
-                            <span
-                              className={`inline-flex items-center justify-end gap-0.5 font-semibold ${
-                                up ? 'text-ws-accent-soft' : 'text-ws-bear'
-                              }`}
-                            >
-                              {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                              {Math.abs(delta).toFixed(1)}%
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-ws-accent/25 bg-ws-accent-dim/20 font-semibold">
-                    <td className="px-2 py-2.5 align-top text-[10px] uppercase leading-snug tracking-wider text-ws-accent-soft sm:px-3 sm:text-xs">
-                      {rollLabel}
-                    </td>
-                    <td className="px-2 py-2.5 text-right text-[11px] tabular-nums leading-snug text-ws-paper sm:px-3 sm:text-xs">
-                      {formatCurrency(totalSixMonth)}
-                    </td>
-                    <td className="px-2 py-2.5 text-right text-[9px] uppercase leading-snug tracking-wider text-ws-mist sm:px-3 sm:text-[10px]">
-                      <span className="hidden sm:inline">
-                        {paidCount} facture{paidCount > 1 ? 's' : ''} payée{paidCount > 1 ? 's' : ''} · glissant
-                      </span>
-                      <span className="sm:hidden">
-                        {paidCount} payée{paidCount > 1 ? 's' : ''} · glissant
-                      </span>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-              </div>
-            </div>
-
-            <RevenueChartsPanel monthlyRows={monthlyRows} />
-          </div>
-
-          <div className="min-w-0 max-w-full overflow-hidden border-t border-white/[0.06] bg-ws-deep/25 lg:border-t-0">
-            <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
+        {/* Liste des derniers règlements — format liste, pas tableau */}
+        <div className="px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
               <Receipt className="h-3.5 w-3.5 text-ws-accent-soft" strokeWidth={2} />
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ws-ink">
-                Derniers encaissements
+              <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-ws-mist">
+                Derniers règlements
               </p>
             </div>
-            <div className="max-h-[min(420px,55vh)] overflow-y-auto overflow-x-auto overscroll-contain [-webkit-overflow-scrolling:touch] scrollbar-ws">
-              {recentPaid.length === 0 ? (
-                <p className="px-4 py-8 text-center text-xs text-ws-mist">Aucun encaissement enregistré</p>
-              ) : (
-                <table className="w-full min-w-[260px] table-fixed border-collapse font-mono text-[10px] sm:min-w-0 sm:text-[11px]">
-                  <thead className="sticky top-0 z-[1] border-b border-white/[0.06] bg-ws-deep/95 text-[8px] uppercase tracking-wider text-ws-mist backdrop-blur-sm sm:text-[9px]">
-                    <tr>
-                      <th className="w-[22%] px-1.5 py-2 text-left font-semibold sm:px-2">Date</th>
-                      <th className="w-[18%] px-1 py-2 text-left font-semibold sm:px-2">N°</th>
-                      <th className="min-w-0 px-1 py-2 text-left font-semibold sm:px-2">Contrepartie</th>
-                      <th className="w-[26%] px-1.5 py-2 text-right font-semibold sm:px-2">Montant</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentPaid.map((inv, i) => (
-                      <tr
-                        key={inv.id}
-                        className={`border-b border-white/[0.04] transition-colors hover:bg-ws-raised/40 ${
-                          i % 2 === 1 ? 'bg-black/[0.07]' : ''
-                        }`}
-                      >
-                        <td className="whitespace-nowrap px-1.5 py-2 tabular-nums text-ws-ink sm:px-2">
-                          {formatDate(inv.paid_date || inv.created_at)}
-                        </td>
-                        <td className="truncate px-1 py-2 text-ws-mist sm:px-2" title={inv.invoice_number || undefined}>
-                          {inv.invoice_number || '—'}
-                        </td>
-                        <td className="min-w-0 truncate px-1 py-2 text-ws-paper sm:px-2" title={inv.client?.name || ''}>
-                          {inv.client?.name || '—'}
-                        </td>
-                        <td className="whitespace-nowrap px-1.5 py-2 text-right text-[10px] font-semibold tabular-nums leading-tight text-ws-gold sm:px-2 sm:text-[11px]">
-                          {formatCurrency(inv.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="relative flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] bg-ws-deep/40 px-4 py-2 text-[10px] font-mono uppercase tracking-[0.12em] text-ws-mist">
-          <span className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-ws-accent shadow-glow-sm" aria-hidden />
-            Données à la consultation
-          </span>
-          <div className="flex items-center gap-3">
-            <time dateTime={updatedIso}>{updatedLabel}</time>
             <button
               type="button"
               onClick={openExpanded}
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-ws-panel/50 text-ws-gold transition-colors hover:border-ws-accent/35 hover:bg-ws-accent-dim/30 hover:text-ws-paper touch-manipulation"
-              aria-label="Agrandir la vue chiffre d'affaires"
-              title="Vue plein écran"
+              className="text-[10px] font-mono uppercase tracking-[0.15em] text-ws-accent-soft hover:text-ws-accent transition-colors"
             >
-              <Maximize2 size={16} strokeWidth={2} />
+              Voir tout
             </button>
           </div>
+
+          {recentPaid.length === 0 ? (
+            <p className="py-6 text-center text-xs font-mono text-ws-mist">Aucun encaissement</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {recentPaid.map((inv) => (
+                <li
+                  key={inv.id}
+                  className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-ws-raised/30"
+                >
+                  <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-400/80" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-ws-paper" title={inv.client?.name || ''}>
+                      {inv.client?.name || '—'}
+                    </p>
+                    <p className="font-mono text-[10px] uppercase tracking-wide text-ws-mist">
+                      {formatDate(inv.paid_date || inv.created_at)} · {inv.invoice_number || '—'}
+                    </p>
+                  </div>
+                  <span className="font-mono text-sm font-semibold tabular-nums text-ws-gold">
+                    {formatCurrency(inv.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Footer minimaliste — juste timestamp */}
+        <div className="border-t border-white/[0.06] bg-ws-deep/30 px-5 py-2 text-center">
+          <time
+            dateTime={updatedIso}
+            className="font-mono text-[9px] uppercase tracking-[0.18em] text-ws-mist"
+          >
+            Actualisé · {updatedLabel}
+          </time>
         </div>
       </section>
 

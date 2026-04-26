@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Plus, FileText, Pencil, Trash2, FilePlus2, Eye } from 'lucide-react';
+import { FileText, Pencil, Trash2, FilePlus2, Eye, Check, Loader2 } from 'lucide-react';
+import { useBulkSelection } from '../hooks/useBulkSelection';
+import { BulkActionBar } from '../components/ui/BulkActionBar';
 import { Header } from '../components/layout/Header';
 import type { AppNotification } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
@@ -133,12 +135,61 @@ export function InvoicesPage({
     );
   }, [invoices, search]);
 
+  const visibleIds = useMemo(() => filtered.map((i) => i.id), [filtered]);
+  const selection = useBulkSelection(visibleIds);
+
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleteLoading(true);
     await onDelete(deleteId);
     setDeleteLoading(false);
     setDeleteId(null);
+  };
+
+  // Bulk actions
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
+  const bulkMarkPaid = async () => {
+    setBulkBusy(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      for (const id of selection.selectedIds) {
+        const inv = invoices.find((i) => i.id === id);
+        if (!inv || inv.status === 'paid') continue;
+        await onUpdate(id, { status: 'paid', paid_date: today });
+      }
+      selection.clear();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkMarkSent = async () => {
+    setBulkBusy(true);
+    try {
+      for (const id of selection.selectedIds) {
+        const inv = invoices.find((i) => i.id === id);
+        if (!inv || inv.status === 'sent' || inv.status === 'paid') continue;
+        await onUpdate(id, { status: 'sent' });
+      }
+      selection.clear();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    try {
+      for (const id of selection.selectedIds) {
+        await onDelete(id);
+      }
+      selection.clear();
+      setConfirmBulkDelete(false);
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   return (
@@ -154,23 +205,13 @@ export function InvoicesPage({
         onSearchChange={setSearch}
         notifications={notifications}
         actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              icon={<Plus size={16} />}
-              onClick={() => setShowCreate(true)}
-              className="normal-case tracking-normal"
-            >
-              <span className="hidden sm:inline">Saisie rapide</span>
-            </Button>
-            <Button
-              icon={<FilePlus2 size={16} />}
-              onClick={() => setShowGenerate(true)}
-              className="normal-case tracking-normal"
-            >
-              Générer une facture
-            </Button>
-          </div>
+          <Button
+            icon={<FilePlus2 size={16} />}
+            onClick={() => setShowGenerate(true)}
+            className="normal-case tracking-normal"
+          >
+            Générer une facture
+          </Button>
         }
       />
 
@@ -180,7 +221,7 @@ export function InvoicesPage({
             icon={<FileText size={24} />}
             title="Aucune facture"
             description="Consignez chaque facture pour un tableau de bord type reporting financier"
-            action={{ label: 'Créer une facture', onClick: () => setShowCreate(true) }}
+            action={{ label: 'Générer une facture', onClick: () => setShowGenerate(true) }}
           />
         ) : filtered.length === 0 ? (
           <EmptyState
@@ -194,12 +235,25 @@ export function InvoicesPage({
               {filtered.map((inv) => (
                 <div
                   key={inv.id}
-                  className="ws-card rounded-2xl p-4 border border-ws-line space-y-3 touch-manipulation"
+                  className={`ws-card rounded-2xl p-4 border space-y-3 touch-manipulation transition-colors ${
+                    selection.has(inv.id)
+                      ? 'border-ws-accent/50 bg-ws-accent/5'
+                      : 'border-ws-line'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-mono text-xs text-ws-gold/90">{inv.invoice_number || '—'}</p>
-                      <p className="font-medium text-ws-paper mt-1">{inv.client?.name || '—'}</p>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selection.has(inv.id)}
+                        onChange={() => selection.toggle(inv.id)}
+                        className="mt-1 w-4 h-4 accent-ws-accent flex-shrink-0"
+                        aria-label={`Sélectionner facture ${inv.invoice_number || inv.id}`}
+                      />
+                      <div>
+                        <p className="font-mono text-xs text-ws-gold/90">{inv.invoice_number || '—'}</p>
+                        <p className="font-medium text-ws-paper mt-1">{inv.client?.name || '—'}</p>
+                      </div>
                     </div>
                     <Badge value={inv.status} />
                   </div>
@@ -246,9 +300,21 @@ export function InvoicesPage({
               ))}
             </div>
             <div className="hidden md:block ws-card rounded-lg overflow-hidden border-ws-line overflow-x-auto">
-            <table className="w-full text-sm min-w-[720px]">
+            <table className="w-full text-sm min-w-[760px]">
               <thead>
                 <tr className="ws-table-header">
+                  <th className="px-3 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={selection.allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = selection.someSelected;
+                      }}
+                      onChange={() => selection.toggleAll()}
+                      className="w-4 h-4 accent-ws-accent"
+                      aria-label="Tout sélectionner"
+                    />
+                  </th>
                   <th className="px-4 py-3">N°</th>
                   <th className="px-4 py-3">Client</th>
                   <th className="px-4 py-3 hidden lg:table-cell">Projet</th>
@@ -260,7 +326,21 @@ export function InvoicesPage({
               </thead>
               <tbody>
                 {filtered.map((inv) => (
-                  <tr key={inv.id} className="border-b border-ws-line/50 hover:bg-ws-raised/40 group">
+                  <tr
+                    key={inv.id}
+                    className={`border-b border-ws-line/50 hover:bg-ws-raised/40 group transition-colors ${
+                      selection.has(inv.id) ? 'bg-ws-accent/8' : ''
+                    }`}
+                  >
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selection.has(inv.id)}
+                        onChange={() => selection.toggle(inv.id)}
+                        className="w-4 h-4 accent-ws-accent"
+                        aria-label={`Sélectionner facture ${inv.invoice_number || inv.id}`}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs text-ws-gold/90">{inv.invoice_number || '—'}</td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-ws-paper">{inv.client?.name || '—'}</span>
@@ -372,6 +452,52 @@ export function InvoicesPage({
         description="Cette action est définitive."
         loading={deleteLoading}
       />
+
+      <ConfirmDialog
+        isOpen={confirmBulkDelete}
+        onClose={() => setConfirmBulkDelete(false)}
+        onConfirm={bulkDelete}
+        title={`Supprimer ${selection.count} facture${selection.count > 1 ? 's' : ''} ?`}
+        description="Action définitive — toutes les factures sélectionnées seront supprimées."
+        loading={bulkBusy}
+      />
+
+      <BulkActionBar
+        count={selection.count}
+        itemLabel="facture"
+        onClear={() => selection.clear()}
+      >
+        <Button
+          variant="secondary"
+          icon={
+            bulkBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />
+          }
+          onClick={() => void bulkMarkPaid()}
+          disabled={bulkBusy}
+          className="normal-case tracking-normal text-xs py-1.5"
+        >
+          Marquer réglées
+        </Button>
+        <Button
+          variant="secondary"
+          icon={
+            bulkBusy ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />
+          }
+          onClick={() => void bulkMarkSent()}
+          disabled={bulkBusy}
+          className="normal-case tracking-normal text-xs py-1.5"
+        >
+          Marquer envoyées
+        </Button>
+        <Button
+          icon={<Trash2 size={14} />}
+          onClick={() => setConfirmBulkDelete(true)}
+          disabled={bulkBusy}
+          className="normal-case tracking-normal text-xs py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 border-red-500/40"
+        >
+          Supprimer
+        </Button>
+      </BulkActionBar>
     </div>
   );
 }

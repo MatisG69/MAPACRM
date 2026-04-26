@@ -316,3 +316,30 @@ export interface PortalMessage {
   read_by_client: boolean;
   created_at: string;
 }
+
+/** Catégories de documents arbitraires partagés au client via le portail */
+export type ClientDocumentCategory =
+  | 'contrat'
+  | 'livrable'
+  | 'compte-rendu'
+  | 'charte'
+  | 'autre';
+
+/**
+ * Document arbitraire uploadé par l'admin pour un client (visible côté portail).
+ * Stockage : bucket Supabase `client-documents`. RLS scope par `client_id`.
+ */
+export interface ClientDocument {
+  id: string;
+  client_id: string;
+  project_id: string | null;
+  category: ClientDocumentCategory;
+  name: string;
+  description: string | null;
+  file_path: string;
+  mime_type: string | null;
+  file_size: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
