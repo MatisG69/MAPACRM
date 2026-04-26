@@ -80,6 +80,7 @@ export function Dashboard({ clients, projects, tasks, interactions, invoices, on
     () =>
       [
         { label: 'Planification', value: projects.filter((p) => p.status === 'planning').length, color: '#78716c' },
+        { label: 'Devis envoyé', value: projects.filter((p) => p.status === 'quote_sent').length, color: '#d97706' },
         { label: 'En cours', value: projects.filter((p) => p.status === 'in_progress').length, color: '#af7037' },
         { label: 'En révision', value: projects.filter((p) => p.status === 'review').length, color: '#c98a4c' },
         { label: 'Terminés', value: projects.filter((p) => p.status === 'completed').length, color: '#d4a574' },

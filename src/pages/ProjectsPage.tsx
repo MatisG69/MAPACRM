@@ -17,6 +17,7 @@ import { resolveProjectProgress } from '../lib/projectProgress';
 const statusFilters: { value: ProjectStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Tous' },
   { value: 'planning', label: 'Planif.' },
+  { value: 'quote_sent', label: 'Devis envoye' },
   { value: 'in_progress', label: 'En cours' },
   { value: 'review', label: 'Revision' },
   { value: 'completed', label: 'Termines' },
@@ -25,6 +26,7 @@ const statusFilters: { value: ProjectStatus | 'all'; label: string }[] = [
 
 const STATUS_STRIP: Record<ProjectStatus, string> = {
   planning: 'border-l-stone-500/45',
+  quote_sent: 'border-l-amber-500/55',
   in_progress: 'border-l-ws-accent-soft',
   review: 'border-l-ws-highlight',
   completed: 'border-l-emerald-500/55',
@@ -34,6 +36,7 @@ const STATUS_STRIP: Record<ProjectStatus, string> = {
 const SECTION_ORDER: { status: ProjectStatus; label: string }[] = [
   { status: 'in_progress', label: 'En cours' },
   { status: 'review', label: 'En revision' },
+  { status: 'quote_sent', label: 'Devis envoye' },
   { status: 'planning', label: 'Planification' },
   { status: 'on_hold', label: 'En pause' },
   { status: 'completed', label: 'Termines' },

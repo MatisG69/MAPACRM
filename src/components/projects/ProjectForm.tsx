@@ -33,6 +33,7 @@ interface ProjectFormProps {
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
   { value: 'planning', label: 'Planification' },
+  { value: 'quote_sent', label: 'Devis envoyé' },
   { value: 'in_progress', label: 'En cours' },
   { value: 'review', label: 'En révision' },
   { value: 'completed', label: 'Terminé' },
