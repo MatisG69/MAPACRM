@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { PortalUser } from '../lib/types';
 
@@ -12,16 +11,17 @@ export interface InvitePortalUserInput {
 /**
  * Gestion des identifiants d'accès au portail client.
  *
- * Flux d'invitation (le client choisit son propre mot de passe) :
- *   1. L'admin saisit email + nom + projet (aucun mot de passe).
- *   2. Insertion d'une ligne `portal_users` (auth_user_id = null à ce stade).
- *   3. Envoi d'un lien magique Supabase via `signInWithOtp` depuis un client
- *      ÉPHÉMÈRE (sans persistance de session, pour ne pas polluer le CRM).
- *      `shouldCreateUser: true` crée l'auth user et envoie un email.
- *   4. À l'arrivée du client sur le portail, un trigger Postgres
- *      (cf. migration `link_portal_user_on_auth_signup`) relie
- *      `auth.users.id` à la ligne `portal_users` par correspondance d'email.
- *   5. Le client définit lui-même son mot de passe depuis le portail.
+ * Flux de pré-autorisation (aucun email envoyé par MAPA) :
+ *   1. L'admin saisit email + nom + projet (aucun mot de passe, aucun email).
+ *   2. Insertion d'une ligne `portal_users` (auth_user_id = null) — l'email
+ *      est ainsi pré-autorisé sur le portail.
+ *   3. Le client se rend sur l'espace client, choisit l'onglet « Première
+ *      connexion », saisit l'email pré-autorisé et choisit son mot de passe.
+ *   4. Le portail vérifie la pré-autorisation puis appelle `auth.signUp`
+ *      avec le mot de passe choisi par le client.
+ *   5. Le trigger Postgres (cf. migration `link_portal_user_on_auth_signup`)
+ *      relie `auth.users.id` à la ligne `portal_users` par correspondance
+ *      d'email — le client est immédiatement connecté à son projet.
  */
 export function usePortalUsers() {
   const [users, setUsers] = useState<PortalUser[]>([]);
@@ -58,19 +58,16 @@ export function usePortalUsers() {
     fetchUsers();
   }, [fetchUsers]);
 
+  /**
+   * Pré-autorise un email à se connecter au portail. Aucun email n'est envoyé.
+   * Le client définira son mot de passe lui-même lors de sa première connexion.
+   */
   const inviteUser = useCallback(
     async ({ email, name, projectId }: InvitePortalUserInput): Promise<PortalUser> => {
       if (!supabase) throw new Error('Supabase non configuré');
 
-      const url = import.meta.env.VITE_SUPABASE_URL as string;
-      const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-      if (!url || !anon) throw new Error('Variables Supabase manquantes');
-
-      const portalUrl =
-        (import.meta.env.VITE_PORTAL_URL as string | undefined)?.trim() || window.location.origin;
       const cleanEmail = email.trim().toLowerCase();
 
-      // 1. Créer la ligne portal_users (auth_user_id = null jusqu'à acceptation)
       const { data: inserted, error: insertErr } = await supabase
         .from('portal_users')
         .insert({
@@ -83,51 +80,12 @@ export function usePortalUsers() {
         .single();
       if (insertErr) throw insertErr;
 
-      // 2. Envoyer le lien d'invitation via signInWithOtp (client éphémère)
-      const ephemeral = createClient(url, anon, {
-        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-      });
-
-      const { error: otpErr } = await ephemeral.auth.signInWithOtp({
-        email: cleanEmail,
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: portalUrl,
-        },
-      });
-
-      if (otpErr) {
-        // Rollback : on retire la ligne portal_users si l'envoi a échoué
-        await supabase.from('portal_users').delete().eq('id', (inserted as PortalUser).id);
-        throw new Error(`Envoi de l'invitation impossible : ${otpErr.message}`);
-      }
-
       const created = inserted as PortalUser;
       setUsers((prev) => [created, ...prev]);
       return created;
     },
     []
   );
-
-  /** Renvoie un nouveau lien d'invitation à un identifiant existant. */
-  const resendInvite = useCallback(async (email: string): Promise<void> => {
-    const url = import.meta.env.VITE_SUPABASE_URL as string;
-    const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-    if (!url || !anon) throw new Error('Variables Supabase manquantes');
-
-    const portalUrl =
-      (import.meta.env.VITE_PORTAL_URL as string | undefined)?.trim() || window.location.origin;
-
-    const ephemeral = createClient(url, anon, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    });
-
-    const { error: otpErr } = await ephemeral.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: true, emailRedirectTo: portalUrl },
-    });
-    if (otpErr) throw otpErr;
-  }, []);
 
   const updateProject = useCallback(async (id: string, projectId: string | null) => {
     if (!supabase) throw new Error('Supabase non configuré');
@@ -153,5 +111,5 @@ export function usePortalUsers() {
     setUsers((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
-  return { users, loading, error, fetchUsers, inviteUser, resendInvite, updateProject, deleteUser };
+  return { users, loading, error, fetchUsers, inviteUser, updateProject, deleteUser };
 }

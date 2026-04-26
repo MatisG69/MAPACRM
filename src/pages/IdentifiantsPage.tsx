@@ -7,7 +7,7 @@ import {
   AlertCircle,
   Check,
   Mail,
-  Send,
+  Copy,
   Loader2,
   Maximize2,
 } from 'lucide-react';
@@ -22,9 +22,12 @@ import { useProjects } from '../hooks/useProjects';
 import { formatDate } from '../lib/utils';
 import type { PortalUser } from '../lib/types';
 
+const PORTAL_URL =
+  ((import.meta.env.VITE_PORTAL_URL as string | undefined)?.trim() ||
+    'https://espace.mapa-developpement.fr');
+
 export function IdentifiantsPage() {
-  const { users, loading, error, inviteUser, resendInvite, deleteUser, updateProject } =
-    usePortalUsers();
+  const { users, loading, error, inviteUser, deleteUser, updateProject } = usePortalUsers();
   const projectsHook = useProjects();
 
   const [isCreating, setIsCreating] = useState(false);
@@ -39,13 +42,22 @@ export function IdentifiantsPage() {
     email: string;
     name: string | null;
   } | null>(null);
-  const [resendingFor, setResendingFor] = useState<string | null>(null);
-  const [resendFeedback, setResendFeedback] = useState<{ id: string; ok: boolean; msg: string } | null>(
-    null
-  );
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<PortalUser | null>(null);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const expandedUser = expandedUserId ? users.find((u) => u.id === expandedUserId) ?? null : null;
+
+  const copyAccessInstructions = async (email: string) => {
+    const body = `Bonjour,\n\nVotre espace de suivi projet MAPA Développement est prêt.\n\n→ Espace client : ${PORTAL_URL}\n→ Email : ${email}\n\nCliquez sur « Première connexion » et choisissez votre mot de passe.\n\n— MAPA Développement`;
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopyFeedback('Message copié dans le presse-papiers');
+      setTimeout(() => setCopyFeedback(null), 3000);
+    } catch {
+      setCopyFeedback('Impossible de copier');
+      setTimeout(() => setCopyFeedback(null), 3000);
+    }
+  };
 
   const activeProjects = useMemo(
     () =>
@@ -79,38 +91,21 @@ export function IdentifiantsPage() {
         name: form.name || null,
       });
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Erreur lors de l\'invitation');
+      setFormError(err instanceof Error ? err.message : 'Erreur lors de la pré-autorisation');
     } finally {
       setBusy(false);
     }
   };
 
-  const handleResend = async (user: PortalUser) => {
-    setResendingFor(user.id);
-    setResendFeedback(null);
-    try {
-      await resendInvite(user.email);
-      setResendFeedback({ id: user.id, ok: true, msg: 'Lien renvoyé par email' });
-    } catch (err) {
-      setResendFeedback({
-        id: user.id,
-        ok: false,
-        msg: err instanceof Error ? err.message : 'Erreur',
-      });
-    } finally {
-      setResendingFor(null);
-      setTimeout(() => setResendFeedback(null), 4000);
-    }
-  };
 
   return (
     <div>
       <Header
         title="Identifiants clients"
-        subtitle="Invitez vos clients par email — ils choisissent leur propre mot de passe"
+        subtitle="Pré-autorisez un email — le client définit son mot de passe à la première connexion"
         actions={
           <Button icon={<Plus size={16} />} onClick={openCreate} className="normal-case tracking-normal">
-            Inviter un client
+            Pré-autoriser un client
           </Button>
         }
       />
@@ -132,8 +127,8 @@ export function IdentifiantsPage() {
           <EmptyState
             icon={<KeyRound size={28} />}
             title="Aucun identifiant pour l'instant"
-            description="Invitez un client par email — il définira lui-même son mot de passe pour accéder au suivi de son projet."
-            action={{ label: 'Envoyer la première invitation', onClick: openCreate }}
+            description="Pré-autorisez l'email d'un client. Il se rendra ensuite sur l'espace client et choisira lui-même son mot de passe pour activer son accès."
+            action={{ label: 'Pré-autoriser le premier client', onClick: openCreate }}
           />
         ) : (
           <div className="rounded-2xl border border-ws-line bg-ws-panel/60 overflow-hidden">
@@ -149,7 +144,6 @@ export function IdentifiantsPage() {
             <ul className="divide-y divide-ws-line">
               {users.map((u) => {
                 const pending = !u.auth_user_id;
-                const fb = resendFeedback?.id === u.id ? resendFeedback : null;
                 return (
                   <li
                     key={u.id}
@@ -159,10 +153,15 @@ export function IdentifiantsPage() {
                       <Mail size={14} className="text-ws-accent flex-shrink-0" />
                       <div className="min-w-0">
                         <span className="text-sm text-ws-paper font-mono truncate block">{u.email}</span>
-                        {pending && (
+                        {pending ? (
                           <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-[0.18em] text-amber-300/90 mt-0.5">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-400/80" />
-                            En attente d'activation
+                            En attente de première connexion
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-[0.18em] text-emerald-300/90 mt-0.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
+                            Compte actif
                           </span>
                         )}
                       </div>
@@ -190,22 +189,13 @@ export function IdentifiantsPage() {
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        onClick={() => void handleResend(u)}
-                        disabled={resendingFor === u.id}
-                        className="flex h-9 items-center gap-1.5 px-3 rounded-xl border border-ws-line bg-ws-panel/70 text-xs font-mono text-ws-mist transition-all hover:border-ws-accent/40 hover:text-ws-paper disabled:opacity-50 disabled:cursor-wait touch-manipulation"
-                        aria-label={`Renvoyer le lien d'invitation à ${u.email}`}
-                        title={fb?.msg ?? 'Renvoyer le lien d\'invitation'}
+                        onClick={() => void copyAccessInstructions(u.email)}
+                        className="flex h-9 items-center gap-1.5 px-3 rounded-xl border border-ws-line bg-ws-panel/70 text-xs font-mono text-ws-mist transition-all hover:border-ws-accent/40 hover:text-ws-paper touch-manipulation"
+                        aria-label={`Copier les instructions d'accès pour ${u.email}`}
+                        title="Copier le message à transmettre au client (URL portail + email)"
                       >
-                        {resendingFor === u.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : fb?.ok ? (
-                          <Check size={14} className="text-emerald-400" />
-                        ) : (
-                          <Send size={14} />
-                        )}
-                        <span className="hidden lg:inline">
-                          {resendingFor === u.id ? 'Envoi…' : fb?.ok ? 'Envoyé' : pending ? 'Inviter' : 'Renvoyer'}
-                        </span>
+                        <Copy size={14} />
+                        <span className="hidden lg:inline">Copier l'accès</span>
                       </button>
                     </div>
                     <div className="flex justify-end">
@@ -240,7 +230,7 @@ export function IdentifiantsPage() {
       <Modal
         isOpen={isCreating}
         onClose={() => setIsCreating(false)}
-        title={lastInvited ? 'Invitation envoyée' : 'Inviter un client'}
+        title={lastInvited ? 'Identifiant pré-autorisé' : 'Pré-autoriser un client'}
         size="md"
       >
         {lastInvited ? (
@@ -248,35 +238,61 @@ export function IdentifiantsPage() {
             <div className="flex items-start gap-3 p-4 rounded-2xl bg-ws-accent/10 border border-ws-accent/30">
               <Check size={18} className="text-ws-accent mt-0.5 flex-shrink-0" />
               <div className="text-sm text-ws-paper">
-                Un lien d'invitation a été envoyé à <strong className="text-ws-accent">{lastInvited.email}</strong>.
-                Le client recevra un email de Supabase et choisira lui-même son mot de passe en activant son
-                compte.
+                L'email <strong className="text-ws-accent">{lastInvited.email}</strong> est désormais
+                pré-autorisé sur l'espace client. Aucun email n'a été envoyé : transmettez vous-même
+                l'URL et l'email au client (par message, appel, en personne…).
               </div>
             </div>
-            <div className="rounded-2xl border border-ws-line bg-ws-deep/40 p-4 space-y-2">
+            <div className="rounded-2xl border border-ws-line bg-ws-deep/40 p-4 space-y-3">
               <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist">
-                Étapes pour le client
+                À transmettre au client
               </div>
-              <ol className="text-sm text-ws-ink space-y-1.5 list-decimal list-inside">
-                <li>Recevoir l'email d'invitation (vérifier les spams si besoin)</li>
-                <li>Cliquer sur le lien magique reçu</li>
-                <li>Définir un mot de passe sur l'espace client</li>
-                <li>Accéder au suivi du projet</li>
-              </ol>
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist mb-1">
+                  Espace client
+                </div>
+                <div className="px-3 py-2 rounded-lg bg-ws-deep/60 border border-ws-line text-ws-paper font-mono text-sm break-all">
+                  {PORTAL_URL}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist mb-1">
+                  Email pré-autorisé
+                </div>
+                <div className="px-3 py-2 rounded-lg bg-ws-deep/60 border border-ws-line text-ws-paper font-mono text-sm break-all">
+                  {lastInvited.email}
+                </div>
+              </div>
+              <p className="text-[11px] text-ws-mist font-mono leading-relaxed">
+                Le client choisit l'onglet « Première connexion », saisit cet email et définit
+                lui-même son mot de passe.
+              </p>
             </div>
-            <div className="flex justify-end pt-1">
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="secondary"
+                icon={<Copy size={14} />}
+                onClick={() => void copyAccessInstructions(lastInvited.email)}
+                className="normal-case tracking-normal flex-1"
+              >
+                Copier le message complet
+              </Button>
               <Button onClick={() => setIsCreating(false)} className="normal-case tracking-normal">
                 Fermer
               </Button>
             </div>
+            {copyFeedback && (
+              <p className="text-[11px] text-emerald-300 font-mono text-center">{copyFeedback}</p>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex items-start gap-3 p-4 rounded-2xl bg-ws-deep/40 border border-ws-line">
               <Mail size={16} className="text-ws-accent mt-0.5 flex-shrink-0" />
               <p className="text-xs text-ws-ink leading-relaxed">
-                Le client recevra un lien d'invitation par email et définira lui-même son mot de passe.
-                Vous n'avez aucun mot de passe à choisir ni à transmettre.
+                Vous pré-autorisez l'email du client. <strong className="text-ws-paper">Aucun email
+                ne sera envoyé.</strong> Le client se rend lui-même sur l'espace client, choisit
+                « Première connexion » et définit son propre mot de passe.
               </p>
             </div>
 
@@ -347,13 +363,8 @@ export function IdentifiantsPage() {
               >
                 Annuler
               </Button>
-              <Button
-                type="submit"
-                loading={busy}
-                icon={<Send size={14} />}
-                className="normal-case tracking-normal flex-1"
-              >
-                Envoyer l'invitation
+              <Button type="submit" loading={busy} className="normal-case tracking-normal flex-1">
+                Pré-autoriser l'accès
               </Button>
             </div>
           </form>
