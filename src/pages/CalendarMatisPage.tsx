@@ -161,7 +161,7 @@ export function CalendarMatisPage() {
       <div
         className={
           fullscreen
-            ? 'fixed inset-0 z-[80] flex flex-col bg-ws-void/97 backdrop-blur-xl pt-[env(safe-area-inset-top)] overflow-hidden'
+            ? 'fixed inset-0 z-40 flex flex-col bg-ws-void/97 backdrop-blur-xl pt-[env(safe-area-inset-top)] overflow-hidden'
             : 'px-4 md:px-8 py-5 md:py-6 space-y-5'
         }
       >
