@@ -63,12 +63,37 @@ export function getRandomColor(): string {
   return AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 }
 
-export function generateInvoiceNumber(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const rand = String(Math.floor(Math.random() * 9000) + 1000);
-  return `MAPA-${year}${month}-${rand}`;
+/**
+ * Numérotation chronologique stricte des factures (article 242 nonies A CGI).
+ * Format : FAC-YYYY-NNN où NNN est le n° séquentiel sur l'année en cours.
+ *
+ * @param existing liste des numéros de facture déjà émis (pour calculer le suivant)
+ * @returns le prochain numéro disponible. Si aucune facture cette année → FAC-YYYY-001.
+ */
+export function generateInvoiceNumber(existing: (string | null | undefined)[] = []): string {
+  const year = new Date().getFullYear();
+  const prefix = `FAC-${year}-`;
+  let maxSeq = 0;
+  for (const num of existing) {
+    if (!num) continue;
+    if (!num.startsWith(prefix)) continue;
+    const tail = num.slice(prefix.length);
+    const n = parseInt(tail, 10);
+    if (Number.isFinite(n) && n > maxSeq) maxSeq = n;
+  }
+  const next = (maxSeq + 1).toString().padStart(3, '0');
+  return `${prefix}${next}`;
+}
+
+/** Numéro suivant donné un numéro de référence (FAC-YYYY-NNN → FAC-YYYY-NNN+1). */
+export function nextInvoiceNumber(reference: string): string {
+  const m = reference.match(/^(FAC-\d{4}-)(\d+)$/);
+  if (!m) {
+    // fallback : on ré-extrait depuis liste vide → FAC-YYYY-001
+    return generateInvoiceNumber([reference]);
+  }
+  const next = (parseInt(m[2], 10) + 1).toString().padStart(m[2].length, '0');
+  return `${m[1]}${next}`;
 }
 
 export function generateQuoteNumber(): string {

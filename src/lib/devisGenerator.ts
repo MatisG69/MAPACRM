@@ -843,9 +843,10 @@ export function generateDevisHTML(params: DevisParams): string {
 
   <div class="footer">
     <div class="diamond-row">♦</div>
-    <div class="brand">MAPA Développement · Matis Gouyet</div>
+    <div class="brand">MAPA Développement · Matis Gouyet · Entrepreneur Individuel (EI)</div>
     <div class="name" style="font-style:normal;font-family:'Inter',sans-serif;font-size:6.5pt;letter-spacing:.05em;color:#9E9080;line-height:1.55;margin-top:3px">
-      89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq · SIREN 919 461 301<br>
+      89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq · SIREN 919 461 301 · SIRET 919 461 301 00021<br>
+      Dispensé d'immatriculation au RCS et au RM · TVA non applicable, art. 293 B du CGI<br>
       contact@mapa-developpement.fr · +33 6 79 62 39 42
     </div>
   </div>
@@ -1056,9 +1057,11 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
       <div class="lbl">Le Prestataire</div>
       <div class="entity">MAPA Développement</div>
       <div class="coords">
-        Matis GOUYET, Exploitant<br>
+        Matis GOUYET, Entrepreneur Individuel (EI)<br>
         89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq<br>
         SIREN 919 461 301 · SIRET 919 461 301 00021<br>
+        Dispensé d'immatriculation au RCS et au RM<br>
+        TVA non applicable, art. 293 B du CGI<br>
         contact@mapa-developpement.fr · +33 6 79 62 39 42
       </div>
       <div class="fields">

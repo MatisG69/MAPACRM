@@ -10,8 +10,18 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { InvoiceForm } from '../components/invoices/InvoiceForm';
 import { GenerateInvoiceModal } from '../components/invoices/GenerateInvoiceModal';
 import { InvoicePreviewOverlay } from '../components/invoices/InvoicePreviewOverlay';
-import { generateInvoiceHTML } from '../lib/invoiceGenerator';
+import { generateInvoiceHTML, MAPA_VENDOR } from '../lib/invoiceGenerator';
 import { Client, Invoice, Project, Quote } from '../lib/types';
+
+/**
+ * RIB MAPA pour règlement — paramétrable via env vars (zéro hardcoding produit).
+ * Ces variables sont publiques (visibles côté client) car affichées sur les factures.
+ */
+const DEFAULT_IBAN =
+  ((import.meta.env.VITE_MAPA_IBAN as string | undefined)?.trim() ||
+    'FR76 1670 6050 8763 5180 1129 014');
+const DEFAULT_BIC =
+  ((import.meta.env.VITE_MAPA_BIC as string | undefined)?.trim() || 'AGRIFRPP867');
 import { formatCurrency, formatDate, isOverdue } from '../lib/utils';
 
 interface InvoicesPageProps {
@@ -54,8 +64,9 @@ export function InvoicesPage({
     const sourceQuote = inv.source_quote_id
       ? quotes.find((q) => q.id === inv.source_quote_id)
       : null;
+    // Détecte si c'est une facture d'acompte ou de solde via le notes ou le pattern de numéro.
+    // À défaut, on génère en mode 'full' (pas d'acompte associé connu côté DB).
     const html = generateInvoiceHTML({
-      // Reconstitue un client minimal si la jointure ne contient pas tous les champs légaux
       client: {
         ...client,
         legal_form: (client as Client).legal_form ?? null,
@@ -64,12 +75,18 @@ export function InvoicesPage({
         contact_role: (client as Client).contact_role ?? null,
       } as Client,
       project: project as Project | null,
-      amount: inv.amount,
+      totalAmount: inv.amount,
       invoiceNumber: inv.invoice_number ?? '',
+      kind: 'full',
       issueDateISO: inv.created_at?.slice(0, 10),
       dueDateISO: inv.due_date ?? undefined,
+      serviceDateISO: inv.due_date ?? inv.created_at?.slice(0, 10),
       sourceQuoteRef: sourceQuote?.quote_number ?? undefined,
+      sourceQuoteSignedISO: sourceQuote?.signed_at?.slice(0, 10) ?? undefined,
       customNotes: inv.notes ?? undefined,
+      iban: DEFAULT_IBAN,
+      bic: DEFAULT_BIC,
+      vendor: MAPA_VENDOR,
     });
     setPreviewFilename(`facture-${inv.invoice_number ?? inv.id}.pdf`);
     setPreviewHtml(html);
@@ -317,6 +334,9 @@ export function InvoicesPage({
         clients={clients}
         projects={projects}
         quotes={quotes}
+        existingInvoices={invoices}
+        defaultIban={DEFAULT_IBAN}
+        defaultBic={DEFAULT_BIC}
         onCreateInvoice={onCreate}
       />
 
