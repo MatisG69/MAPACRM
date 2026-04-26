@@ -413,30 +413,30 @@ export function generateDevisHTML(params: DevisParams): string {
   }
   .tline.main .val{font-size:12pt;}
 
-  /* ── Bandeau récurrent ultra-compact (1 ligne) ── */
+  /* ── Bandeau récurrent ultra-compact (1 ligne, centrage vertical strict) ── */
   .recurring-strip{
     margin-top:8px;
     border:1px solid rgba(201,168,76,.22);
     background:rgba(201,168,76,.04);
     border-radius:2px;
-    padding:8px 10px;
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:7px 12px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
     color:#C8BFB0;
-    line-height:1;
+    line-height:1.2;
+    min-height:24px;
   }
-  .recurring-strip > *{line-height:1;display:flex;align-items:center;}
   .recurring-strip .r-label{
     font-size:5.4pt;letter-spacing:.2em;text-transform:uppercase;
-    font-weight:600;color:#C9A84C;white-space:nowrap;
+    font-weight:600;color:#C9A84C;white-space:nowrap;line-height:1.2;
   }
   .recurring-strip .r-items{
-    flex:1;justify-content:center;color:#C8BFB0;font-size:6.8pt;
+    flex:1;text-align:center;color:#C8BFB0;font-size:6.8pt;line-height:1.2;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
   .recurring-strip .r-items strong{color:#E2C97E;font-weight:500;}
   .recurring-strip .r-total{
     font-family:'JetBrains Mono',monospace;
-    font-size:7.8pt;font-weight:600;color:#E2C97E;white-space:nowrap;
+    font-size:7.8pt;font-weight:600;color:#E2C97E;white-space:nowrap;line-height:1.2;
   }
   .recurring-foot{
     margin-top:2px;
