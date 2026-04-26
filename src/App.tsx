@@ -389,6 +389,7 @@ function App() {
                 invoices={invoicesHook.invoices}
                 clients={clientsHook.clients}
                 projects={projectsHook.projects}
+                quotes={quotesHook.quotes}
                 onCreate={invoicesHook.createInvoice}
                 onUpdate={invoicesHook.updateInvoice}
                 onDelete={invoicesHook.deleteInvoice}

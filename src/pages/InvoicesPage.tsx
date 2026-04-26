@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, FileText, Pencil, Trash2 } from 'lucide-react';
+import { Plus, FileText, Pencil, Trash2, FilePlus2, Eye } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import type { AppNotification } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
@@ -8,13 +8,18 @@ import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { InvoiceForm } from '../components/invoices/InvoiceForm';
-import { Client, Invoice, Project } from '../lib/types';
+import { GenerateInvoiceModal } from '../components/invoices/GenerateInvoiceModal';
+import { InvoicePreviewOverlay } from '../components/invoices/InvoicePreviewOverlay';
+import { generateInvoiceHTML } from '../lib/invoiceGenerator';
+import { Client, Invoice, Project, Quote } from '../lib/types';
 import { formatCurrency, formatDate, isOverdue } from '../lib/utils';
 
 interface InvoicesPageProps {
   invoices: Invoice[];
   clients: Client[];
   projects: Project[];
+  /** Devis du CRM (pour pré-remplir une facture depuis un devis signé) */
+  quotes?: Quote[];
   onCreate: (
     data: Omit<Invoice, 'id' | 'created_at' | 'updated_at' | 'client' | 'project'>
   ) => Promise<Invoice>;
@@ -22,12 +27,53 @@ interface InvoicesPageProps {
   onDelete: (id: string) => Promise<void>;
 }
 
-export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, onDelete }: InvoicesPageProps) {
+export function InvoicesPage({
+  invoices,
+  clients,
+  projects,
+  quotes = [],
+  onCreate,
+  onUpdate,
+  onDelete,
+}: InvoicesPageProps) {
   const [showCreate, setShowCreate] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewFilename, setPreviewFilename] = useState('');
+
+  const openPreview = (inv: Invoice) => {
+    const client =
+      inv.client ?? clients.find((c) => c.id === inv.client_id) ?? null;
+    const project =
+      inv.project ?? projects.find((p) => p.id === inv.project_id) ?? null;
+    if (!client) return;
+    const sourceQuote = inv.source_quote_id
+      ? quotes.find((q) => q.id === inv.source_quote_id)
+      : null;
+    const html = generateInvoiceHTML({
+      // Reconstitue un client minimal si la jointure ne contient pas tous les champs légaux
+      client: {
+        ...client,
+        legal_form: (client as Client).legal_form ?? null,
+        siret: (client as Client).siret ?? null,
+        vat_number: (client as Client).vat_number ?? null,
+        contact_role: (client as Client).contact_role ?? null,
+      } as Client,
+      project: project as Project | null,
+      amount: inv.amount,
+      invoiceNumber: inv.invoice_number ?? '',
+      issueDateISO: inv.created_at?.slice(0, 10),
+      dueDateISO: inv.due_date ?? undefined,
+      sourceQuoteRef: sourceQuote?.quote_number ?? undefined,
+      customNotes: inv.notes ?? undefined,
+    });
+    setPreviewFilename(`facture-${inv.invoice_number ?? inv.id}.pdf`);
+    setPreviewHtml(html);
+  };
 
   const totalPending = invoices
     .filter((i) => i.status === 'sent' || i.status === 'overdue')
@@ -91,9 +137,23 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
         onSearchChange={setSearch}
         notifications={notifications}
         actions={
-          <Button icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
-            Nouvelle facture
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              icon={<Plus size={16} />}
+              onClick={() => setShowCreate(true)}
+              className="normal-case tracking-normal"
+            >
+              <span className="hidden sm:inline">Saisie rapide</span>
+            </Button>
+            <Button
+              icon={<FilePlus2 size={16} />}
+              onClick={() => setShowGenerate(true)}
+              className="normal-case tracking-normal"
+            >
+              Générer une facture
+            </Button>
+          </div>
         }
       />
 
@@ -140,6 +200,14 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
                     </span>
                   </div>
                   <div className="flex justify-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openPreview(inv)}
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-ws-panel text-ws-mist hover:text-ws-paper"
+                      aria-label="Aperçu PDF"
+                    >
+                      <Eye size={16} />
+                    </button>
                     <button
                       type="button"
                       onClick={() => setEditInvoice(inv)}
@@ -200,6 +268,14 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100">
                         <button
                           type="button"
+                          onClick={() => openPreview(inv)}
+                          className="p-1.5 rounded-md hover:bg-ws-panel text-ws-mist hover:text-ws-paper"
+                          title="Aperçu PDF"
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setEditInvoice(inv)}
                           className="p-1.5 rounded-md hover:bg-ws-panel text-ws-mist hover:text-ws-paper"
                         >
@@ -234,6 +310,23 @@ export function InvoicesPage({ invoices, clients, projects, onCreate, onUpdate, 
           onCancel={() => setShowCreate(false)}
         />
       </Modal>
+
+      <GenerateInvoiceModal
+        isOpen={showGenerate}
+        onClose={() => setShowGenerate(false)}
+        clients={clients}
+        projects={projects}
+        quotes={quotes}
+        onCreateInvoice={onCreate}
+      />
+
+      {previewHtml && (
+        <InvoicePreviewOverlay
+          html={previewHtml}
+          filename={previewFilename}
+          onClose={() => setPreviewHtml(null)}
+        />
+      )}
 
       <Modal isOpen={!!editInvoice} onClose={() => setEditInvoice(null)} title="Modifier la facture" size="lg">
         {editInvoice && (
