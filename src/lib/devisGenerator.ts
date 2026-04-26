@@ -295,24 +295,22 @@ export function generateDevisHTML(params: DevisParams): string {
 
   /* Chaque .page = une feuille A4 strictement dimensionnée + fond noir plein */
   .page{
-    width:210mm;height:297mm;min-height:297mm;max-height:297mm;
+    width:210mm;min-height:297mm;
     padding:14mm 16mm;
     display:flex;flex-direction:column;
     background:#0A0A0A;
     position:relative;
     box-sizing:border-box;
-    overflow:hidden;
     page-break-after:always;
     break-after:page;
   }
   .page:last-child{page-break-after:auto;break-after:auto;}
 
-  /* Zone centrale du devis qui remplit l'espace disponible sans pousser le footer */
+  /* Zone centrale du devis qui remplit l'espace disponible */
   .devis-body{
-    flex:1 1 auto;min-height:0;
+    flex:1 1 auto;
     display:flex;flex-direction:column;
     justify-content:space-evenly;
-    overflow:hidden;
   }
   .header,.footer{flex-shrink:0;}
 
