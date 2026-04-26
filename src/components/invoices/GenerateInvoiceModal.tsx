@@ -144,6 +144,7 @@ export function GenerateInvoiceModal({
       setStatus('sent')
       setNotes('')
       setPreviewHtml(null)
+      setPersistError(null)
     } else {
       // Auto-numérotation chronologique sans rupture (art. 242 nonies A CGI)
       const existingNums = existingInvoices.map((i) => i.invoice_number)
@@ -249,10 +250,16 @@ export function GenerateInvoiceModal({
     })
   }
 
-  const persistInvoices = async () => {
-    if (!selectedClient || !saveAfterPreview) return
+  const [persistError, setPersistError] = useState<string | null>(null)
+
+  const persistInvoices = async (): Promise<{ created: number; failed: string[] }> => {
+    if (!selectedClient || !saveAfterPreview) return { created: 0, failed: [] }
+    const failed: string[] = []
+    let created = 0
+
     if (hasDeposit) {
-      // Crée 2 enregistrements : acompte + solde
+      // Crée 2 enregistrements indépendants : acompte ET solde
+      // Si l'un plante, on continue avec l'autre et on remonte l'erreur précisément.
       try {
         await onCreateInvoice({
           client_id: selectedClient.id,
@@ -265,21 +272,25 @@ export function GenerateInvoiceModal({
           notes: `Facture d'acompte ${depositPercent}% sur prestation de ${grandTotal.toLocaleString('fr-FR')} €.${notes.trim() ? ' — ' + notes.trim() : ''}`,
           source_quote_id: sourceQuoteId || null,
         })
+        created++
+      } catch (e) {
+        failed.push(`Acompte ${acompteNumber.trim()} : ${e instanceof Error ? e.message : 'échec'}`)
+      }
+      try {
         await onCreateInvoice({
           client_id: selectedClient.id,
           project_id: selectedProject?.id ?? null,
           invoice_number: soldeNumber.trim(),
           amount: soldeAmount,
-          // La facture de solde est généralement émise plus tard à la livraison
-          // → on la met en draft par défaut sauf si l'utilisateur a explicitement choisi sent/paid
           status: status === 'paid' ? 'sent' : 'draft',
           due_date: null,
           paid_date: null,
           notes: `Facture de solde après acompte ${acompteNumber.trim()} de ${acompteAmount.toLocaleString('fr-FR')} €.${notes.trim() ? ' — ' + notes.trim() : ''}`,
           source_quote_id: sourceQuoteId || null,
         })
-      } catch {
-        /* save échoué — on laisse l'aperçu PDF dispo */
+        created++
+      } catch (e) {
+        failed.push(`Solde ${soldeNumber.trim()} : ${e instanceof Error ? e.message : 'échec'}`)
       }
     } else {
       try {
@@ -294,15 +305,19 @@ export function GenerateInvoiceModal({
           notes: notes.trim() || null,
           source_quote_id: sourceQuoteId || null,
         })
-      } catch {
-        /* save échoué */
+        created++
+      } catch (e) {
+        failed.push(`Facture ${singleNumber.trim()} : ${e instanceof Error ? e.message : 'échec'}`)
       }
     }
+
+    return { created, failed }
   }
 
   const handlePreview = async () => {
     if (!canGenerate) return
     setGenerating(true)
+    setPersistError(null)
     try {
       const html = buildHTML()
       if (!html) return
@@ -311,7 +326,18 @@ export function GenerateInvoiceModal({
         : `facture-${singleNumber.trim()}.pdf`
       setPreviewFilename(fileName)
       setPreviewHtml(html)
-      await persistInvoices()
+
+      const expected = hasDeposit ? 2 : 1
+      const result = await persistInvoices()
+      if (saveAfterPreview && (result.failed.length > 0 || result.created < expected)) {
+        const msg =
+          result.failed.length > 0
+            ? `Échec d'enregistrement : ${result.failed.join(' · ')}`
+            : `Seules ${result.created}/${expected} factures ont été enregistrées en base.`
+        setPersistError(msg)
+        // On retourne sur le formulaire pour que l'utilisateur voie l'erreur
+        setPreviewHtml(null)
+      }
     } finally {
       setGenerating(false)
     }
@@ -723,6 +749,20 @@ export function GenerateInvoiceModal({
           />
           Enregistrer la (les) facture(s) dans le CRM en parallèle de l'aperçu PDF
         </label>
+
+        {persistError && (
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-xs leading-relaxed">
+            <FileText size={14} className="mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <strong className="text-red-100">Sauvegarde incomplète</strong>
+              <div className="font-mono mt-1 break-all">{persistError}</div>
+              <div className="mt-1 text-red-300/80">
+                Cause possible : numéro déjà utilisé, contrainte unique en base, ou erreur réseau.
+                Modifie le numéro et reclique « Aperçu ».
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-2 justify-end pt-2">
           <Button variant="secondary" onClick={onClose} className="normal-case tracking-normal">
