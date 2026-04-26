@@ -645,14 +645,59 @@ export interface PairedInvoiceInput {
   acompteServiceDateISO?: string
   /** Date de livraison effective (date de prestation solde) */
   soldeServiceDateISO?: string
+  /**
+   * Échéance de paiement de la facture d'acompte (override).
+   * À défaut, recalculée comme acompteIssueDate + delai (delai déduit de shared.dueDateISO).
+   */
+  acompteDueDateISO?: string
+  /**
+   * Échéance de paiement de la facture de solde (override).
+   * À défaut, calculée comme soldeIssueDate + le MÊME délai que la facture
+   * d'acompte (préserve le délai contractuel pour les deux pièces).
+   */
+  soldeDueDateISO?: string
+}
+
+/** Calcule le délai (en jours) entre deux dates ISO YYYY-MM-DD. */
+function delayDaysBetween(fromISO: string | undefined, toISO: string | undefined): number {
+  if (!fromISO || !toISO) return 30
+  const a = new Date(fromISO)
+  const b = new Date(toISO)
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return 30
+  return Math.max(0, Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24)))
+}
+
+/** Ajoute N jours à une date ISO et retourne YYYY-MM-DD. */
+function addDaysISO(baseISO: string, days: number): string {
+  const d = new Date(baseISO)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
 }
 
 export function generatePairedInvoiceHTML(input: PairedInvoiceInput): string {
+  const acompteIssueISO = input.acompteIssueDateISO ?? input.shared.issueDateISO
+  const soldeIssueISO = input.soldeIssueDateISO ?? input.shared.issueDateISO
+
+  // Délai de paiement appliqué : déduit de l'écart entre l'émission de l'acompte
+  // et son échéance (telle que saisie). On le réapplique à la date d'émission
+  // de la facture de solde pour calculer son échéance — chaque facture a donc
+  // SON échéance, alignée sur sa propre date d'émission.
+  const paymentDelayDays = delayDaysBetween(acompteIssueISO, input.shared.dueDateISO)
+
+  const acompteDueISO =
+    input.acompteDueDateISO ?? input.shared.dueDateISO ??
+    (acompteIssueISO ? addDaysISO(acompteIssueISO, paymentDelayDays) : undefined)
+
+  const soldeDueISO =
+    input.soldeDueDateISO ??
+    (soldeIssueISO ? addDaysISO(soldeIssueISO, paymentDelayDays) : input.shared.dueDateISO)
+
   const acomptePage = buildInvoicePage({
     ...input.shared,
     invoiceNumber: input.acompteNumber,
     kind: 'acompte',
-    issueDateISO: input.acompteIssueDateISO ?? input.shared.issueDateISO,
+    issueDateISO: acompteIssueISO,
+    dueDateISO: acompteDueISO,
     serviceDateISO: input.acompteServiceDateISO ?? input.shared.serviceDateISO,
   })
 
@@ -660,10 +705,11 @@ export function generatePairedInvoiceHTML(input: PairedInvoiceInput): string {
     ...input.shared,
     invoiceNumber: input.soldeNumber,
     kind: 'solde',
-    issueDateISO: input.soldeIssueDateISO ?? input.shared.issueDateISO,
+    issueDateISO: soldeIssueISO,
+    dueDateISO: soldeDueISO,
     serviceDateISO: input.soldeServiceDateISO ?? input.shared.serviceDateISO,
     acompteInvoiceRef: input.acompteNumber,
-    acompteInvoiceDateISO: input.acompteIssueDateISO ?? input.shared.issueDateISO,
+    acompteInvoiceDateISO: acompteIssueISO,
   })
 
   return wrapHtml(

@@ -44,6 +44,20 @@ function plusDaysISO(days: number): string {
   d.setDate(d.getDate() + days)
   return d.toISOString().slice(0, 10)
 }
+/** Délai de paiement (en jours pleins) entre deux ISO YYYY-MM-DD. Fallback 30. */
+function delayDaysBetween(fromISO: string | undefined, toISO: string | undefined): number {
+  if (!fromISO || !toISO) return 30
+  const a = new Date(fromISO)
+  const b = new Date(toISO)
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return 30
+  return Math.max(0, Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24)))
+}
+/** baseISO + N jours → YYYY-MM-DD. */
+function addDaysToISO(baseISO: string, days: number): string {
+  const d = new Date(baseISO)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
 
 export function GenerateInvoiceModal({
   isOpen,
@@ -117,6 +131,15 @@ export function GenerateInvoiceModal({
   const grandTotal = parsedAmount + additionalTotal
   const acompteAmount = Math.round((grandTotal * depositPercent) / 100)
   const soldeAmount = grandTotal - acompteAmount
+
+  /**
+   * Délai de paiement (en jours) appliqué à la facture d'acompte.
+   * Réutilisé tel quel pour calculer l'échéance de la facture de solde,
+   * à partir de SA propre date d'émission (date de livraison).
+   */
+  const paymentDelayDays = delayDaysBetween(issueDate, dueDate)
+  const computedSoldeDueDate =
+    hasDeposit && deliveryDate ? addDaysToISO(deliveryDate, paymentDelayDays) : null
 
   const canGenerate =
     !!selectedClient &&
@@ -236,9 +259,13 @@ export function GenerateInvoiceModal({
         acompteNumber: acompteNumber.trim(),
         soldeNumber: soldeNumber.trim(),
         acompteIssueDateISO: issueDate,
-        soldeIssueDateISO: deliveryDate, // la facture de solde sera émise à la livraison
+        soldeIssueDateISO: deliveryDate, // la facture de solde est émise à la livraison
         acompteServiceDateISO: acompteServiceDate,
         soldeServiceDateISO: deliveryDate,
+        // Échéance de chaque facture calculée à partir de SA propre date d'émission,
+        // en réutilisant le même délai de règlement que celui de l'acompte.
+        acompteDueDateISO: dueDate,
+        soldeDueDateISO: computedSoldeDueDate ?? undefined,
       })
     }
 
@@ -283,7 +310,9 @@ export function GenerateInvoiceModal({
           invoice_number: soldeNumber.trim(),
           amount: soldeAmount,
           status: status === 'paid' ? 'sent' : 'draft',
-          due_date: null,
+          // Échéance calculée à partir de la livraison + même délai que l'acompte
+          // (cohérent avec ce qui est imprimé sur le PDF de la facture de solde).
+          due_date: computedSoldeDueDate,
           paid_date: null,
           notes: `Facture de solde après acompte ${acompteNumber.trim()} de ${acompteAmount.toLocaleString('fr-FR')} €.${notes.trim() ? ' — ' + notes.trim() : ''}`,
           source_quote_id: sourceQuoteId || null,
@@ -646,7 +675,23 @@ export function GenerateInvoiceModal({
                   onChange={(e) => setDeliveryDate(e.target.value)}
                 />
                 <p className="text-[10px] text-ws-mist/70 mt-1 leading-snug">
-                  Fin de prestation — sert aussi de date d'émission de la facture de solde
+                  Fin de prestation — sert aussi de date d'émission de la facture de solde.
+                  {computedSoldeDueDate && (
+                    <>
+                      <br />
+                      Échéance solde calculée :{' '}
+                      <strong className="text-ws-accent">
+                        {new Date(computedSoldeDueDate).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </strong>{' '}
+                      <span className="text-ws-mist/60">
+                        (livraison + {paymentDelayDays}j, comme l'acompte)
+                      </span>
+                    </>
+                  )}
                 </p>
               </div>
             </div>
