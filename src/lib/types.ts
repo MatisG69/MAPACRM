@@ -275,8 +275,12 @@ export interface PortalUser {
   auth_user_id: string | null;
   email: string;
   name: string | null;
+  /** Client lié — le portail affiche tous ses projets */
+  client_id: string | null;
+  /** @deprecated Conservé pour rétro-compatibilité. Utiliser client_id désormais. */
   project_id: string | null;
   created_at: string;
+  client?: Pick<Client, 'id' | 'name' | 'company' | 'avatar_color'>;
   project?: Pick<Project, 'id' | 'name' | 'status'>;
 }
 

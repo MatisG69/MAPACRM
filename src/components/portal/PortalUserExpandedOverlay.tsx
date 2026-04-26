@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { X, KeyRound, Mail, FolderKanban, Calendar } from 'lucide-react';
-import type { PortalUser, Project } from '../../lib/types';
+import { useEffect, useMemo, useState } from 'react';
+import { X, KeyRound, Mail, Building2, FolderKanban, Calendar } from 'lucide-react';
+import type { Client, PortalUser, Project } from '../../lib/types';
 import { ClientPortalSection } from '../projects/ClientPortalSection';
 import { PortalAdminInsights } from './PortalAdminInsights';
 import { usePortalAdminProjectData } from '../../hooks/usePortalAdminProjectData';
@@ -8,26 +8,27 @@ import { formatDate } from '../../lib/utils';
 
 interface PortalUserExpandedOverlayProps {
   user: PortalUser;
+  clients: Client[];
   projects: Project[];
   onClose: () => void;
-  onChangeProject: (userId: string, projectId: string | null) => Promise<void>;
+  onChangeClient: (userId: string, clientId: string | null) => Promise<void>;
 }
 
 /**
- * Vue plein écran d'un identifiant client — même traitement visuel que
- * RevenueExpandedOverlay : fixed inset-0, grille dorée de fond, header avec
- * eyebrow « Vue élargie » + bouton X, ESC pour fermer.
+ * Vue plein écran d'un identifiant client (scope = un Client).
  *
- * Contient :
- *  - Bandeau identité (email, nom, projet + switch)
- *  - ClientPortalSection : timeline projet (ajout/édition/statut/réorganisation)
- *    + messagerie bidirectionnelle realtime
+ * Affiche :
+ *  - Bandeau identité (email, nom, client + switch)
+ *  - Sélecteur de projet (parmi tous les projets du client)
+ *  - Insights admin du projet sélectionné (finances, agenda, checklist)
+ *  - ClientPortalSection (timeline + messagerie) du projet sélectionné
  */
 export function PortalUserExpandedOverlay({
   user,
+  clients,
   projects,
   onClose,
-  onChangeProject,
+  onChangeClient,
 }: PortalUserExpandedOverlayProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -42,14 +43,52 @@ export function PortalUserExpandedOverlay({
     };
   }, [onClose]);
 
-  const linkedProject = projects.find((p) => p.id === user.project_id) ?? null;
+  const linkedClient = clients.find((c) => c.id === user.client_id) ?? null;
+
+  const clientProjects = useMemo(() => {
+    if (!user.client_id) return [];
+    return projects
+      .filter((p) => p.client_id === user.client_id)
+      .slice()
+      .sort((a, b) => {
+        // Projets actifs (en cours / révision / planning) en premier, puis par date desc
+        const order: Record<string, number> = {
+          in_progress: 0,
+          review: 1,
+          quote_sent: 2,
+          planning: 3,
+          on_hold: 4,
+          completed: 5,
+        };
+        const oa = order[a.status] ?? 9;
+        const ob = order[b.status] ?? 9;
+        if (oa !== ob) return oa - ob;
+        return (b.created_at || '').localeCompare(a.created_at || '');
+      });
+  }, [projects, user.client_id]);
+
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    () => clientProjects[0]?.id ?? null
+  );
+
+  // Si la liste de projets change (changement de client) on réinitialise la sélection
+  useEffect(() => {
+    if (clientProjects.length === 0) {
+      setSelectedProjectId(null);
+    } else if (!clientProjects.some((p) => p.id === selectedProjectId)) {
+      setSelectedProjectId(clientProjects[0].id);
+    }
+  }, [clientProjects, selectedProjectId]);
+
   const {
     project: fullProject,
     quotes,
     invoices,
     events,
     checklist,
-  } = usePortalAdminProjectData(user.project_id);
+  } = usePortalAdminProjectData(selectedProjectId);
+
+  const selectedProject = clientProjects.find((p) => p.id === selectedProjectId) ?? null;
 
   return (
     <div
@@ -58,7 +97,6 @@ export function PortalUserExpandedOverlay({
       aria-modal="true"
       aria-labelledby="portal-user-expanded-title"
     >
-      {/* Grille dorée de fond */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.05]"
         aria-hidden
@@ -69,7 +107,6 @@ export function PortalUserExpandedOverlay({
         }}
       />
 
-      {/* Header */}
       <header className="relative flex flex-shrink-0 items-start justify-between gap-3 border-b border-white/[0.08] px-3 py-3 sm:items-center sm:gap-4 sm:px-4 sm:py-4 md:px-8 md:py-5">
         <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
           <div className="hidden h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-ws-accent/35 bg-ws-accent/15 shadow-glow-sm sm:flex md:h-12 md:w-12">
@@ -95,7 +132,6 @@ export function PortalUserExpandedOverlay({
         </button>
       </header>
 
-      {/* Body scrollable */}
       <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-4 sm:py-6 md:px-8 md:py-10 md:pb-10 scrollbar-ws">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Bandeau identité */}
@@ -116,49 +152,74 @@ export function PortalUserExpandedOverlay({
                   <Mail size={14} className="text-ws-accent flex-shrink-0" />
                   <span className="font-mono text-sm text-ws-paper break-all">{user.email}</span>
                 </div>
-                {user.name && (
-                  <p className="text-base text-ws-paper font-medium">{user.name}</p>
+                {user.name && <p className="text-base text-ws-paper font-medium">{user.name}</p>}
+                {linkedClient && (
+                  <div className="flex items-center gap-2 text-sm text-ws-ink">
+                    <Building2 size={14} className="text-ws-accent" />
+                    <span>{linkedClient.company || linkedClient.name}</span>
+                  </div>
                 )}
                 <p className="text-xs font-mono text-ws-mist flex items-center gap-2">
                   <Calendar size={12} />
                   Compte créé le {formatDate(user.created_at)}
                 </p>
               </div>
-              <div className="md:col-span-1">
-                <label className="block text-[10px] font-mono uppercase tracking-[0.25em] text-ws-mist mb-2">
-                  Projet assigné
-                </label>
-                <div className="relative">
-                  <FolderKanban
-                    size={14}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-ws-mist pointer-events-none"
-                  />
-                  <select
-                    value={user.project_id ?? ''}
-                    onChange={(e) => {
-                      void onChangeProject(user.id, e.target.value || null);
-                    }}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-ws-deep/60 border border-ws-line hover:border-ws-accent/40 text-ws-paper text-sm focus:outline-none focus:border-ws-accent appearance-none"
-                  >
-                    <option value="">— Sans projet —</option>
-                    {projects
-                      .slice()
-                      .sort((a, b) =>
-                        a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
-                      )
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
+              <div className="md:col-span-1 space-y-3">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-[0.25em] text-ws-mist mb-2">
+                    Client
+                  </label>
+                  <div className="relative">
+                    <Building2
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-ws-mist pointer-events-none"
+                    />
+                    <select
+                      value={user.client_id ?? ''}
+                      onChange={(e) => {
+                        void onChangeClient(user.id, e.target.value || null);
+                      }}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-ws-deep/60 border border-ws-line hover:border-ws-accent/40 text-ws-paper text-sm focus:outline-none focus:border-ws-accent appearance-none"
+                    >
+                      <option value="">— Sans client —</option>
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.company || c.name}
                         </option>
                       ))}
-                  </select>
+                    </select>
+                  </div>
                 </div>
-                {linkedProject?.site_url && (
+                {clientProjects.length > 1 && (
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase tracking-[0.25em] text-ws-mist mb-2">
+                      Projet à inspecter ({clientProjects.length})
+                    </label>
+                    <div className="relative">
+                      <FolderKanban
+                        size={14}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-ws-mist pointer-events-none"
+                      />
+                      <select
+                        value={selectedProjectId ?? ''}
+                        onChange={(e) => setSelectedProjectId(e.target.value || null)}
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-ws-deep/60 border border-ws-line hover:border-ws-accent/40 text-ws-paper text-sm focus:outline-none focus:border-ws-accent appearance-none"
+                      >
+                        {clientProjects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+                {selectedProject?.site_url && (
                   <a
-                    href={linkedProject.site_url}
+                    href={selectedProject.site_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-mono text-ws-accent hover:text-ws-accent-soft transition-colors"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-mono text-ws-accent hover:text-ws-accent-soft transition-colors"
                   >
                     Aperçu site →
                   </a>
@@ -167,25 +228,23 @@ export function PortalUserExpandedOverlay({
             </div>
           </section>
 
-          {/* Aperçu 360° admin : projet, finances, agenda, checklist */}
-          {user.project_id && (
-            <PortalAdminInsights
-              project={fullProject}
-              quotes={quotes}
-              invoices={invoices}
-              events={events}
-              checklist={checklist}
-            />
-          )}
-
-          {/* Contenu principal : étapes + messagerie */}
-          {user.project_id ? (
-            <ClientPortalSection projectId={user.project_id} />
+          {selectedProjectId ? (
+            <>
+              <PortalAdminInsights
+                project={fullProject}
+                quotes={quotes}
+                invoices={invoices}
+                events={events}
+                checklist={checklist}
+              />
+              <ClientPortalSection projectId={selectedProjectId} />
+            </>
           ) : (
             <div className="rounded-2xl border border-ws-line bg-ws-panel/60 p-10 text-center">
               <p className="text-sm text-ws-mist">
-                Aucun projet n'est rattaché à ce compte. Sélectionnez un projet ci-dessus pour
-                démarrer le suivi.
+                {linkedClient
+                  ? 'Aucun projet rattaché à ce client. Créez-en un dans la page Projets pour démarrer le suivi.'
+                  : 'Aucun client associé à cet identifiant. Sélectionnez un client ci-dessus.'}
               </p>
             </div>
           )}

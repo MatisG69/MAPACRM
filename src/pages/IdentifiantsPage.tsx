@@ -3,7 +3,7 @@ import {
   KeyRound,
   Plus,
   Trash2,
-  FolderKanban,
+  Building2,
   AlertCircle,
   Check,
   Mail,
@@ -18,6 +18,7 @@ import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EmptyState } from '../components/ui/EmptyState';
 import { usePortalUsers } from '../hooks/usePortalUsers';
+import { useClients } from '../hooks/useClients';
 import { useProjects } from '../hooks/useProjects';
 import { formatDate } from '../lib/utils';
 import type { PortalUser } from '../lib/types';
@@ -27,14 +28,15 @@ const PORTAL_URL =
     'https://space-client-mapa.vercel.app');
 
 export function IdentifiantsPage() {
-  const { users, loading, error, inviteUser, deleteUser, updateProject } = usePortalUsers();
+  const { users, loading, error, inviteUser, deleteUser, updateClient } = usePortalUsers();
+  const clientsHook = useClients();
   const projectsHook = useProjects();
 
   const [isCreating, setIsCreating] = useState(false);
   const [form, setForm] = useState({
     email: '',
     name: '',
-    projectId: '',
+    clientId: '',
   });
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -59,16 +61,28 @@ export function IdentifiantsPage() {
     }
   };
 
-  const activeProjects = useMemo(
+  const sortedClients = useMemo(
     () =>
-      projectsHook.projects
+      clientsHook.clients
         .slice()
-        .sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })),
-    [projectsHook.projects]
+        .sort((a, b) =>
+          (a.company || a.name).localeCompare(b.company || b.name, 'fr', { sensitivity: 'base' })
+        ),
+    [clientsHook.clients]
   );
 
+  /** Compte le nombre de projets associés à un client (affichage informatif). */
+  const projectCountByClient = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of projectsHook.projects) {
+      if (!p.client_id) continue;
+      map.set(p.client_id, (map.get(p.client_id) ?? 0) + 1);
+    }
+    return map;
+  }, [projectsHook.projects]);
+
   const openCreate = () => {
-    setForm({ email: '', name: '', projectId: '' });
+    setForm({ email: '', name: '', clientId: '' });
     setFormError(null);
     setLastInvited(null);
     setIsCreating(true);
@@ -78,13 +92,13 @@ export function IdentifiantsPage() {
     e.preventDefault();
     setFormError(null);
     if (!form.email.trim()) return setFormError('Email obligatoire');
-    if (!form.projectId) return setFormError('Sélectionnez un projet');
+    if (!form.clientId) return setFormError('Sélectionnez un client');
     setBusy(true);
     try {
       await inviteUser({
         email: form.email,
         name: form.name,
-        projectId: form.projectId,
+        clientId: form.clientId,
       });
       setLastInvited({
         email: form.email.trim().toLowerCase(),
@@ -135,7 +149,7 @@ export function IdentifiantsPage() {
             <div className="hidden md:grid grid-cols-[1.4fr_1fr_1.4fr_0.8fr_auto_auto_auto] gap-4 px-5 py-3 text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist border-b border-ws-line bg-ws-deep/30">
               <span>Email</span>
               <span>Nom</span>
-              <span>Projet</span>
+              <span>Client</span>
               <span>Créé</span>
               <span></span>
               <span></span>
@@ -171,18 +185,22 @@ export function IdentifiantsPage() {
                     </div>
                     <div className="min-w-0">
                       <select
-                        value={u.project_id ?? ''}
+                        value={u.client_id ?? ''}
                         onChange={(e) => {
-                          void updateProject(u.id, e.target.value || null);
+                          void updateClient(u.id, e.target.value || null);
                         }}
                         className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-ws-deep/40 border border-ws-line hover:border-ws-accent/40 text-ws-paper focus:outline-none focus:ring-2 focus:ring-ws-accent/30"
                       >
-                        <option value="">— Sans projet —</option>
-                        {activeProjects.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
+                        <option value="">— Sans client —</option>
+                        {sortedClients.map((c) => {
+                          const count = projectCountByClient.get(c.id) ?? 0;
+                          return (
+                            <option key={c.id} value={c.id}>
+                              {c.company || c.name}
+                              {count > 0 ? ` (${count} projet${count > 1 ? 's' : ''})` : ''}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                     <div className="text-xs text-ws-mist font-mono">{formatDate(u.created_at)}</div>
@@ -324,27 +342,35 @@ export function IdentifiantsPage() {
             </div>
             <div>
               <label className="block text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist mb-1.5">
-                Projet assigné *
+                Client *
               </label>
               <div className="relative">
-                <FolderKanban
+                <Building2
                   size={14}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-ws-mist pointer-events-none"
                 />
                 <select
-                  value={form.projectId}
-                  onChange={(e) => setForm({ ...form, projectId: e.target.value })}
+                  value={form.clientId}
+                  onChange={(e) => setForm({ ...form, clientId: e.target.value })}
                   className="w-full pl-9 pr-4 py-3 rounded-xl bg-ws-deep/50 border border-ws-line text-ws-paper focus:outline-none focus:border-ws-accent appearance-none"
                   required
                 >
-                  <option value="">— Sélectionner un projet —</option>
-                  {activeProjects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
+                  <option value="">— Sélectionner un client —</option>
+                  {sortedClients.map((c) => {
+                    const count = projectCountByClient.get(c.id) ?? 0;
+                    return (
+                      <option key={c.id} value={c.id}>
+                        {c.company || c.name}
+                        {count > 0 ? ` · ${count} projet${count > 1 ? 's' : ''}` : ' · aucun projet'}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
+              <p className="text-[11px] text-ws-mist/80 mt-1.5 leading-relaxed">
+                L'identifiant donne accès à <strong className="text-ws-paper">tous les projets</strong>{' '}
+                de ce client présents et à venir.
+              </p>
             </div>
 
             {formError && (
@@ -387,9 +413,10 @@ export function IdentifiantsPage() {
       {expandedUser && (
         <PortalUserExpandedOverlay
           user={expandedUser}
+          clients={sortedClients}
           projects={projectsHook.projects}
           onClose={() => setExpandedUserId(null)}
-          onChangeProject={updateProject}
+          onChangeClient={updateClient}
         />
       )}
     </div>

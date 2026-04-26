@@ -5,14 +5,15 @@ import type { PortalUser } from '../lib/types';
 export interface InvitePortalUserInput {
   email: string;
   name: string;
-  projectId: string;
+  clientId: string;
 }
 
 /**
  * Gestion des identifiants d'accès au portail client.
  *
  * Flux de pré-autorisation (aucun email envoyé par MAPA) :
- *   1. L'admin saisit email + nom + projet (aucun mot de passe, aucun email).
+ *   1. L'admin saisit email + nom + client (aucun mot de passe, aucun email).
+ *      Le client portail aura accès à TOUS les projets de ce client.
  *   2. Insertion d'une ligne `portal_users` (auth_user_id = null) — l'email
  *      est ainsi pré-autorisé sur le portail.
  *   3. Le client se rend sur l'espace client, choisit l'onglet « Première
@@ -21,7 +22,7 @@ export interface InvitePortalUserInput {
  *      avec le mot de passe choisi par le client.
  *   5. Le trigger Postgres (cf. migration `link_portal_user_on_auth_signup`)
  *      relie `auth.users.id` à la ligne `portal_users` par correspondance
- *      d'email — le client est immédiatement connecté à son projet.
+ *      d'email — le client est immédiatement connecté.
  */
 export function usePortalUsers() {
   const [users, setUsers] = useState<PortalUser[]>([]);
@@ -41,6 +42,7 @@ export function usePortalUsers() {
         .select(
           `
           *,
+          client:clients(id, name, company, avatar_color),
           project:projects(id, name, status)
         `
         )
@@ -63,7 +65,7 @@ export function usePortalUsers() {
    * Le client définira son mot de passe lui-même lors de sa première connexion.
    */
   const inviteUser = useCallback(
-    async ({ email, name, projectId }: InvitePortalUserInput): Promise<PortalUser> => {
+    async ({ email, name, clientId }: InvitePortalUserInput): Promise<PortalUser> => {
       if (!supabase) throw new Error('Supabase non configuré');
 
       const cleanEmail = email.trim().toLowerCase();
@@ -74,9 +76,10 @@ export function usePortalUsers() {
           auth_user_id: null,
           email: cleanEmail,
           name: name.trim() || null,
-          project_id: projectId,
+          client_id: clientId,
+          project_id: null,
         })
-        .select('*, project:projects(id, name, status)')
+        .select('*, client:clients(id, name, company, avatar_color), project:projects(id, name, status)')
         .single();
       if (insertErr) throw insertErr;
 
@@ -87,13 +90,14 @@ export function usePortalUsers() {
     []
   );
 
-  const updateProject = useCallback(async (id: string, projectId: string | null) => {
+  /** Modifie le client lié à un identifiant portail existant. */
+  const updateClient = useCallback(async (id: string, clientId: string | null) => {
     if (!supabase) throw new Error('Supabase non configuré');
     const { data, error: err } = await supabase
       .from('portal_users')
-      .update({ project_id: projectId })
+      .update({ client_id: clientId })
       .eq('id', id)
-      .select('*, project:projects(id, name, status)')
+      .select('*, client:clients(id, name, company, avatar_color), project:projects(id, name, status)')
       .single();
     if (err) throw err;
     setUsers((prev) => prev.map((u) => (u.id === id ? (data as PortalUser) : u)));
@@ -111,5 +115,5 @@ export function usePortalUsers() {
     setUsers((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
-  return { users, loading, error, fetchUsers, inviteUser, updateProject, deleteUser };
+  return { users, loading, error, fetchUsers, inviteUser, updateClient, deleteUser };
 }
