@@ -419,16 +419,18 @@ export function generateDevisHTML(params: DevisParams): string {
     border:1px solid rgba(201,168,76,.22);
     background:rgba(201,168,76,.04);
     border-radius:2px;
-    padding:5px 10px;
+    padding:8px 10px;
     display:flex;align-items:center;justify-content:space-between;gap:10px;
-    font-size:7pt;color:#C8BFB0;line-height:1.45;
+    color:#C8BFB0;
+    line-height:1;
   }
+  .recurring-strip > *{line-height:1;display:flex;align-items:center;}
   .recurring-strip .r-label{
     font-size:5.4pt;letter-spacing:.2em;text-transform:uppercase;
     font-weight:600;color:#C9A84C;white-space:nowrap;
   }
   .recurring-strip .r-items{
-    flex:1;text-align:center;color:#C8BFB0;font-size:6.8pt;
+    flex:1;justify-content:center;color:#C8BFB0;font-size:6.8pt;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
   .recurring-strip .r-items strong{color:#E2C97E;font-weight:500;}
@@ -498,7 +500,10 @@ export function generateDevisHTML(params: DevisParams): string {
     flex:1;
     font-size:7.5pt;line-height:1.6;color:#BAB0A0;
     text-align:justify;
+    hyphens:manual;
   }
+  /* Mots avec tiret qu'il ne faut jamais casser ni laisser le justify écraser */
+  .nb{white-space:nowrap;}
   .cgv-art{
     margin-bottom:9px;
     break-inside:avoid;
@@ -700,8 +705,8 @@ export function generateDevisHTML(params: DevisParams): string {
     .cond-block{padding:10px 12px;font-size:8.5pt;line-height:1.7;}
     .footer{padding-top:8px;}
 
-    /* Bandeau récurrent en print : monoligne, taille minimale */
-    .recurring-strip{margin-top:6px;padding:4px 9px;font-size:6.8pt;}
+    /* Bandeau récurrent en print : monoligne, padding symétrique pour centrage vertical */
+    .recurring-strip{margin-top:6px;padding:7px 9px;}
     .recurring-strip .r-label{font-size:5pt;}
     .recurring-strip .r-items{font-size:6.4pt;}
     .recurring-strip .r-total{font-size:7.4pt;}
@@ -925,7 +930,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
   const articlesPartTwo = `
     <div class="cgv-art">
       <h5>Art. 9 - Suivi, maintenance, hébergement et évolutions</h5>
-      <p><strong>9.1 Prestation de suivi.</strong> La garantie de conformité prévue à l'article 8 ne constitue pas une prestation de maintenance. Au‑delà de ce délai, toute intervention (correction, ajout, modification, évolution) fait l'objet d'une <strong>prestation distincte</strong>, sur devis ou dans le cadre d'un contrat de suivi dédié.</p>
+      <p><strong>9.1 Prestation de suivi.</strong> La garantie de conformité prévue à l'article 8 ne constitue pas une prestation de maintenance. <span class="nb">Au-delà</span> de ce délai, toute intervention (correction, ajout, modification, évolution) fait l'objet d'une <strong>prestation distincte</strong>, sur devis ou dans le cadre d'un contrat de suivi dédié.</p>
       <p><strong>9.2 Contrat de suivi.</strong> Le Client peut souscrire, à tout moment, un contrat de <strong>suivi et maintenance</strong> couvrant notamment : mises à jour techniques, supervision de la disponibilité, sauvegardes régulières, corrections d'anomalies, ajustements mineurs de contenu et accompagnement fonctionnel. Les modalités (périmètre, heures incluses, délais de réponse, tarif, durée) sont précisées dans un contrat distinct ou un bon de commande spécifique.</p>
       <p><strong>9.3 Durée et reconduction.</strong> Sauf stipulation contraire, le contrat de suivi est conclu pour une durée initiale de <strong>douze (12) mois</strong>, reconductible par tacite reconduction pour des périodes successives de même durée. Chaque partie peut y mettre fin par lettre recommandée avec accusé de réception adressée au moins <strong>trente (30) jours</strong> avant le terme en cours.</p>
       <p><strong>9.4 Hébergement et nom de domaine.</strong> L'hébergement du site et la gestion du nom de domaine constituent des prestations <strong>optionnelles</strong>, facturées séparément et reconductibles annuellement. À défaut de souscription, le Client conserve la charge exclusive de son hébergement et du renouvellement de son nom de domaine. Le Prestataire transfère, sur demande écrite et sous réserve du paiement intégral des sommes dues, l'ensemble des accès et codes sources nécessaires à une migration.</p>
@@ -949,8 +954,8 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
     <div class="cgv-art">
       <h5>Art. 11 - Réversibilité et portabilité</h5>
       <p><strong>11.1 Remise des livrables.</strong> À l'issue de la prestation et sous réserve du paiement intégral, le Prestataire remet au Client, sur demande écrite : le code source, les fichiers de production, les accès aux services associés (hébergement, nom de domaine, comptes tiers configurés au nom du Client), les éventuels identifiants administrateurs et la documentation technique disponible.</p>
-      <p><strong>11.2 Assistance à la migration.</strong> En cas de migration vers un nouveau prestataire, le Prestataire apporte une assistance technique raisonnable, dans la limite de <strong>deux (2) heures incluses</strong>. Au‑delà, les heures sont facturées au taux journalier en vigueur communiqué sur demande.</p>
-      <p><strong>11.3 Conservation post-contractuelle.</strong> Le Prestataire conserve une copie d'archive du livrable pour une durée de <strong>six (6) mois</strong> suivant la fin de la prestation, à des fins de continuité de service et de gestion d'éventuelles réclamations. Au‑delà, les éléments sont supprimés sauf demande expresse du Client de prolonger la conservation.</p>
+      <p><strong>11.2 Assistance à la migration.</strong> En cas de migration vers un nouveau prestataire, le Prestataire apporte une assistance technique raisonnable, dans la limite de <strong>deux (2) heures incluses</strong>. <span class="nb">Au-delà</span>, les heures sont facturées au taux journalier en vigueur communiqué sur demande.</p>
+      <p><strong>11.3 Conservation post-contractuelle.</strong> Le Prestataire conserve une copie d'archive du livrable pour une durée de <strong>six (6) mois</strong> suivant la fin de la prestation, à des fins de continuité de service et de gestion d'éventuelles réclamations. <span class="nb">Au-delà</span>, les éléments sont supprimés sauf demande expresse du Client de prolonger la conservation.</p>
     </div>
 
     <div class="cgv-art">
@@ -974,7 +979,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
 
     <div class="cgv-art">
       <h5>Art. 15 - Force majeure</h5>
-      <p>Aucune partie ne saurait voir sa responsabilité engagée en cas de force majeure au sens de l'<em>article 1218 du Code civil</em>. Si un tel événement se prolonge au‑delà de <strong>soixante (60) jours</strong>, chaque partie peut résilier le contrat sans indemnité par lettre recommandée avec accusé de réception.</p>
+      <p>Aucune partie ne saurait voir sa responsabilité engagée en cas de force majeure au sens de l'<em>article 1218 du Code civil</em>. Si un tel événement se prolonge <span class="nb">au-delà</span> de <strong>soixante (60) jours</strong>, chaque partie peut résilier le contrat sans indemnité par lettre recommandée avec accusé de réception.</p>
     </div>
 
     <div class="cgv-art">
