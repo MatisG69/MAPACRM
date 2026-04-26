@@ -24,7 +24,7 @@ import type { PortalUser } from '../lib/types';
 
 const PORTAL_URL =
   ((import.meta.env.VITE_PORTAL_URL as string | undefined)?.trim() ||
-    'https://espace.mapa-developpement.fr');
+    'https://space-client-mapa.vercel.app');
 
 export function IdentifiantsPage() {
   const { users, loading, error, inviteUser, deleteUser, updateProject } = usePortalUsers();
