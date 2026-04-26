@@ -247,6 +247,7 @@ export function ContactsPage({
                   ['telephoned', 'Téléphoné'],
                   ['in_discussion', 'Contacté'],
                   ['interested', 'Intéressé'],
+                  ['quote_sent', 'Devis envoyé'],
                   ['not_interested', 'Pas intéressé'],
                 ] as const
               ).map(([v, label]) => (

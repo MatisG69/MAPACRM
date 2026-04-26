@@ -13,6 +13,8 @@ export type ClientStatus =
   /** Contacté — clé distincte du stade pipeline `contacted` */
   | 'in_discussion'
   | 'interested'
+  /** Devis envoyé au client, en attente de signature */
+  | 'quote_sent'
   | 'not_interested';
 export type ProjectStatus = 'planning' | 'quote_sent' | 'in_progress' | 'review' | 'completed' | 'on_hold';
 export type ProjectType = 'website' | 'ecommerce' | 'webapp' | 'redesign' | 'maintenance' | 'seo' | 'automation' | 'other';

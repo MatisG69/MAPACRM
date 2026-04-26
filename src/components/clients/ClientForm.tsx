@@ -16,6 +16,7 @@ const statusOptions: { value: ClientStatus; label: string }[] = [
   { value: 'telephoned', label: 'Téléphoné' },
   { value: 'in_discussion', label: 'Contacté' },
   { value: 'interested', label: 'Intéressé' },
+  { value: 'quote_sent', label: 'Devis envoyé' },
   { value: 'not_interested', label: 'Pas intéressé' },
 ];
 

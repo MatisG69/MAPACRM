@@ -26,6 +26,7 @@ export const CLIENT_CARD_STRIP: Record<ClientStatus, string> = {
   telephoned: 'border-l-sky-500/70',
   in_discussion: 'border-l-violet-500/65',
   interested: 'border-l-emerald-500/70',
+  quote_sent: 'border-l-amber-400/80',
   not_interested: 'border-l-red-500/60',
 };
 
@@ -39,6 +40,7 @@ export function normalizeClientStatus(raw: string | undefined | null): ClientSta
     raw === 'telephoned' ||
     raw === 'in_discussion' ||
     raw === 'interested' ||
+    raw === 'quote_sent' ||
     raw === 'not_interested'
   ) {
     return raw;
