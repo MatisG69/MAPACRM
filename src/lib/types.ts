@@ -246,7 +246,9 @@ export type Page =
   /** Analyse de trafic et performances du site vitrine */
   | 'analyse'
   /** Identifiants clients pour l'espace suivi projet */
-  | 'identifiants';
+  | 'identifiants'
+  /** Calendrier personnel Matis synchronisé depuis Apple Calendar (ICS public) */
+  | 'calendar-matis';
 
 export type ServiceRequestStatus = 'new' | 'read' | 'in_progress' | 'converted' | 'archived';
 

@@ -10,6 +10,7 @@ import { TasksPage } from './pages/TasksPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { CalendarMatisPage } from './pages/CalendarMatisPage';
 import { CommercialPlaybookPage } from './pages/CommercialPlaybookPage';
 import { AnalyseSitePage } from './pages/AnalyseSitePage';
 import { PipelinePage } from './pages/PipelinePage';
@@ -368,6 +369,7 @@ function App() {
                 onDelete={calendarHook.deleteEvent}
               />
             )}
+            {page === 'calendar-matis' && <CalendarMatisPage />}
             {page === 'analytics' && (
               <AnalyticsPage
                 clients={clientsHook.clients}
