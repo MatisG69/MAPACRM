@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,6 +6,8 @@ import {
   AlertCircle,
   RefreshCw,
   Plus,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
@@ -77,6 +79,22 @@ export function CalendarMatisPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorInitial, setEditorInitial] = useState<IcsEvent | null>(null);
   const [editorDefaultStart, setEditorDefaultStart] = useState<Date | undefined>(undefined);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // ESC ferme le plein écran (sauf si une modal est ouverte par-dessus)
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !editorOpen) setFullscreen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [fullscreen, editorOpen]);
 
   const goToday = () => setReference(new Date());
   const goPrev = () => setReference((r) => shiftDate(view, r, -1));
@@ -122,6 +140,14 @@ export function CalendarMatisPage() {
               <span className="hidden sm:inline">Rafraîchir</span>
             </Button>
             <Button
+              variant="secondary"
+              icon={<Maximize2 size={14} />}
+              onClick={() => setFullscreen(true)}
+              className="normal-case tracking-normal"
+            >
+              <span className="hidden sm:inline">Plein écran</span>
+            </Button>
+            <Button
               icon={<Plus size={14} />}
               onClick={() => openCreate()}
               className="normal-case tracking-normal"
@@ -132,7 +158,65 @@ export function CalendarMatisPage() {
         }
       />
 
-      <div className="px-4 md:px-8 py-5 md:py-6 space-y-5">
+      <div
+        className={
+          fullscreen
+            ? 'fixed inset-0 z-[80] flex flex-col bg-ws-void/97 backdrop-blur-xl pt-[env(safe-area-inset-top)] overflow-hidden'
+            : 'px-4 md:px-8 py-5 md:py-6 space-y-5'
+        }
+      >
+        {fullscreen && (
+          <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-white/[0.08] px-4 md:px-8 py-3">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-ws-accent">
+                Plein écran
+              </span>
+              <span className="text-sm text-ws-paper font-display font-semibold">
+                Calendrier Matis
+              </span>
+              {calendarName && (
+                <span className="hidden md:inline text-xs font-mono text-ws-mist">
+                  · {calendarName}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                icon={<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />}
+                onClick={() => void refetch()}
+                disabled={loading}
+                className="normal-case tracking-normal"
+              >
+                <span className="hidden sm:inline">Rafraîchir</span>
+              </Button>
+              <Button
+                icon={<Plus size={14} />}
+                onClick={() => openCreate()}
+                className="normal-case tracking-normal"
+              >
+                Nouvel évènement
+              </Button>
+              <button
+                type="button"
+                onClick={() => setFullscreen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.1] bg-ws-panel/80 text-ws-paper transition-colors hover:bg-ws-raised hover:border-ws-accent/30 touch-manipulation"
+                aria-label="Quitter le plein écran"
+                title="Quitter le plein écran (Échap)"
+              >
+                <Minimize2 size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div
+          className={
+            fullscreen
+              ? 'flex-1 overflow-y-auto px-4 md:px-8 py-5 space-y-5'
+              : 'space-y-5'
+          }
+        >
         {error && (
           <div className="flex items-start gap-3 p-4 rounded-2xl bg-ws-bear-dim border border-red-500/30 text-red-200 text-sm">
             <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
@@ -229,6 +313,7 @@ export function CalendarMatisPage() {
             </>
           )}
         </div>
+        </div>{/* /scroll wrapper */}
       </div>
 
       <EventEditorModal

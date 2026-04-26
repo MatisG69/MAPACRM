@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Calendar, Clock, MapPin, FileText, Trash2, Save, AlertCircle, Loader2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, FileText, Trash2, Save, AlertCircle, Loader2, Users } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { AddressAutocomplete } from '../ui/AddressAutocomplete';
+import { EmailChipsInput } from '../ui/EmailChipsInput';
 import type { IcsEvent } from '../../lib/icsParser';
 import type { CaldavEventInput } from '../../hooks/useCaldavCalendar';
 
@@ -57,6 +59,7 @@ export function EventEditorModal({
   const [startTime, setStartTime] = useState('09:00');
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('10:00');
+  const [attendees, setAttendees] = useState<string[]>([]);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +80,7 @@ export function EventEditorModal({
       const endRef = initial.allDay ? new Date(initial.start) : initial.end;
       setEndDate(toDateInputValue(endRef));
       setEndTime(toTimeInputValue(initial.end));
+      setAttendees((initial.attendees ?? []).map((a) => a.email).filter(Boolean));
     } else {
       const d = defaultStart || new Date();
       const startD = new Date(d);
@@ -95,6 +99,7 @@ export function EventEditorModal({
       setStartTime(toTimeInputValue(startD));
       setEndDate(toDateInputValue(endD));
       setEndTime(toTimeInputValue(endD));
+      setAttendees([]);
     }
   }, [isOpen, initial, defaultStart]);
 
@@ -119,6 +124,11 @@ export function EventEditorModal({
       return;
     }
 
+    // Filtre les emails invalides silencieusement à la sauvegarde
+    const cleanAttendees = attendees
+      .map((e) => e.trim())
+      .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
     const input: CaldavEventInput = {
       summary: summary.trim(),
       description: description.trim() || null,
@@ -126,6 +136,7 @@ export function EventEditorModal({
       start: start.toISOString(),
       end: end.toISOString(),
       allDay,
+      attendees: cleanAttendees.length > 0 ? cleanAttendees : undefined,
     };
 
     setBusy(true);
@@ -269,13 +280,36 @@ export function EventEditorModal({
             <label className="block text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist mb-1.5 flex items-center gap-1.5">
               <MapPin size={10} /> Lieu
             </label>
-            <input
-              type="text"
+            <AddressAutocomplete
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Adresse, lien Zoom, …"
-              className="w-full px-3 py-2.5 rounded-xl bg-ws-deep/50 border border-ws-line text-ws-paper focus:outline-none focus:border-ws-accent text-sm placeholder:text-ws-mist/50"
+              onChange={setLocation}
+              placeholder="Tape une adresse, un lien Zoom, le nom d'un lieu…"
             />
+            <p className="text-[10px] font-mono text-ws-mist/60 mt-1.5 leading-relaxed">
+              Suggestions d'adresses françaises (BAN). Tu peux aussi saisir librement (lien Zoom, salle…).
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-[0.2em] text-ws-mist mb-1.5 flex items-center gap-1.5">
+              <Users size={10} /> Invités
+              {attendees.length > 0 && (
+                <span className="text-ws-accent normal-case tracking-normal">
+                  · {attendees.length}
+                </span>
+              )}
+            </label>
+            <EmailChipsInput
+              value={attendees}
+              onChange={setAttendees}
+              placeholder="email@exemple.fr puis Entrée pour valider"
+            />
+            <p className="text-[10px] font-mono text-ws-mist/60 mt-1.5 leading-relaxed">
+              Sépare avec <kbd className="px-1 rounded bg-ws-deep/60 border border-ws-line">Entrée</kbd>,{' '}
+              <kbd className="px-1 rounded bg-ws-deep/60 border border-ws-line">,</kbd> ou espace.
+              iCloud enverra automatiquement une invitation par email à chaque participant lors de la
+              création / modification.
+            </p>
           </div>
 
           <div>

@@ -14,9 +14,18 @@ function getCaldavEndpoint(): string {
 }
 
 function getAuthHeaders(): Record<string, string> {
-  const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() || '';
-  if (!anonKey) return {};
-  return { Authorization: `Bearer ${anonKey}`, apikey: anonKey };
+  const headers: Record<string, string> = {};
+  // Token CalDAV optionnel : protège la fonction si tu choisis d'ajouter
+  // CALDAV_TOKEN dans les Secrets Supabase + VITE_CALDAV_TOKEN ici (même valeur).
+  const caldavToken = (import.meta.env.VITE_CALDAV_TOKEN as string | undefined)?.trim();
+  if (caldavToken) headers['X-Caldav-Token'] = caldavToken;
+  // Clé anon pour passer la couche Supabase (si Verify JWT est ré-activée)
+  const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
+  if (anonKey) {
+    headers['Authorization'] = `Bearer ${anonKey}`;
+    headers['apikey'] = anonKey;
+  }
+  return headers;
 }
 
 export interface CaldavEventInput {
@@ -28,6 +37,8 @@ export interface CaldavEventInput {
   /** ISO string */
   end: string;
   allDay?: boolean;
+  /** Emails à inviter (iCloud envoie l'invitation par mail aux ATTENDEE) */
+  attendees?: string[];
 }
 
 interface UseCaldavCalendarResult {

@@ -48,12 +48,17 @@ const json = (body: unknown, status = 200) =>
 
 const fail = (msg: string, status = 500) => json({ error: msg }, status);
 
-// ─── Auth simple : on exige le Bearer anon key Supabase ─────────────────
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
+// ─── Auth : token partagé optionnel ─────────────────────────────────────
+// Si CALDAV_TOKEN est défini dans les Secrets Supabase, on exige le même
+// dans le header X-Caldav-Token (ou Authorization: Bearer <token>).
+// Sinon (token absent), la fonction est ouverte — utile pour dev / single-user.
+const CALDAV_TOKEN = Deno.env.get('CALDAV_TOKEN') || '';
 function requireAuth(req: Request): boolean {
-  if (!SUPABASE_ANON_KEY) return true; // dev local sans clé : on laisse passer
+  if (!CALDAV_TOKEN) return true;
+  const headerToken = req.headers.get('x-caldav-token') || '';
+  if (headerToken === CALDAV_TOKEN) return true;
   const auth = req.headers.get('authorization') || req.headers.get('Authorization') || '';
-  return auth === `Bearer ${SUPABASE_ANON_KEY}`;
+  return auth === `Bearer ${CALDAV_TOKEN}`;
 }
 
 // ─── Credentials Apple ──────────────────────────────────────────────────
@@ -130,9 +135,14 @@ async function discoverCalendar(): Promise<CalendarRef> {
 
   let res = await caldavRequest('https://caldav.icloud.com/', 'PROPFIND', principalReq);
   if (!res.ok) throw new Error(`Principal discovery failed: ${res.status} ${await res.text()}`);
-  const principalHref = extractFirst(await res.text(), 'href');
-  if (!principalHref) throw new Error('No principal href in response');
-
+  const principalXml = await res.text();
+  // ⚠️ extraire le <href> INTERNE à <current-user-principal> (pas le 1er href global de la réponse,
+  // qui correspond à l'URL de la ressource elle-même)
+  const principalMatch = principalXml.match(
+    /<(?:[a-zA-Z0-9]+:)?current-user-principal[^>]*>[\s\S]*?<(?:[a-zA-Z0-9]+:)?href[^>]*>([\s\S]*?)<\/(?:[a-zA-Z0-9]+:)?href>/i
+  );
+  if (!principalMatch) throw new Error(`No current-user-principal href found. Body: ${principalXml.slice(0, 500)}`);
+  const principalHref = principalMatch[1].trim();
   const principalUrl = new URL(principalHref, res.url).toString();
 
   // Étape 2 : calendar-home-set
@@ -225,6 +235,8 @@ interface EventInput {
   start: string; // ISO
   end: string; // ISO
   allDay?: boolean;
+  /** Liste d'emails à inviter (RFC 5545 ATTENDEE). iCloud envoie les invits par mail. */
+  attendees?: string[];
 }
 
 function buildIcs(uid: string, ev: EventInput): string {
@@ -250,6 +262,7 @@ function buildIcs(uid: string, ev: EventInput): string {
     'VERSION:2.0',
     'PRODID:-//MAPA Developpement//MAPA CRM//FR',
     'CALSCALE:GREGORIAN',
+    'METHOD:REQUEST',
     'BEGIN:VEVENT',
     `UID:${uid}`,
     `DTSTAMP:${toIcsUTC(stamp)}`,
@@ -259,8 +272,21 @@ function buildIcs(uid: string, ev: EventInput): string {
   ];
   if (ev.description) lines.push(`DESCRIPTION:${escapeIcsText(ev.description)}`);
   if (ev.location) lines.push(`LOCATION:${escapeIcsText(ev.location)}`);
-  lines.push('END:VEVENT', 'END:VCALENDAR');
 
+  // Invités : si présents, on ajoute ORGANIZER (toi) + ATTENDEE (chaque invité)
+  // iCloud envoie automatiquement les invitations email aux ATTENDEE quand un
+  // ORGANIZER est défini et que la METHOD est REQUEST.
+  const attendees = (ev.attendees || []).map((e) => e.trim()).filter(Boolean);
+  if (attendees.length > 0) {
+    lines.push(`ORGANIZER;CN=${escapeIcsText(APPLE_ID)}:mailto:${APPLE_ID}`);
+    for (const email of attendees) {
+      lines.push(
+        `ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${email}`
+      );
+    }
+  }
+
+  lines.push('END:VEVENT', 'END:VCALENDAR');
   return lines.join('\r\n') + '\r\n';
 }
 

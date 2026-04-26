@@ -17,6 +17,15 @@
  * suffisant. Si on a besoin de plus tard, on swappera vers `ical.js`.
  */
 
+export interface IcsAttendee {
+  email: string;
+  name: string | null;
+  /** ROLE=REQ-PARTICIPANT (défaut), OPT-PARTICIPANT, CHAIR */
+  role: string | null;
+  /** PARTSTAT=NEEDS-ACTION (défaut), ACCEPTED, DECLINED, TENTATIVE */
+  status: string | null;
+}
+
 export interface IcsEvent {
   uid: string;
   summary: string;
@@ -28,6 +37,10 @@ export interface IcsEvent {
   allDay: boolean;
   /** Source de récurrence (utile pour debug / styling) */
   recurring: boolean;
+  /** Email de l'organisateur de l'event (RFC 5545 ORGANIZER) */
+  organizer: string | null;
+  /** Invités RFC 5545 ATTENDEE — vide si aucun */
+  attendees: IcsAttendee[];
 }
 
 interface RawEvent {
@@ -39,6 +52,21 @@ interface RawEvent {
   dtend: { value: string; tzid: string | null; isDate: boolean } | null;
   rrule: string | null;
   exdates: string[];
+  organizer: string | null;
+  attendees: IcsAttendee[];
+}
+
+/** Parse une ligne ATTENDEE / ORGANIZER : `mailto:email` (avec params CN, ROLE, PARTSTAT) */
+function parseAttendee(value: string, params: Record<string, string>): IcsAttendee {
+  // value est typiquement "mailto:foo@bar.com"
+  const emailMatch = value.match(/mailto:(.+)/i);
+  const email = (emailMatch ? emailMatch[1] : value).trim();
+  return {
+    email,
+    name: params.CN ? unescapeText(params.CN.replace(/^"|"$/g, '')) : null,
+    role: params.ROLE || null,
+    status: params.PARTSTAT || null,
+  };
 }
 
 /** Reconstitue les lignes ICS pliées (RFC 5545 § 3.1) */
@@ -175,6 +203,8 @@ function expandRRule(
       end,
       allDay: startParsed.isDate,
       recurring: true,
+      organizer: raw.organizer,
+      attendees: raw.attendees,
     });
     return true;
   };
@@ -259,6 +289,8 @@ export function parseIcs(text: string, windowStart: Date, windowEnd: Date): IcsE
         dtend: null,
         rrule: null,
         exdates: [],
+        organizer: null,
+        attendees: [],
       };
       continue;
     }
@@ -307,6 +339,14 @@ export function parseIcs(text: string, windowStart: Date, windowEnd: Date): IcsE
         // Plusieurs EXDATE possibles, séparés par virgule sur la même ligne
         for (const ex of value.split(',')) current.exdates.push(ex.trim());
         break;
+      case 'ORGANIZER': {
+        const m = value.match(/mailto:(.+)/i);
+        current.organizer = (m ? m[1] : value).trim();
+        break;
+      }
+      case 'ATTENDEE':
+        current.attendees.push(parseAttendee(value, params));
+        break;
     }
   }
 
@@ -334,6 +374,8 @@ export function parseIcs(text: string, windowStart: Date, windowEnd: Date): IcsE
         end: eventEnd,
         allDay: startParsed.isDate,
         recurring: false,
+        organizer: raw.organizer,
+        attendees: raw.attendees,
       });
     }
   }
