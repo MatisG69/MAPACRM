@@ -42,16 +42,36 @@
 
 @layer base {
   html {
-    @apply scroll-smooth bg-black;
+    @apply scroll-smooth;
+    background-color: #000;
   }
   body {
-    @apply m-0 min-h-[100dvh] min-h-screen bg-black text-ws-paper overflow-x-hidden;
+    @apply m-0 min-h-[100dvh] min-h-screen text-ws-paper overflow-x-hidden;
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+
+    /**
+     * Background ambiance MAPA — image dim (restaurant chandelles) + overlay très sombre.
+     * 1) gradient noir 85 % — assure lisibilité (contrast WCAG sur les cards)
+     * 2) image fixed (parallax-like, pas de scroll)
+     * 3) fallback noir pur si image manquante
+     *
+     * Posez le fichier dans /img/ambient.jpg (ou .webp si exporté).
+     */
+    background-color: #000;
+    background-image:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.86) 0%, rgba(0, 0, 0, 0.92) 60%, rgba(0, 0, 0, 0.96) 100%),
+      radial-gradient(ellipse 60% 80% at 50% 35%, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.78) 60%, rgba(0, 0, 0, 0.92) 100%),
+      url('/img/ambient.jpg');
+    background-size: cover, cover, cover;
+    background-position: center, center, center;
+    background-repeat: no-repeat, no-repeat, no-repeat;
+    background-attachment: fixed, fixed, fixed;
   }
   #root {
-    @apply min-h-[100dvh] min-h-screen bg-black;
+    @apply min-h-[100dvh] min-h-screen;
+    background-color: transparent;
   }
   ::selection {
     @apply bg-ws-accent/40 text-ws-void;
