@@ -167,7 +167,7 @@ function App() {
   const localMode = !isSupabaseEnabled();
 
   return (
-    <div className="min-h-[100dvh] min-h-screen bg-black font-sans text-ws-paper">
+    <div className="min-h-[100dvh] min-h-screen font-sans text-ws-paper">
       <Sidebar currentPage={page} onNavigate={(p) => navigate(p)} badges={{ demandes: demandesHook.newCount }} />
       <MobileTabBar currentPage={page} onNavigate={(p) => navigate(p)} />
 
