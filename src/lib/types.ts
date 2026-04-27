@@ -252,7 +252,9 @@ export type Page =
   /** Identifiants clients pour l'espace suivi projet */
   | 'identifiants'
   /** Calendrier personnel Matis synchronisé depuis Apple Calendar (ICS public) */
-  | 'calendar-matis';
+  | 'calendar-matis'
+  /** Journal d'appels commerciaux (vue tableau) */
+  | 'calls';
 
 export type ServiceRequestStatus = 'new' | 'read' | 'in_progress' | 'converted' | 'archived';
 
@@ -342,4 +344,34 @@ export interface ClientDocument {
   uploaded_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Call — ligne de journal d'appel commercial.
+ * Les coordonnées (téléphone, email, site web) NE sont PAS stockées ici :
+ * elles sont lues à la volée depuis la fiche `clients` via la jointure.
+ */
+export interface Call {
+  id: string;
+  client_id: string;
+  /** Appel passé oui/non */
+  called: boolean;
+  /** Timestamp de l'appel (auto-rempli côté UI quand `called` passe à true) */
+  called_at: string | null;
+  /** Intéressé : null tant que non évalué */
+  interested: boolean | null;
+  /** Notes libres */
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Relation jointe (lecture seule) — auto-fill UI */
+  client?: {
+    id: string;
+    name: string;
+    company: string | null;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    avatar_color?: string;
+  } | null;
 }

@@ -15,6 +15,7 @@ import {
   Inbox,
   LineChart,
   KeyRound,
+  PhoneCall,
   type LucideIcon,
 } from 'lucide-react';
 import { Page } from './types';
@@ -29,6 +30,7 @@ export interface NavItemConfig {
 export const MAIN_NAV_ITEMS: NavItemConfig[] = [
   { id: 'dashboard', label: 'Accueil', shortLabel: 'Accueil', icon: LayoutDashboard },
   { id: 'clients', label: 'Clients', shortLabel: 'Clients', icon: Users },
+  { id: 'calls', label: 'Appels', shortLabel: 'Appels', icon: PhoneCall },
   { id: 'contacts', label: 'Contacts', shortLabel: 'Contacts', icon: Contact2 },
   { id: 'projects', label: 'Projets', shortLabel: 'Projets', icon: FolderKanban },
   { id: 'pipeline', label: 'Pipeline', shortLabel: 'Pipeline', icon: GitBranch },
