@@ -57,13 +57,13 @@
      * 2) image fixed (parallax-like, pas de scroll)
      * 3) fallback noir pur si image manquante
      *
-     * Posez le fichier dans /img/ambient.jpg (ou .webp si exporté).
+     * Posez le fichier dans /img/ambient.png (ou .jpg / .webp).
      */
     background-color: #000;
     background-image:
       linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.82) 60%, rgba(0, 0, 0, 0.88) 100%),
       radial-gradient(ellipse 70% 85% at 50% 40%, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.55) 60%, rgba(0, 0, 0, 0.78) 100%),
-      url('/img/ambient.jpg');
+      url('/img/ambient.png');
     background-size: cover, cover, cover;
     background-position: center, center, center;
     background-repeat: no-repeat, no-repeat, no-repeat;
