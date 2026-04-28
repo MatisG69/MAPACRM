@@ -369,11 +369,19 @@ export function GenerateDevisModal({
                           className="w-4 h-4 rounded accent-ws-accent flex-shrink-0"
                           checked={checked}
                           onChange={(e) => {
-                            setAdditionalProjectIds((ids) =>
-                              e.target.checked
-                                ? [...ids, p.id]
-                                : ids.filter((id) => id !== p.id)
-                            )
+                            if (e.target.checked) {
+                              // Si aucun projet principal n'est encore sélectionné,
+                              // ce projet devient automatiquement le projet principal
+                              // (et son montant HT se remplit via l'useEffect dédié).
+                              if (!projectId) {
+                                setProjectId(p.id)
+                                if (!clientId && p.client_id) setClientId(p.client_id)
+                              } else {
+                                setAdditionalProjectIds((ids) => [...ids, p.id])
+                              }
+                            } else {
+                              setAdditionalProjectIds((ids) => ids.filter((id) => id !== p.id))
+                            }
                           }}
                         />
                         <div className="min-w-0">
@@ -404,12 +412,12 @@ export function GenerateDevisModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="form-label">
-              Montant TTC (€) *
+              Montant HT (€) *
               {autoPrice != null && (
-                <span className="ml-2 text-ws-bull normal-case font-normal">— tarif standard</span>
+                <span className="ml-2 text-ws-bull normal-case font-normal">- tarif standard</span>
               )}
               {needsManualPrice && (
-                <span className="ml-2 text-ws-gold normal-case font-normal">— à renseigner</span>
+                <span className="ml-2 text-ws-gold normal-case font-normal">- à renseigner</span>
               )}
             </label>
             <input
