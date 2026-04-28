@@ -312,6 +312,13 @@ export function ClientDocumentsManager({
       title: q.title,
       notes: q.notes,
     });
+
+    let parentQuoteRef: string | null = null;
+    if (isRecurring && q.notes) {
+      const match = q.notes.match(/Suivi de la prestation livrée au titre du devis [^\n]+/);
+      if (match) parentQuoteRef = match[0];
+    }
+
     const html = generateDevisHTML({
       client,
       project: project ?? null,
@@ -325,6 +332,9 @@ export function ClientDocumentsManager({
       includeCGV: !isRecurring,
       isRecurring,
       recurringScope: project?.recurring_support_scope ?? null,
+      recurringTitle: isRecurring ? q.title : null,
+      recurringDescription: project?.recurring_support_description ?? null,
+      parentQuoteRef,
       acompteDateISO: (q as Quote & { expected_acompte_date?: string | null }).expected_acompte_date ?? null,
       deliveryDateISO: (q as Quote & { expected_delivery_date?: string | null }).expected_delivery_date ?? null,
     });

@@ -42,6 +42,16 @@ export interface DevisParams {
   isRecurring?: boolean
   /** Périmètre détaillé du suivi (texte multi-ligne, une ligne = une puce). */
   recurringScope?: string | null
+  /** Titre custom du contrat de suivi (override du fallback générique). */
+  recurringTitle?: string | null
+  /** Description courte du suivi — affichée dans la table de tarification. */
+  recurringDescription?: string | null
+  /**
+   * Référence au devis principal (lié) — affichée en sous-titre dans le
+   * devis abonnement pour la traçabilité comptable. Format libre,
+   * ex. "DEV-2026-001 du 28 avril 2026".
+   */
+  parentQuoteRef?: string | null
 }
 
 /**
@@ -103,30 +113,12 @@ function prestationsForType(project: Project | null): string[] {
   if (rawScope) {
     const sanitized = sanitizeScopeText(rawScope)
 
-    // Découpage par sauts de ligne en priorité
-    let lines = sanitized
+    // Découpage UNIQUEMENT par sauts de ligne explicites.
+    // Les tirets / em-dashes à l'intérieur des phrases sont préservés.
+    // → l'utilisateur DOIT séparer ses puces avec Entrée (cf. placeholder).
+    const cleaned = sanitized
       .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-
-    // Cas où l'utilisateur a tapé tout sur une seule ligne avec des séparateurs
-    // typographiques (— en dash, – em dash, • bullet, · middle dot).
-    // On re-split si on détecte au moins 2 occurrences d'un séparateur.
-    if (lines.length === 1) {
-      const single = lines[0]
-      const candidates = [' — ', ' – ', ' • ', ' · ', ' / ']
-      for (const sep of candidates) {
-        const parts = single.split(sep)
-        if (parts.length >= 2) {
-          lines = parts
-          break
-        }
-      }
-    }
-
-    // Nettoyage final : retire bullets pré-existants en début, trim
-    const cleaned = lines
-      .map((l) => l.replace(/^[\s•‣◦⁃\-*·—–]+/, '').trim())
+      .map((l) => l.replace(/^[\s•‣◦⁃*]+/, '').trim())
       .filter((l) => l.length > 0)
 
     if (cleaned.length > 0) return cleaned
@@ -335,6 +327,9 @@ export function generateDevisHTML(params: DevisParams): string {
     deliveryDateISO,
     isRecurring = false,
     recurringScope,
+    recurringTitle,
+    recurringDescription,
+    parentQuoteRef,
   } = params
 
   // En mode abonnement mensuel : pas de CGV transactionnelles (incompatibles
@@ -385,7 +380,9 @@ export function generateDevisHTML(params: DevisParams): string {
   const hostingTypes = new Set(['website', 'redesign', 'webapp', 'ecommerce'])
   const needsHostingNote = !isRecurring && allLines.some((l) => l.project?.type && hostingTypes.has(l.project.type))
   const missionTitle = isRecurring
-    ? `Suivi mensuel - ${client.company || formatClientFullName(client)}`
+    ? (recurringTitle?.trim()
+        || project?.recurring_support_title?.trim()
+        || `Contrat de suivi & maintenance - ${client.company || formatClientFullName(client)}`)
     : isMulti
     ? `Prestations combinées (${allLines.length} projets)`
     : project
@@ -932,9 +929,10 @@ export function generateDevisHTML(params: DevisParams): string {
         project?.recurring_support_scope?.trim() ||
         ''
       if (scopeRaw) {
+        // Split UNIQUEMENT sur \n (idem périmètre principal)
         const lines = sanitizeScopeText(scopeRaw)
           .split(/\r?\n/)
-          .map((l) => l.replace(/^[\s•‣◦⁃\-*·—–]+/, '').trim())
+          .map((l) => l.replace(/^[\s•‣◦⁃*]+/, '').trim())
           .filter((l) => l.length > 0)
         if (lines.length > 0) {
           return `<ul class="prest-list">
@@ -980,12 +978,18 @@ export function generateDevisHTML(params: DevisParams): string {
     </thead>
     <tbody>
       ${isRecurring
-        ? `
+        ? (() => {
+            const recurringDesc =
+              recurringDescription?.trim() ||
+              project?.recurring_support_description?.trim() ||
+              `Suivi & maintenance mensuelle de la solution livrée (supervision, corrections d'anomalies, ajustements mineurs, conseils, support utilisateur).`
+            return `
       <tr>
         <td><strong style="color:#E2C97E">Suivi mensuel</strong></td>
-        <td>Abonnement de suivi - ${client.company || formatClientFullName(client)}</td>
+        <td>${recurringDesc}</td>
         <td class="amt">${formatEur(totalAmount)} <span style="font-size:6pt;color:#9E9080;font-weight:400">/ mois</span></td>
       </tr>`
+          })()
         : allLines.length > 0
         ? allLines.map((l) => `
       <tr>
@@ -1039,11 +1043,14 @@ export function generateDevisHTML(params: DevisParams): string {
   ` : ''}
 
   ${isRecurring
-    ? `<div class="slabel">Conditions de l'abonnement</div>
+    ? `${parentQuoteRef ? `<div class="cond-block" style="margin-top:0;margin-bottom:8px;font-style:italic">${parentQuoteRef}</div>` : ''}
+  <div class="slabel">Modalités de l'abonnement</div>
   <div class="cond-block">
-    <strong>Tarif</strong> - ${formatEur(totalAmount)} HT par mois, facturé mensuellement.<br>
-    <strong>Aucun acompte</strong> - le règlement s'effectue mois par mois, à terme échu.<br>
-    <strong>Engagement</strong> - reconductible mensuellement par tacite reconduction. Résiliable à tout moment moyennant un préavis d'un mois.<br>
+    <strong>Tarif</strong> - ${formatEur(totalAmount)} HT par mois, sans acompte. La facturation se fait <strong>mensuellement à terme à échoir</strong> (en début de mois).<br>
+    <strong>Mode de paiement</strong> - virement SEPA ou prélèvement automatique mensuel.<br>
+    <strong>Démarrage</strong> - à la livraison de la prestation principale référencée ci-dessus.<br>
+    <strong>Engagement initial</strong> - 12 mois (art. 9.2 CGV), reconductible tacitement par périodes de 12 mois.<br>
+    <strong>Résiliation</strong> - à tout moment après l'engagement initial, par lettre recommandée avec accusé de réception, moyennant un préavis de 30 jours (art. 9.3 CGV).<br>
     <strong>Validité du devis</strong> - 30 jours à compter de sa date d'émission.
   </div>`
     : includeCGV

@@ -190,6 +190,15 @@ export function QuotesPage({
       title: q.title,
       notes: q.notes,
     })
+
+    /* Pour le devis suivi, on extrait la référence au devis parent depuis les notes
+       (format injecté par GenerateDevisModal : "Suivi de la prestation livrée au titre du devis ..."). */
+    let parentQuoteRef: string | null = null
+    if (isRecurring && q.notes) {
+      const match = q.notes.match(/Suivi de la prestation livrée au titre du devis [^\n]+/)
+      if (match) parentQuoteRef = match[0]
+    }
+
     const html = generateDevisHTML({
       client,
       project,
@@ -198,10 +207,13 @@ export function QuotesPage({
       validityDays: 30,
       validUntilISO: q.valid_until,
       depositPercent,
-      customNotes: q.notes ?? undefined,
+      customNotes: isRecurring ? undefined : q.notes ?? undefined,
       includeCGV: !isRecurring,
       isRecurring,
       recurringScope: project?.recurring_support_scope ?? null,
+      recurringTitle: isRecurring ? q.title : null,
+      recurringDescription: project?.recurring_support_description ?? null,
+      parentQuoteRef,
     })
     setPreviewQuote({ html, filename: `devis-${q.quote_number ?? q.id}.pdf` })
   }

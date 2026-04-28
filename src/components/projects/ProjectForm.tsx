@@ -78,6 +78,8 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onUpdateCl
     recurring_support_amount: initial?.recurring_support_amount ?? null,
     recurring_support_label: initial?.recurring_support_label ?? null,
     recurring_support_scope: initial?.recurring_support_scope ?? null,
+    recurring_support_title: initial?.recurring_support_title ?? null,
+    recurring_support_description: initial?.recurring_support_description ?? null,
     prestation_scope: initial?.prestation_scope ?? null,
   });
 
@@ -323,22 +325,54 @@ Documentation & accompagnement à la prise en main`}
 
         {form.has_recurring_support && (
           <div className="space-y-3 pt-1">
-            <div className="max-w-[260px]">
-              <label className="form-label">Montant mensuel HT (€) *</label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="form-label">Montant mensuel HT (€) *</label>
+                <input
+                  type="number"
+                  className="input font-mono"
+                  value={form.recurring_support_amount ?? ''}
+                  onChange={(e) =>
+                    set(
+                      'recurring_support_amount',
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  placeholder="ex : 80"
+                  min={0}
+                  step={5}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="form-label">Titre du contrat de suivi</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={form.recurring_support_title ?? ''}
+                  onChange={(e) =>
+                    set('recurring_support_title', e.target.value || null)
+                  }
+                  placeholder="ex : Contrat de suivi & maintenance — Automatisation interne"
+                />
+                <p className="text-[10px] font-mono text-ws-mist mt-1 leading-snug">
+                  Apparaît en titre principal du devis abonnement. Vide → « Contrat de suivi &amp; maintenance ».
+                </p>
+              </div>
+            </div>
+            <div>
+              <label className="form-label">Description courte (optionnel)</label>
               <input
-                type="number"
-                className="input font-mono"
-                value={form.recurring_support_amount ?? ''}
+                type="text"
+                className="input"
+                value={form.recurring_support_description ?? ''}
                 onChange={(e) =>
-                  set(
-                    'recurring_support_amount',
-                    e.target.value ? Number(e.target.value) : null
-                  )
+                  set('recurring_support_description', e.target.value || null)
                 }
-                placeholder="ex : 80"
-                min={0}
-                step={5}
+                placeholder="ex : Suivi & maintenance mensuelle de la solution livrée (supervision, corrections, conseils)."
               />
+              <p className="text-[10px] font-mono text-ws-mist mt-1 leading-snug">
+                Affichée dans la table de tarification du devis abonnement.
+              </p>
             </div>
             <div>
               <div className="flex items-baseline justify-between gap-3 flex-wrap">

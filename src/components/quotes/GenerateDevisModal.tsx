@@ -189,7 +189,7 @@ export function GenerateDevisModal({
               .join(' / ')}`
           : null
 
-      await onCreateQuote({
+      const principalQuote = await onCreateQuote({
         client_id: selectedClient.id,
         project_id: selectedProject?.id ?? null,
         opportunity_id: null,
@@ -209,22 +209,39 @@ export function GenerateDevisModal({
       })
 
       /* ── 2e devis automatique pour le suivi mensuel ──
-         Créé en complément du devis ponctuel quand au moins un projet
-         a un suivi mensuel activé.
-         - amount stocké = MONTANT MENSUEL HT (pas annualisé)
-         - status: draft, aucun acompte, pas d'engagement annuel forcé
-         - Périmètre = recurring_support_scope concaténé des projets concernés. */
+         Lié au devis principal via `parent_quote_id` pour traçabilité.
+         - amount stocké = MONTANT MENSUEL HT
+         - status: draft, aucun acompte
+         - title custom pris du projet (ou fallback)
+         - notes : référence au devis parent + périmètre détaillé. */
       if (recurringProjectsAll.length > 0 && recurringMonthlyTotal > 0) {
         const recurringScopes = recurringProjectsAll
           .map((p) => (p.recurring_support_scope ?? p.recurring_support_label ?? '').trim())
           .filter((s) => s.length > 0)
           .join('\n')
 
+        // Titre custom : on prend le 1er projet qui en a un, sinon fallback générique.
+        const customTitle = recurringProjectsAll
+          .map((p) => p.recurring_support_title?.trim())
+          .find((t) => !!t)
+        const suiviTitle = customTitle
+          || `Contrat de suivi & maintenance - ${selectedClient.company || selectedClient.name}`
+
+        const principalRef = `Suivi de la prestation livrée au titre du devis ${quoteNumber.trim()}${
+          principalQuote?.created_at
+            ? ` du ${new Date(principalQuote.created_at).toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+              })}`
+            : ''
+        }.`
+
         await onCreateQuote({
           client_id: selectedClient.id,
-          project_id: null,
+          project_id: selectedProject?.id ?? null,
           opportunity_id: null,
-          title: `Suivi mensuel - ${selectedClient.company || selectedClient.name}`,
+          title: suiviTitle,
           quote_number: `${quoteNumber.trim()}-SUIVI`,
           amount: recurringMonthlyTotal,
           status: 'draft',
@@ -234,9 +251,10 @@ export function GenerateDevisModal({
           expected_acompte_date: null,
           expected_delivery_date: null,
           version: 1,
-          parent_quote_id: null,
+          parent_quote_id: principalQuote?.id ?? null,
           notes: [
             `Devis abonnement mensuel - ${recurringMonthlyTotal} € HT/mois`,
+            principalRef,
             recurringScopes ? `Périmètre :\n${recurringScopes}` : null,
             notes.trim() || null,
           ]

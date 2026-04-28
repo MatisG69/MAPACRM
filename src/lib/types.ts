@@ -98,6 +98,16 @@ export interface Project {
    */
   recurring_support_scope?: string | null;
   /**
+   * Titre custom du contrat de suivi (apparaît en titre du devis abonnement).
+   * Si null, fallback sur « Contrat de suivi & maintenance ».
+   */
+  recurring_support_title?: string | null;
+  /**
+   * Description courte du contrat de suivi — affichée dans la table de
+   * tarification du devis abonnement.
+   */
+  recurring_support_description?: string | null;
+  /**
    * Périmètre de la prestation (texte multi-ligne, une ligne = un bullet point sur le devis).
    * Si null/vide → le générateur de devis utilise la liste catalogue par défaut selon le `type`.
    */
