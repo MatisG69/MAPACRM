@@ -9,6 +9,10 @@ import { ProjectForm } from '../components/projects/ProjectForm';
 import { ProjectCardPreview } from '../components/projects/ProjectCardPreview';
 import { ClientPortalSection } from '../components/projects/ClientPortalSection';
 import { ClientDocumentsManager } from '../components/projects/ClientDocumentsManager';
+import { ProjectBriefEditor } from '../components/projects/ProjectBriefEditor';
+import { ProjectCollaboration } from '../components/projects/ProjectCollaboration';
+import { ProjectProductionEditor } from '../components/projects/ProjectProductionEditor';
+import { ProjectExtras } from '../components/projects/ProjectExtras';
 import { TaskForm } from '../components/tasks/TaskForm';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import type {
@@ -288,6 +292,10 @@ export function ProjectDetailPage({
       </div>
 
       <div className="px-4 md:px-8 pb-8">
+        <ProjectBriefEditor projectId={project.id} />
+      </div>
+
+      <div className="px-4 md:px-8 pb-8">
         <ClientPortalSection projectId={project.id} />
       </div>
 
@@ -301,6 +309,22 @@ export function ProjectDetailPage({
             quotes={projectQuotes}
             invoices={projectInvoices}
           />
+        </div>
+      )}
+
+      {project.client_id && (
+        <div className="px-4 md:px-8 pb-8">
+          <ProjectCollaboration projectId={project.id} clientId={project.client_id} />
+        </div>
+      )}
+
+      <div className="px-4 md:px-8 pb-8">
+        <ProjectProductionEditor projectId={project.id} />
+      </div>
+
+      {project.client_id && (
+        <div className="px-4 md:px-8 pb-8">
+          <ProjectExtras projectId={project.id} clientId={project.client_id} />
         </div>
       )}
 

@@ -11,9 +11,15 @@ import {
   X,
   Calendar,
   Lock,
+  MailQuestion,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { Modal } from '../ui/Modal';
 import { useClientDocuments } from '../../hooks/useClientDocuments';
 import type {
   Client,
@@ -22,6 +28,7 @@ import type {
   Invoice,
   Project,
   Quote,
+  RequestPriority,
 } from '../../lib/types';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { generateDevisHTML, isRecurringQuoteHeuristic } from '../../lib/devisGenerator';
@@ -136,10 +143,17 @@ export function ClientDocumentsManager({
   quotes = [],
   invoices = [],
 }: ClientDocumentsManagerProps) {
-  const { documents, loading, error, upload, remove, getSignedUrl } = useClientDocuments(
-    clientId,
-    projectId ?? null,
-  );
+  const {
+    documents,
+    loading,
+    error,
+    upload,
+    remove,
+    getSignedUrl,
+    createRequest,
+    validateRequest,
+    rejectRequest,
+  } = useClientDocuments(clientId, projectId ?? null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -150,6 +164,31 @@ export function ClientDocumentsManager({
   });
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  /* ── Création de demande de ressource ── */
+  const [requestFormOpen, setRequestFormOpen] = useState(false);
+  const [requestForm, setRequestForm] = useState<{
+    name: string;
+    description: string;
+    category: ClientDocumentCategory;
+    dueDate: string;
+    priority: RequestPriority;
+    adminNotes: string;
+  }>({
+    name: '',
+    description: '',
+    category: 'autre',
+    dueDate: '',
+    priority: 'normal',
+    adminNotes: '',
+  });
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+
+  /* ── Refus d'une demande reçue ── */
+  const [rejectingDoc, setRejectingDoc] = useState<ClientDocument | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectingSubmitting, setRejectingSubmitting] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<ClientDocument | null>(null);
   const [previewingDocId, setPreviewingDocId] = useState<string | null>(null);
@@ -291,6 +330,58 @@ export function ClientDocumentsManager({
     }
   };
 
+  /* ── Resource request handlers ── */
+
+  const handleCreateRequest = async () => {
+    if (!requestForm.name.trim()) {
+      setRequestError('Le nom du document est requis');
+      return;
+    }
+    setRequestSubmitting(true);
+    setRequestError(null);
+    try {
+      await createRequest({
+        clientId,
+        projectId: projectId ?? null,
+        category: requestForm.category,
+        name: requestForm.name.trim(),
+        description: requestForm.description.trim() || null,
+        dueDate: requestForm.dueDate || null,
+        priority: requestForm.priority,
+        adminNotes: requestForm.adminNotes.trim() || null,
+      });
+      setRequestFormOpen(false);
+      setRequestForm({
+        name: '',
+        description: '',
+        category: 'autre',
+        dueDate: '',
+        priority: 'normal',
+        adminNotes: '',
+      });
+    } catch (e) {
+      setRequestError((e as Error).message);
+    } finally {
+      setRequestSubmitting(false);
+    }
+  };
+
+  const handleValidateRequest = async (doc: ClientDocument) => {
+    await validateRequest(doc);
+  };
+
+  const handleRejectRequest = async () => {
+    if (!rejectingDoc) return;
+    setRejectingSubmitting(true);
+    try {
+      await rejectRequest(rejectingDoc, rejectionReason);
+      setRejectingDoc(null);
+      setRejectionReason('');
+    } finally {
+      setRejectingSubmitting(false);
+    }
+  };
+
   /* ── Preview handlers ── */
   const openUploadPreview = async (doc: ClientDocument) => {
     setPreviewingDocId(doc.id);
@@ -387,40 +478,207 @@ export function ClientDocumentsManager({
           <div>
             <h3 className="font-display text-base font-bold text-ws-paper">Documents partagés</h3>
             <p className="text-xs font-mono text-ws-mist mt-0.5">
-              Vue centralisée — devis, factures et fichiers uploadés
+              Vue centralisée — devis, factures, ressources demandées au client &amp; uploads
               {projectId ? ' · filtrés sur ce projet' : ''}
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={<Upload size={14} />}
-            onClick={onPickFile}
-            className="normal-case tracking-normal"
-          >
-            Ajouter un document
-          </Button>
-          <input ref={fileInputRef} type="file" className="hidden" onChange={onFileChange} />
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<MailQuestion size={14} />}
+              onClick={() => setRequestFormOpen((v) => !v)}
+              className="normal-case tracking-normal"
+            >
+              Demander au client
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Upload size={14} />}
+              onClick={onPickFile}
+              className="normal-case tracking-normal"
+            >
+              Ajouter un document
+            </Button>
+            <input ref={fileInputRef} type="file" className="hidden" onChange={onFileChange} />
+          </div>
         </header>
       )}
 
       {compact && (
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <FolderOpen size={14} className="text-ws-accent" />
             <span className="text-sm font-semibold text-ws-paper">Documents partagés</span>
             <span className="text-[10px] font-mono text-ws-mist">({unified.length})</span>
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={<Upload size={14} />}
-            onClick={onPickFile}
-            className="normal-case tracking-normal"
-          >
-            Ajouter
-          </Button>
-          <input ref={fileInputRef} type="file" className="hidden" onChange={onFileChange} />
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<MailQuestion size={14} />}
+              onClick={() => setRequestFormOpen((v) => !v)}
+              className="normal-case tracking-normal"
+            >
+              Demander
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Upload size={14} />}
+              onClick={onPickFile}
+              className="normal-case tracking-normal"
+            >
+              Ajouter
+            </Button>
+            <input ref={fileInputRef} type="file" className="hidden" onChange={onFileChange} />
+          </div>
+        </div>
+      )}
+
+      {/* ─── Form de demande de ressource ─── */}
+      {requestFormOpen && (
+        <div className="ws-card rounded-2xl border border-sky-500/30 bg-sky-500/[0.04] p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <MailQuestion size={14} className="text-sky-300 flex-shrink-0" />
+              <span className="text-sm text-ws-paper font-medium">
+                Demander un document au client
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setRequestFormOpen(false);
+                setRequestError(null);
+              }}
+              className="p-1.5 rounded-md text-ws-mist hover:text-ws-paper hover:bg-white/5"
+              aria-label="Fermer"
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-ws-mist mb-1">
+                Nom du document à fournir *
+              </label>
+              <input
+                type="text"
+                value={requestForm.name}
+                onChange={(e) => setRequestForm((s) => ({ ...s, name: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg bg-ws-panel border border-ws-line text-ws-paper text-sm focus:outline-none focus:border-sky-500"
+                placeholder="ex : Logo HD (formats SVG + PNG transparent)"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-ws-mist mb-1">
+                Catégorie
+              </label>
+              <select
+                value={requestForm.category}
+                onChange={(e) =>
+                  setRequestForm((s) => ({
+                    ...s,
+                    category: e.target.value as ClientDocumentCategory,
+                  }))
+                }
+                className="w-full px-3 py-2 rounded-lg bg-ws-panel border border-ws-line text-ws-paper text-sm focus:outline-none focus:border-sky-500"
+              >
+                {CATEGORY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-ws-mist mb-1">
+                Priorité
+              </label>
+              <select
+                value={requestForm.priority}
+                onChange={(e) =>
+                  setRequestForm((s) => ({ ...s, priority: e.target.value as RequestPriority }))
+                }
+                className="w-full px-3 py-2 rounded-lg bg-ws-panel border border-ws-line text-ws-paper text-sm focus:outline-none focus:border-sky-500"
+              >
+                <option value="low">Faible</option>
+                <option value="normal">Normale</option>
+                <option value="high">Élevée</option>
+                <option value="urgent">Urgente</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-ws-mist mb-1">
+                Date limite (optionnel)
+              </label>
+              <input
+                type="date"
+                value={requestForm.dueDate}
+                onChange={(e) => setRequestForm((s) => ({ ...s, dueDate: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg bg-ws-panel border border-ws-line text-ws-paper text-sm focus:outline-none focus:border-sky-500 font-mono"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-ws-mist mb-1">
+                Description visible par le client
+              </label>
+              <input
+                type="text"
+                value={requestForm.description}
+                onChange={(e) => setRequestForm((s) => ({ ...s, description: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg bg-ws-panel border border-ws-line text-ws-paper text-sm focus:outline-none focus:border-sky-500"
+                placeholder="Précisions pour le client (formats, dimensions…)"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-ws-mist mb-1">
+                Note interne (optionnel, non visible client)
+              </label>
+              <input
+                type="text"
+                value={requestForm.adminNotes}
+                onChange={(e) => setRequestForm((s) => ({ ...s, adminNotes: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg bg-ws-panel border border-ws-line text-ws-paper text-sm focus:outline-none focus:border-sky-500"
+                placeholder="Mémo personnel…"
+              />
+            </div>
+          </div>
+
+          {requestError && (
+            <p
+              className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-md px-2 py-1.5 font-mono"
+              role="alert"
+            >
+              {requestError}
+            </p>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <Button
+              size="sm"
+              onClick={handleCreateRequest}
+              loading={requestSubmitting}
+              icon={<MailQuestion size={14} />}
+              className="normal-case tracking-normal"
+            >
+              Envoyer la demande
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setRequestFormOpen(false);
+                setRequestError(null);
+              }}
+              className="normal-case tracking-normal"
+            >
+              Annuler
+            </Button>
+          </div>
         </div>
       )}
 
@@ -594,6 +852,11 @@ export function ClientDocumentsManager({
                 onPreviewQuote={openQuotePreview}
                 onPreviewInvoice={openInvoicePreview}
                 onDelete={(doc) => setConfirmDelete(doc)}
+                onValidateRequest={handleValidateRequest}
+                onRejectRequest={(doc) => {
+                  setRejectingDoc(doc);
+                  setRejectionReason('');
+                }}
               />
             ))}
           </div>
@@ -611,6 +874,54 @@ export function ClientDocumentsManager({
         onConfirm={handleConfirmDelete}
         onClose={() => setConfirmDelete(null)}
       />
+
+      {/* Modal refus de demande */}
+      <Modal
+        isOpen={!!rejectingDoc}
+        onClose={() => {
+          setRejectingDoc(null);
+          setRejectionReason('');
+        }}
+        title="Refuser la demande"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-ws-ink leading-relaxed">
+            Vous allez refuser <strong className="text-ws-paper">« {rejectingDoc?.name} »</strong>.
+            Le fichier actuel sera supprimé et le client devra ré-uploader. Indiquez le motif —
+            il sera visible par le client.
+          </p>
+          <textarea
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            rows={3}
+            placeholder="ex : Format SVG manquant, fichier corrompu, mauvais visuel…"
+            className="w-full px-3 py-2 rounded-lg bg-ws-panel border border-ws-line text-ws-paper text-sm focus:outline-none focus:border-red-500 resize-none"
+            autoFocus
+          />
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1 normal-case tracking-normal"
+              onClick={() => {
+                setRejectingDoc(null);
+                setRejectionReason('');
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1 normal-case tracking-normal"
+              onClick={handleRejectRequest}
+              loading={rejectingSubmitting}
+              disabled={!rejectionReason.trim()}
+            >
+              Refuser et redemander
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {pdfPreview &&
         (pdfPreview.kind === 'devis' ? (
@@ -639,7 +950,16 @@ interface UnifiedRowProps {
   onPreviewQuote: (q: Quote) => void;
   onPreviewInvoice: (inv: Invoice) => void;
   onDelete: (doc: ClientDocument) => void;
+  onValidateRequest: (doc: ClientDocument) => Promise<void> | void;
+  onRejectRequest: (doc: ClientDocument) => void;
 }
+
+const PRIORITY_BADGE: Record<string, string> = {
+  low: 'bg-ws-deep/40 text-ws-mist border-ws-line',
+  normal: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
+  high: 'bg-amber-500/12 text-amber-300 border-amber-500/35',
+  urgent: 'bg-red-500/12 text-red-300 border-red-500/35',
+};
 
 function UnifiedRow({
   item,
@@ -648,10 +968,20 @@ function UnifiedRow({
   onPreviewQuote,
   onPreviewInvoice,
   onDelete,
+  onValidateRequest,
+  onRejectRequest,
 }: UnifiedRowProps) {
   const isUpload = item.kind === 'upload';
   const isQuote = item.kind === 'devis';
   const isInvoice = !isUpload && !isQuote;
+
+  // Détection demande (request) parmi les uploads
+  const doc = isUpload ? (item.source as ClientDocument) : null;
+  const isRequest = !!doc?.is_request;
+  const requestStatus = doc?.request_status;
+  const requestReceived = isRequest && requestStatus === 'received';
+  const requestPending = isRequest && (requestStatus === 'requested' || !requestStatus);
+  const requestValidated = isRequest && requestStatus === 'validated';
 
   /* Icon + style par type */
   let Icon = FileText;
@@ -659,8 +989,18 @@ function UnifiedRow({
   let kindLabel = '';
   let kindTone = 'bg-ws-deep/40 text-ws-mist border-ws-line';
 
-  if (isUpload) {
-    const doc = item.source as ClientDocument;
+  if (isRequest) {
+    Icon = MailQuestion;
+    iconStyle = requestPending
+      ? 'bg-sky-500/12 text-sky-300 border-sky-500/30'
+      : requestReceived
+        ? 'bg-amber-500/12 text-amber-300 border-amber-500/30'
+        : requestValidated
+          ? 'bg-emerald-500/12 text-emerald-300 border-emerald-500/30'
+          : 'bg-ws-deep/40 text-ws-mist border-ws-line';
+    kindLabel = 'Demande';
+    kindTone = iconStyle;
+  } else if (isUpload && doc) {
     Icon = CATEGORY_ICON[doc.category] ?? FileText;
     iconStyle = CATEGORY_STYLE[doc.category];
     kindLabel = CATEGORY_OPTIONS.find((o) => o.value === doc.category)?.label ?? doc.category;
@@ -678,10 +1018,43 @@ function UnifiedRow({
   }
 
   const handleView = () => {
-    if (isUpload) onPreviewUpload(item.source as ClientDocument);
-    else if (isQuote) onPreviewQuote(item.source as Quote);
-    else onPreviewInvoice(item.source as Invoice);
+    if (isQuote) {
+      onPreviewQuote(item.source as Quote);
+    } else if (isInvoice) {
+      onPreviewInvoice(item.source as Invoice);
+    } else if (doc?.file_path) {
+      onPreviewUpload(doc);
+    }
   };
+
+  // Status spécifique des demandes
+  let requestStatusBadge: { label: string; tone: string; icon: React.ReactNode } | null = null;
+  if (isRequest) {
+    if (requestPending) {
+      requestStatusBadge = {
+        label: doc?.rejection_reason ? 'À refaire' : 'En attente client',
+        tone: 'bg-sky-500/12 text-sky-300 border-sky-500/30',
+        icon: <Clock size={9} />,
+      };
+    } else if (requestReceived) {
+      requestStatusBadge = {
+        label: 'À valider',
+        tone: 'bg-amber-500/15 text-amber-300 border-amber-500/35',
+        icon: <AlertCircle size={9} />,
+      };
+    } else if (requestValidated) {
+      requestStatusBadge = {
+        label: 'Validé',
+        tone: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
+        icon: <CheckCircle2 size={9} />,
+      };
+    }
+  }
+
+  // Date d'échéance (si demande avec due date)
+  const dueDate = doc?.request_due_date;
+  const overdue =
+    dueDate && requestPending && new Date(dueDate) < new Date(new Date().toDateString());
 
   return (
     <div className="px-4 py-3.5 flex items-center gap-3 hover:bg-ws-raised/30 transition-colors group">
@@ -699,7 +1072,26 @@ function UnifiedRow({
           >
             {kindLabel}
           </span>
-          {item.statusLabel && item.statusTone && (
+          {requestStatusBadge && (
+            <span
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[9px] font-mono uppercase tracking-[0.15em] ${requestStatusBadge.tone}`}
+            >
+              {requestStatusBadge.icon}
+              {requestStatusBadge.label}
+            </span>
+          )}
+          {isRequest && doc && doc.request_priority !== 'normal' && (
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded-full border text-[9px] font-mono uppercase tracking-[0.15em] ${PRIORITY_BADGE[doc.request_priority]}`}
+            >
+              {doc.request_priority === 'urgent'
+                ? 'Urgent'
+                : doc.request_priority === 'high'
+                  ? 'Élevée'
+                  : 'Faible'}
+            </span>
+          )}
+          {item.statusLabel && item.statusTone && !isRequest && (
             <span
               className={`inline-flex items-center px-1.5 py-0.5 rounded-full border text-[9px] font-mono uppercase tracking-[0.15em] ${item.statusTone}`}
             >
@@ -720,13 +1112,30 @@ function UnifiedRow({
           {item.subtitle && (
             <span className="text-[11px] font-mono text-ws-mist truncate">{item.subtitle}</span>
           )}
-          <span className="text-[10px] font-mono text-ws-mist/70 flex items-center gap-1">
-            <Calendar size={9} />
-            {formatDate(item.date)}
-          </span>
-          {isUpload && (item.source as ClientDocument).file_size != null && (
+          {dueDate && (
+            <span
+              className={`text-[10px] font-mono flex items-center gap-1 ${
+                overdue ? 'text-red-300' : 'text-ws-mist/70'
+              }`}
+            >
+              <Calendar size={9} />
+              {overdue ? 'En retard' : 'Échéance'} {formatDate(dueDate)}
+            </span>
+          )}
+          {!dueDate && (
+            <span className="text-[10px] font-mono text-ws-mist/70 flex items-center gap-1">
+              <Calendar size={9} />
+              {formatDate(item.date)}
+            </span>
+          )}
+          {isUpload && doc?.file_size != null && (
             <span className="text-[10px] font-mono text-ws-mist/70">
-              {formatBytes((item.source as ClientDocument).file_size)}
+              {formatBytes(doc.file_size)}
+            </span>
+          )}
+          {isRequest && doc?.rejection_reason && (
+            <span className="text-[10px] font-mono text-red-300/80 italic truncate">
+              Refusé : {doc.rejection_reason}
             </span>
           )}
         </div>
@@ -739,20 +1148,49 @@ function UnifiedRow({
       )}
 
       <div className="flex items-center gap-1 flex-shrink-0">
-        <button
-          type="button"
-          onClick={handleView}
-          disabled={previewing}
-          className="p-1.5 rounded-md text-ws-mist hover:text-ws-accent hover:bg-ws-accent/10 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ws-accent/50"
-          aria-label={`Voir ${item.title}`}
-          title="Voir"
-        >
-          {previewing ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
-        </button>
-        {isUpload && (
+        {/* Demande reçue : actions Valider / Refuser */}
+        {requestReceived && doc && (
+          <>
+            <button
+              type="button"
+              onClick={() => onValidateRequest(doc)}
+              className="p-1.5 rounded-md text-ws-mist hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+              aria-label="Valider"
+              title="Valider la demande"
+            >
+              <CheckCircle2 size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onRejectRequest(doc)}
+              className="p-1.5 rounded-md text-ws-mist hover:text-red-400 hover:bg-red-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+              aria-label="Refuser"
+              title="Refuser et redemander"
+            >
+              <XCircle size={14} />
+            </button>
+          </>
+        )}
+
+        {/* Voir le fichier (si dispo) */}
+        {(!isRequest || doc?.file_path) && (
           <button
             type="button"
-            onClick={() => onDelete(item.source as ClientDocument)}
+            onClick={handleView}
+            disabled={previewing}
+            className="p-1.5 rounded-md text-ws-mist hover:text-ws-accent hover:bg-ws-accent/10 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ws-accent/50"
+            aria-label={`Voir ${item.title}`}
+            title="Voir"
+          >
+            {previewing ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+          </button>
+        )}
+
+        {/* Supprimer (uniquement uploads / demandes — pas devis ni factures) */}
+        {isUpload && doc && (
+          <button
+            type="button"
+            onClick={() => onDelete(doc)}
             className="p-1.5 rounded-md text-ws-mist hover:text-red-400 hover:bg-red-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
             aria-label={`Supprimer ${item.title}`}
             title="Supprimer"

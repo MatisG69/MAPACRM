@@ -324,6 +324,8 @@ export interface PortalUser {
 }
 
 /** Étape de suivi projet visible par le client */
+export type ProjectPhase = 'analyse' | 'conception' | 'dev' | 'ajustements' | 'livraison';
+
 export interface ProjectStep {
   id: string;
   project_id: string;
@@ -333,11 +335,120 @@ export interface ProjectStep {
   status: ProjectStepStatus;
   started_at: string | null;
   completed_at: string | null;
+  /** Phase macro pour grouper les étapes dans la timeline */
+  phase?: ProjectPhase | null;
+  /** Date prévue de début (frise prévisionnelle) */
+  planned_start?: string | null;
+  /** Date prévue de fin */
+  planned_end?: string | null;
+  /** Lien vers un livrable consultable par le client (staging, Figma, etc.) */
+  deliverable_url?: string | null;
+  /** Si true, l'étape requiert une validation explicite du client */
+  requires_validation?: boolean;
+  validated_at?: string | null;
+  validated_signature?: string | null;
+  validated_by_ip?: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export type PortalMessageSender = 'client' | 'team';
+
+export type ChangeRequestStatus =
+  | 'submitted'
+  | 'estimated'
+  | 'approved'
+  | 'rejected'
+  | 'completed';
+export type ChangeRequestUrgency = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface ChangeRequest {
+  id: string;
+  project_id: string;
+  client_id: string;
+  description: string;
+  urgency: ChangeRequestUrgency;
+  estimated_days: number | null;
+  estimated_amount: number | null;
+  status: ChangeRequestStatus;
+  submitted_by_signature: string | null;
+  submitted_at: string;
+  approved_by_signature: string | null;
+  approved_at: string | null;
+  approved_by_ip: string | null;
+  rejection_reason: string | null;
+  admin_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MeetingKind = 'visio' | 'physique' | 'telephone' | 'autre';
+
+export interface MeetingNote {
+  id: string;
+  project_id: string;
+  client_id: string;
+  meeting_date: string;
+  meeting_duration_minutes: number | null;
+  meeting_attendees: string | null;
+  meeting_kind: MeetingKind;
+  title: string;
+  decisions: string | null;
+  actions: string | null;
+  next_steps: string | null;
+  validated_at: string | null;
+  validated_by_signature: string | null;
+  validated_by_ip: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Notification in-app. `target_user_id` NULL = destinée à l'admin CRM,
+ * sinon destinée à un client du portail.
+ */
+export interface Notification {
+  id: string;
+  target_user_id: string | null;
+  kind: string;
+  title: string;
+  message: string | null;
+  link_path: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+/**
+ * Brief & spécifications d'un projet (1:1 avec `projects`).
+ * Visible par le client via le portail. Le client peut signer numériquement
+ * pour valider le périmètre — protection juridique anti-litige scope.
+ */
+export interface ProjectBrief {
+  id: string;
+  project_id: string;
+  /** Objectifs business (texte multi-ligne) */
+  objectives: string | null;
+  /** Périmètre inclus (texte multi-ligne, 1 ligne = 1 puce) */
+  scope_in: string | null;
+  /** Hors périmètre explicite (texte multi-ligne) */
+  scope_out: string | null;
+  /** Contraintes techniques, légales, calendrier */
+  constraints: string | null;
+  /** Livrables attendus */
+  deliverables: string | null;
+  /** Lien vers maquettes Figma (URL ou embed) */
+  figma_url: string | null;
+  /** Notes libres */
+  notes: string | null;
+  /** Timestamp de validation client */
+  validated_at: string | null;
+  /** IP du client au moment de la validation */
+  validated_by_ip: string | null;
+  /** Signature texte du client (nom complet tapé) */
+  validated_signature: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 /** Message échangé entre le client et l'équipe via l'espace client */
 export interface PortalMessage {
@@ -362,6 +473,9 @@ export type ClientDocumentCategory =
  * Document arbitraire uploadé par l'admin pour un client (visible côté portail).
  * Stockage : bucket Supabase `client-documents`. RLS scope par `client_id`.
  */
+export type RequestStatus = 'requested' | 'received' | 'validated' | 'rejected';
+export type RequestPriority = 'low' | 'normal' | 'high' | 'urgent';
+
 export interface ClientDocument {
   id: string;
   client_id: string;
@@ -369,10 +483,20 @@ export interface ClientDocument {
   category: ClientDocumentCategory;
   name: string;
   description: string | null;
-  file_path: string;
+  /** Null si c'est une demande pas encore remplie par le client. */
+  file_path: string | null;
   mime_type: string | null;
   file_size: number | null;
   uploaded_by: string | null;
+  /** true → l'admin attend un fichier du client (ressource demandée). */
+  is_request: boolean;
+  request_status: RequestStatus | null;
+  request_due_date: string | null;
+  request_priority: RequestPriority;
+  request_admin_notes: string | null;
+  received_at: string | null;
+  validated_at: string | null;
+  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -405,4 +529,87 @@ export interface Call {
     website: string | null;
     avatar_color?: string;
   } | null;
+}
+
+/* ─── Sprint 7 : Témoignages, NDA, Suggestions ─── */
+
+export interface Testimonial {
+  id: string;
+  project_id: string;
+  client_id: string;
+  rating: number;
+  content: string;
+  author_signature: string;
+  author_role: string | null;
+  allow_public: boolean;
+  allow_logo: boolean;
+  approved: boolean;
+  approved_at: string | null;
+  rejection_reason: string | null;
+  signed_at: string;
+  signed_by_ip: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type NdaStatus = 'draft' | 'sent' | 'signed' | 'expired' | 'cancelled';
+
+export interface NdaAgreement {
+  id: string;
+  project_id: string;
+  client_id: string;
+  title: string;
+  content: string;
+  expires_at: string | null;
+  signed_at: string | null;
+  signed_by_signature: string | null;
+  signed_by_ip: string | null;
+  status: NdaStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SuggestionKind = 'feature' | 'improvement' | 'bug' | 'question' | 'other';
+export type SuggestionStatus = 'new' | 'considering' | 'planned' | 'done' | 'declined';
+
+export interface ProjectSuggestion {
+  id: string;
+  project_id: string;
+  client_id: string;
+  title: string;
+  description: string | null;
+  kind: SuggestionKind;
+  status: SuggestionStatus;
+  admin_response: string | null;
+  submitted_by_signature: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Site en production (1:1 avec un projet livré). Sprint 6. */
+export type UptimeStatus = 'up' | 'down' | 'unknown' | 'maintenance';
+
+export interface ProjectProduction {
+  id: string;
+  project_id: string;
+  prod_url: string | null;
+  hosting_provider: string | null;
+  hosting_dashboard_url: string | null;
+  repo_url: string | null;
+  cms_url: string | null;
+  launch_date: string | null;
+  lighthouse_performance: number | null;
+  lighthouse_accessibility: number | null;
+  lighthouse_seo: number | null;
+  lighthouse_best_practices: number | null;
+  cwv_lcp_seconds: number | null;
+  cwv_cls: number | null;
+  cwv_inp_ms: number | null;
+  lighthouse_checked_at: string | null;
+  lighthouse_report_url: string | null;
+  uptime_status: UptimeStatus;
+  uptime_checked_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }

@@ -54,7 +54,23 @@ export function ClientPortalSection({ projectId }: ClientPortalSectionProps) {
   const [isAddingStep, setIsAddingStep] = useState(false);
   const [newStep, setNewStep] = useState({ title: '', description: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ title: '', description: '' });
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    description: string;
+    phase: string;
+    planned_start: string;
+    planned_end: string;
+    deliverable_url: string;
+    requires_validation: boolean;
+  }>({
+    title: '',
+    description: '',
+    phase: '',
+    planned_start: '',
+    planned_end: '',
+    deliverable_url: '',
+    requires_validation: false,
+  });
 
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
@@ -88,7 +104,15 @@ export function ClientPortalSection({ projectId }: ClientPortalSectionProps) {
 
   const startEdit = (step: ProjectStep) => {
     setEditingId(step.id);
-    setEditForm({ title: step.title, description: step.description ?? '' });
+    setEditForm({
+      title: step.title,
+      description: step.description ?? '',
+      phase: step.phase ?? '',
+      planned_start: step.planned_start ?? '',
+      planned_end: step.planned_end ?? '',
+      deliverable_url: step.deliverable_url ?? '',
+      requires_validation: !!step.requires_validation,
+    });
   };
 
   const saveEdit = async () => {
@@ -96,6 +120,11 @@ export function ClientPortalSection({ projectId }: ClientPortalSectionProps) {
     await updateStep(editingId, {
       title: editForm.title.trim(),
       description: editForm.description.trim() || null,
+      phase: (editForm.phase || null) as ProjectStep['phase'],
+      planned_start: editForm.planned_start || null,
+      planned_end: editForm.planned_end || null,
+      deliverable_url: editForm.deliverable_url.trim() || null,
+      requires_validation: editForm.requires_validation,
     });
     setEditingId(null);
   };
@@ -239,13 +268,71 @@ export function ClientPortalSection({ projectId }: ClientPortalSectionProps) {
                         value={editForm.title}
                         onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
                         className="w-full px-2.5 py-1.5 rounded-md bg-ws-panel border border-ws-line text-ws-paper text-sm focus:outline-none focus:border-ws-accent"
+                        placeholder="Titre de l'étape"
                       />
                       <textarea
                         value={editForm.description}
                         onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
                         rows={2}
                         className="w-full px-2.5 py-1.5 rounded-md bg-ws-panel border border-ws-line text-ws-paper text-sm focus:outline-none focus:border-ws-accent resize-none"
+                        placeholder="Description"
                       />
+
+                      {/* Champs avancés : phase, dates prévues, livrable, validation */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1">
+                        <select
+                          value={editForm.phase}
+                          onChange={(e) => setEditForm((f) => ({ ...f, phase: e.target.value }))}
+                          className="px-2.5 py-1.5 rounded-md bg-ws-panel border border-ws-line text-ws-paper text-xs focus:outline-none focus:border-ws-accent"
+                        >
+                          <option value="">— Phase —</option>
+                          <option value="analyse">01 Analyse</option>
+                          <option value="conception">02 Conception</option>
+                          <option value="dev">03 Développement</option>
+                          <option value="ajustements">04 Ajustements</option>
+                          <option value="livraison">05 Livraison</option>
+                        </select>
+                        <input
+                          type="date"
+                          value={editForm.planned_start}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, planned_start: e.target.value }))
+                          }
+                          className="px-2.5 py-1.5 rounded-md bg-ws-panel border border-ws-line text-ws-paper text-xs font-mono focus:outline-none focus:border-ws-accent"
+                          placeholder="Début"
+                          aria-label="Date de début prévue"
+                        />
+                        <input
+                          type="date"
+                          value={editForm.planned_end}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, planned_end: e.target.value }))
+                          }
+                          className="px-2.5 py-1.5 rounded-md bg-ws-panel border border-ws-line text-ws-paper text-xs font-mono focus:outline-none focus:border-ws-accent"
+                          aria-label="Date de fin prévue"
+                        />
+                      </div>
+                      <input
+                        type="url"
+                        value={editForm.deliverable_url}
+                        onChange={(e) =>
+                          setEditForm((f) => ({ ...f, deliverable_url: e.target.value }))
+                        }
+                        className="w-full px-2.5 py-1.5 rounded-md bg-ws-panel border border-ws-line text-ws-paper text-xs focus:outline-none focus:border-ws-accent"
+                        placeholder="URL livrable (staging, Figma, preview…)"
+                      />
+                      <label className="inline-flex items-center gap-2 cursor-pointer text-[11px] font-mono text-ws-mist select-none">
+                        <input
+                          type="checkbox"
+                          checked={editForm.requires_validation}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, requires_validation: e.target.checked }))
+                          }
+                          className="w-3.5 h-3.5 rounded accent-ws-accent"
+                        />
+                        Validation client requise pour cette étape
+                      </label>
+
                       <div className="flex gap-2">
                         <Button size="sm" onClick={saveEdit} className="normal-case tracking-normal">
                           Enregistrer

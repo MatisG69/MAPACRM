@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Search, X, Info, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Bell, Search, X, Info, AlertTriangle, CheckCircle2, MessageSquare, FileCheck, FileText, Inbox } from 'lucide-react';
 import { MapaLogo } from './MapaLogo';
+import { useNotifications } from '../../hooks/useNotifications';
+import type { Notification as DbNotification } from '../../lib/types';
 
 export interface AppNotification {
   id: string
@@ -82,9 +84,104 @@ function NotificationPanel({
   )
 }
 
+const KIND_ICON: Record<string, React.ReactNode> = {
+  client_message: <MessageSquare size={14} className="text-ws-accent flex-shrink-0 mt-0.5" />,
+  doc_received: <Inbox size={14} className="text-emerald-400 flex-shrink-0 mt-0.5" />,
+  brief_validated: <FileCheck size={14} className="text-emerald-400 flex-shrink-0 mt-0.5" />,
+  step_validated: <FileCheck size={14} className="text-emerald-400 flex-shrink-0 mt-0.5" />,
+  default: <FileText size={14} className="text-ws-mist flex-shrink-0 mt-0.5" />,
+};
+
+function DbNotificationPanel({
+  notifications,
+  unreadCount,
+  onClose,
+  onMarkRead,
+  onMarkAllRead,
+}: {
+  notifications: DbNotification[];
+  unreadCount: number;
+  onClose: () => void;
+  onMarkRead: (id: string) => void;
+  onMarkAllRead: () => void;
+}) {
+  return (
+    <div className="absolute right-0 top-full mt-2 w-80 bg-ws-panel border border-ws-line rounded-2xl shadow-2xl z-50 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-ws-line">
+        <span className="text-xs font-semibold uppercase tracking-widest text-ws-accent-soft">
+          Notifications {unreadCount > 0 && `· ${unreadCount}`}
+        </span>
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button
+              onClick={onMarkAllRead}
+              className="text-[10px] font-mono uppercase tracking-[0.15em] text-ws-mist hover:text-ws-paper transition-colors"
+            >
+              Tout lire
+            </button>
+          )}
+          <button onClick={onClose} className="text-ws-mist hover:text-ws-paper transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+      <div className="max-h-96 overflow-y-auto divide-y divide-ws-line/50">
+        {notifications.length === 0 ? (
+          <p className="text-xs text-ws-mist text-center py-8 font-mono">Aucune notification</p>
+        ) : (
+          notifications.map((n) => {
+            const isUnread = !n.read_at;
+            return (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => isUnread && onMarkRead(n.id)}
+                className={`w-full text-left flex items-start gap-2.5 px-4 py-3 hover:bg-ws-deep/40 transition-colors ${
+                  isUnread ? 'bg-ws-accent/[0.04]' : ''
+                }`}
+              >
+                {KIND_ICON[n.kind] ?? KIND_ICON.default}
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs leading-relaxed ${isUnread ? 'text-ws-paper font-medium' : 'text-ws-ink'}`}>
+                    {n.title}
+                  </p>
+                  {n.message && (
+                    <p className="text-[10px] text-ws-mist mt-0.5 leading-snug truncate">
+                      {n.message}
+                    </p>
+                  )}
+                  <p className="text-[9px] text-ws-mist/70 mt-1 font-mono">
+                    {new Date(n.created_at).toLocaleString('fr-FR', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+                {isUnread && (
+                  <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-ws-accent" />
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Header({ title, subtitle, actions, searchValue, onSearchChange, notifications = [] }: HeaderProps) {
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
+
+  // Notifications BDD (priorité sur les notifs in-prop legacy)
+  const {
+    notifications: dbNotifications,
+    unreadCount: dbUnreadCount,
+    markRead,
+    markAllRead,
+  } = useNotifications();
 
   useEffect(() => {
     if (!notifOpen) return
@@ -97,7 +194,10 @@ export function Header({ title, subtitle, actions, searchValue, onSearchChange, 
     return () => document.removeEventListener('mousedown', handler)
   }, [notifOpen])
 
-  const hasUnread = notifications.length > 0
+  // On affiche les notifs BDD si dispo, sinon fallback sur prop legacy
+  const useDb = dbNotifications.length > 0 || dbUnreadCount > 0
+  const hasUnread = useDb ? dbUnreadCount > 0 : notifications.length > 0
+  const badgeCount = useDb ? dbUnreadCount : notifications.length
 
   return (
     <div className="sticky top-0 z-20 bg-ws-deep/90 backdrop-blur-2xl border-b border-white/[0.06] px-4 py-3.5 md:px-8 md:py-5 supports-[backdrop-filter]:bg-ws-deep/80">
@@ -126,10 +226,21 @@ export function Header({ title, subtitle, actions, searchValue, onSearchChange, 
             >
               <Bell size={18} strokeWidth={1.75} />
               {hasUnread && (
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-ws-accent rounded-full ring-2 ring-ws-panel" />
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-ws-accent text-[9px] font-bold font-mono text-ws-void ring-2 ring-ws-panel">
+                  {badgeCount > 9 ? '9+' : badgeCount}
+                </span>
               )}
             </button>
-            {notifOpen && (
+            {notifOpen && useDb && (
+              <DbNotificationPanel
+                notifications={dbNotifications}
+                unreadCount={dbUnreadCount}
+                onClose={() => setNotifOpen(false)}
+                onMarkRead={(id) => void markRead(id)}
+                onMarkAllRead={() => void markAllRead()}
+              />
+            )}
+            {notifOpen && !useDb && (
               <NotificationPanel notifications={notifications} onClose={() => setNotifOpen(false)} />
             )}
           </div>
@@ -176,10 +287,21 @@ export function Header({ title, subtitle, actions, searchValue, onSearchChange, 
             >
               <Bell size={18} strokeWidth={1.75} />
               {hasUnread && (
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-ws-accent rounded-full ring-2 ring-ws-panel" />
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-ws-accent text-[9px] font-bold font-mono text-ws-void ring-2 ring-ws-panel">
+                  {badgeCount > 9 ? '9+' : badgeCount}
+                </span>
               )}
             </button>
-            {notifOpen && (
+            {notifOpen && useDb && (
+              <DbNotificationPanel
+                notifications={dbNotifications}
+                unreadCount={dbUnreadCount}
+                onClose={() => setNotifOpen(false)}
+                onMarkRead={(id) => void markRead(id)}
+                onMarkAllRead={() => void markAllRead()}
+              />
+            )}
+            {notifOpen && !useDb && (
               <NotificationPanel notifications={notifications} onClose={() => setNotifOpen(false)} />
             )}
           </div>
