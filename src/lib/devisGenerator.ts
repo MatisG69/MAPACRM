@@ -1096,10 +1096,26 @@ export function generateDevisHTML(params: DevisParams): string {
 
 </section>
 
-${includeCGV ? renderCGVPage({ quoteNumber, client, depositPercent }) : ''}
+${includeCGV
+  ? renderCGVPage({ quoteNumber, client, depositPercent })
+  : isRecurring
+    ? renderSignaturePage({
+        quoteNumber,
+        client,
+        pageLabel: 'Page 2/2',
+        title: 'Acceptation du devis de suivi mensuel',
+        recap: `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis de suivi mensuel <strong>${escapeHtml(quoteNumber)}</strong> émis le ${today()} par <strong>MAPA Développement</strong>${parentQuoteRef ? `, en lien avec le devis de prestation initial <strong>${escapeHtml(parentQuoteRef)}</strong>` : ''}. <em>Fait en deux exemplaires originaux.</em>`,
+        mention: `La mention <strong>« Lu et approuvé, bon pour accord »</strong> doit être apposée de la main du signataire, suivie de sa signature et, le cas échéant, du cachet de l'entreprise. Tout exemplaire non signé ou dont la mention manuscrite ferait défaut ne saurait engager les parties.`,
+      })
+    : ''}
 
 </body>
 </html>`
+}
+
+/** Helper d'échappement HTML utilisable depuis l'appelant comme depuis renderCGVPage. */
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1284,15 +1300,43 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
   <div class="cgv-continued">Signature du devis et des présentes CGV → page suivante</div>
 </section>
 
+${renderSignaturePage({
+  quoteNumber,
+  client,
+  pageLabel: 'Page 5/5',
+  title: 'Acceptation du devis et des Conditions Générales de Vente',
+  recap: `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis <strong>${safe(quoteNumber)}</strong> émis le ${updatedAt} par <strong>MAPA Développement</strong>, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document. Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>`,
+  mention: `La mention <strong>« Lu et approuvé, bon pour accord »</strong> doit être apposée de la main du signataire, suivie de sa signature et, le cas échéant, du cachet de l'entreprise. Les <em>paraphes sont recommandés en bas de chaque page</em>. Tout exemplaire non signé ou dont la mention manuscrite ferait défaut ne saurait engager les parties.`,
+})}`
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Page de signature autonome — réutilisable :
+   · pour le devis principal : page 5/5, après les CGV.
+   · pour le devis de suivi mensuel : page 2/2, sans CGV.
+   ═══════════════════════════════════════════════════════════ */
+function renderSignaturePage(ctx: {
+  quoteNumber: string
+  client: Client
+  pageLabel: string
+  title: string
+  recap: string
+  mention: string
+}): string {
+  const { quoteNumber, client, pageLabel, title, recap, mention } = ctx
+  const clientName = client.company || formatClientFullName(client)
+  const updatedAt = today()
+  const safe = escapeHtml
+  return `
 <section class="page page-sign">
   <div class="sign-head">
-    <div class="eyebrow">Annexe contractuelle · Page 5/5</div>
-    <div class="ttl">Acceptation du devis et des Conditions Générales de Vente</div>
+    <div class="eyebrow">Annexe contractuelle · ${pageLabel}</div>
+    <div class="ttl">${title}</div>
     <div class="sub">Devis <strong style="color:#E2C97E">${safe(quoteNumber)}</strong> · ${safe(clientName)}</div>
   </div>
 
   <div class="sign-recap">
-    La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis <strong>${safe(quoteNumber)}</strong> émis le ${updatedAt} par <strong>MAPA Développement</strong>, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document. Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>
+    ${recap}
   </div>
 
   <div class="sign-grid">
@@ -1337,7 +1381,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
   </div>
 
   <div class="sign-mention">
-    La mention <strong>« Lu et approuvé, bon pour accord »</strong> doit être apposée de la main du signataire, suivie de sa signature et, le cas échéant, du cachet de l'entreprise. Les <em>paraphes sont recommandés en bas de chaque page</em>. Tout exemplaire non signé ou dont la mention manuscrite ferait défaut ne saurait engager les parties.
+    ${mention}
   </div>
 
   <div class="sign-footer">
