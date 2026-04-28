@@ -291,8 +291,11 @@ function numberToFrenchWords(n: number): string {
   return String(i)
 }
 
-/** Phrase légale dynamique pour la modalité d'acompte (article 3 CGV) */
-function depositClauseLegal(depositPercent: number): string {
+/** Phrase légale dynamique pour la modalité de paiement (article 3 CGV) */
+function depositClauseLegal(depositPercent: number, isRecurring: boolean = false): string {
+  if (isRecurring) {
+    return "Pour les <strong>contrats de suivi mensuel</strong>, la facturation est <strong>mensuelle</strong>, payable par virement à <strong>trente (30) jours</strong> à compter de l'émission de la facture, conformément à l'<em>article L. 441-10 du Code de commerce</em>."
+  }
   const p = Math.max(0, Math.min(100, Math.round(depositPercent)))
   if (p === 0) return 'Sauf stipulation contraire au devis : <strong>paiement intégral à la livraison</strong>, sans acompte requis.'
   if (p === 100) return 'Sauf stipulation contraire au devis : <strong>paiement intégral à la commande</strong> avant démarrage des travaux.'
@@ -349,9 +352,11 @@ export function generateDevisHTML(params: DevisParams): string {
     parentQuoteRef,
   } = params
 
-  // En mode abonnement mensuel : pas de CGV transactionnelles (incompatibles
-  // avec la structure acompte/solde) et pas de calendrier acompte/livraison.
-  const includeCGV = isRecurring ? false : includeCGVRaw
+  // Les CGV sont systématiquement annexées en mode suivi mensuel : elles
+  // contiennent les art. 9.2 / 9.3 (engagement initial 12 mois, reconduction
+  // tacite, préavis 30 jours) que le devis cite. Hors suivi, l'inclusion suit
+  // le choix opérateur (case `includeCGV` du formulaire).
+  const includeCGV = isRecurring ? true : includeCGVRaw
 
   const acompteDateDisplay = formatISODate(acompteDateISO) ?? null
   const deliveryDateDisplay = formatISODate(deliveryDateISO) ?? null
@@ -815,6 +820,19 @@ export function generateDevisHTML(params: DevisParams): string {
   }
   .sign-mention strong{color:#E2C97E;font-style:italic;}
 
+  .acceptance-check{
+    display:flex;align-items:flex-start;gap:8px;
+    padding:8px 0 10px;
+    font-size:8pt;color:#C8BFB0;line-height:1.45;
+  }
+  .acceptance-check .check-box{
+    display:inline-block;width:11px;height:11px;
+    border:1.2px solid #C9A84C;border-radius:1px;
+    flex-shrink:0;margin-top:1px;
+    background:rgba(201,168,76,.04);
+  }
+  .acceptance-check .check-label{flex:1;font-style:normal;}
+
   .sign-footer{
     margin-top:14px;padding-top:10px;
     border-top:1px solid rgba(201,168,76,.2);
@@ -1088,7 +1106,7 @@ export function generateDevisHTML(params: DevisParams): string {
     <div class="diamond-row">♦</div>
     <div class="brand">MAPA Développement · Matis Gouyet · Entrepreneur Individuel (EI)</div>
     <div class="name" style="font-style:normal;font-family:'Inter',sans-serif;font-size:6.5pt;letter-spacing:.05em;color:#9E9080;line-height:1.55;margin-top:3px">
-      89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq · SIREN 919 461 301 · SIRET 919 461 301 00021<br>
+      14 Rue d'Aguesseau, 59800 Lille · SIREN 919 461 301 · SIRET 919 461 301 00021<br>
       Dispensé d'immatriculation au RCS et au RM · TVA non applicable, art. 293 B du CGI<br>
       contact@mapa-developpement.fr · +33 6 79 62 39 42
     </div>
@@ -1097,17 +1115,20 @@ export function generateDevisHTML(params: DevisParams): string {
 </section>
 
 ${includeCGV
-  ? renderCGVPage({ quoteNumber, client, depositPercent })
-  : isRecurring
-    ? renderSignaturePage({
+  ? renderCGVPage({ quoteNumber, client, depositPercent, isRecurring })
+    + renderSignaturePage({
         quoteNumber,
         client,
-        pageLabel: 'Page 2/2',
-        title: 'Acceptation du devis de suivi mensuel',
-        recap: `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis de suivi mensuel <strong>${escapeHtml(quoteNumber)}</strong> émis le ${today()} par <strong>MAPA Développement</strong>${parentQuoteRef ? `, en lien avec le devis de prestation initial <strong>${escapeHtml(parentQuoteRef)}</strong>` : ''}. <em>Fait en deux exemplaires originaux.</em>`,
-        mention: `La mention <strong>« Lu et approuvé, bon pour accord »</strong> doit être apposée de la main du signataire, suivie de sa signature et, le cas échéant, du cachet de l'entreprise. Tout exemplaire non signé ou dont la mention manuscrite ferait défaut ne saurait engager les parties.`,
+        pageLabel: 'Page 5/5',
+        title: isRecurring
+          ? 'Acceptation du devis de suivi mensuel et des Conditions Générales de Vente'
+          : 'Acceptation du devis et des Conditions Générales de Vente',
+        recap: isRecurring
+          ? `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis de suivi mensuel <strong>${escapeHtml(quoteNumber)}</strong> émis le ${today()} par <strong>MAPA Développement</strong>${parentQuoteRef ? `, en lien avec le devis de prestation initial <strong>${escapeHtml(parentQuoteRef)}</strong>` : ''}, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document, et notamment de l'<strong>article 9.2</strong> (contrat de suivi) et de l'<strong>article 9.3</strong> (engagement initial de douze mois reconductible par tacite reconduction, dénonciation par lettre recommandée avec accusé de réception au moins trente jours avant le terme en cours). Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>`
+          : `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis <strong>${escapeHtml(quoteNumber)}</strong> émis le ${today()} par <strong>MAPA Développement</strong>, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document. Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>`,
+        mention: `L'acceptation du Client est matérialisée par la case <strong>« Je reconnais avoir lu et accepté ces conditions »</strong>, complétée par sa signature. Conformément à l'<em>article 1366 du Code civil</em>, l'écrit électronique signé a la même force probante que l'écrit sur support papier dès lors que l'identité du signataire et l'intégrité du document sont garanties. Tout exemplaire dépourvu de l'acceptation expresse et de la signature ne saurait engager les parties.`,
       })
-    : ''}
+  : ''}
 
 </body>
 </html>`
@@ -1125,8 +1146,8 @@ function escapeHtml(s: string): string {
    Code de la propriété intellectuelle, Code de la consommation,
    RGPD), structure ordonnée, zéro clause floue.
    ═══════════════════════════════════════════════════════════ */
-function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercent: number }): string {
-  const { quoteNumber, client, depositPercent } = ctx
+function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercent: number; isRecurring?: boolean }): string {
+  const { quoteNumber, client, depositPercent, isRecurring = false } = ctx
   const clientName = client.company || formatClientFullName(client)
   const updatedAt = today()
   const safe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -1157,7 +1178,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
 
     <div class="cgv-art">
       <h5>Art. 3 - Prix et modalités de paiement</h5>
-      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. ${depositClauseLegal(depositPercent)} Les paiements sont effectués par virement bancaire sur le compte indiqué sur la facture. Aucun escompte pour paiement anticipé n'est consenti.</p>
+      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. ${depositClauseLegal(depositPercent, isRecurring)} Les paiements sont effectués par virement bancaire sur le compte indiqué sur la facture. Aucun escompte pour paiement anticipé n'est consenti.</p>
     </div>
 
     <div class="cgv-art">
@@ -1270,7 +1291,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
   ${cgvHeader('Page 2/5')}
 
   <div class="cgv-preamble">
-    <strong>Préambule.</strong> Les présentes conditions générales de vente (ci-après « CGV ») régissent l'ensemble des relations contractuelles entre <strong>MAPA Développement</strong>, exploitée par Matis GOUYET, entrepreneur individuel sous le régime de la micro-entreprise, immatriculée au Registre National des Entreprises sous le numéro SIREN <strong>919 461 301</strong>, dont le siège est sis 89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq (ci-après « le Prestataire »), et toute personne morale ou personne physique agissant à des fins entrant dans le cadre de son activité commerciale, industrielle, artisanale, libérale ou agricole, passant commande (ci-après « le Client »). Les présentes CGV sont <strong>exclusivement applicables aux relations entre professionnels</strong> au sens du droit français ; elles ne sauraient s'appliquer à un Client consommateur ou non-professionnel au sens de l'article liminaire du Code de la consommation. Toute commande emporte adhésion sans réserve aux présentes CGV, qui prévalent sur tout autre document du Client (CGA, conditions internes), sauf dérogation écrite expresse du Prestataire.
+    <strong>Préambule.</strong> Les présentes conditions générales de vente (ci-après « CGV ») régissent l'ensemble des relations contractuelles entre <strong>MAPA Développement</strong>, exploitée par Matis GOUYET, entrepreneur individuel sous le régime de la micro-entreprise, immatriculée au Registre National des Entreprises sous le numéro SIREN <strong>919 461 301</strong>, dont le siège est sis 14 Rue d'Aguesseau, 59800 Lille (ci-après « le Prestataire »), et toute personne morale ou personne physique agissant à des fins entrant dans le cadre de son activité commerciale, industrielle, artisanale, libérale ou agricole, passant commande (ci-après « le Client »). Les présentes CGV sont <strong>exclusivement applicables aux relations entre professionnels</strong> au sens du droit français ; elles ne sauraient s'appliquer à un Client consommateur ou non-professionnel au sens de l'article liminaire du Code de la consommation. Toute commande emporte adhésion sans réserve aux présentes CGV, qui prévalent sur tout autre document du Client (CGA, conditions internes), sauf dérogation écrite expresse du Prestataire.
   </div>
 
   <div class="cgv-body">
@@ -1298,22 +1319,14 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
   </div>
 
   <div class="cgv-continued">Signature du devis et des présentes CGV → page suivante</div>
-</section>
-
-${renderSignaturePage({
-  quoteNumber,
-  client,
-  pageLabel: 'Page 5/5',
-  title: 'Acceptation du devis et des Conditions Générales de Vente',
-  recap: `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis <strong>${safe(quoteNumber)}</strong> émis le ${updatedAt} par <strong>MAPA Développement</strong>, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document. Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>`,
-  mention: `La mention <strong>« Lu et approuvé, bon pour accord »</strong> doit être apposée de la main du signataire, suivie de sa signature et, le cas échéant, du cachet de l'entreprise. Les <em>paraphes sont recommandés en bas de chaque page</em>. Tout exemplaire non signé ou dont la mention manuscrite ferait défaut ne saurait engager les parties.`,
-})}`
+</section>`
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Page de signature autonome — réutilisable :
-   · pour le devis principal : page 5/5, après les CGV.
-   · pour le devis de suivi mensuel : page 2/2, sans CGV.
+   Page de signature autonome — réutilisable, toujours en page 5/5
+   après les 3 pages CGV (art. 1 à 20). Les variantes (devis
+   principal vs. devis de suivi mensuel) sont portées par le titre
+   et le recap, transmis par l'appelant.
    ═══════════════════════════════════════════════════════════ */
 function renderSignaturePage(ctx: {
   quoteNumber: string
@@ -1345,22 +1358,22 @@ function renderSignaturePage(ctx: {
       <div class="entity">MAPA Développement</div>
       <div class="coords">
         Matis GOUYET, Entrepreneur Individuel (EI)<br>
-        89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq<br>
+        14 Rue d'Aguesseau, 59800 Lille<br>
         SIREN 919 461 301 · SIRET 919 461 301 00021<br>
         Dispensé d'immatriculation au RCS et au RM<br>
         TVA non applicable, art. 293 B du CGI<br>
         contact@mapa-developpement.fr · +33 6 79 62 39 42
       </div>
       <div class="fields">
-        <div class="field"><span class="k">Fait à</span><span>Villeneuve-d'Ascq</span></div>
+        <div class="field"><span class="k">Fait à</span><span>Lille</span></div>
         <div class="field"><span class="k">Le</span><span>${updatedAt}</span></div>
       </div>
-      <div class="hint">Signature précédée de la mention manuscrite<br>« Lu et approuvé, bon pour accord » :</div>
+      <div class="hint">Signature :</div>
       <div class="handwritten-zone"></div>
     </div>
 
     <div class="sign-card">
-      <div class="lbl">Le Client - Bon pour accord</div>
+      <div class="lbl">Le Client</div>
       <div class="entity">${safe(clientName)}</div>
       <div class="coords">
         ${client.legal_form ? `${safe(client.legal_form)}` : ''}${client.legal_form && client.siret ? ' · ' : ''}${client.siret ? `SIRET ${safe(client.siret)}` : ''}${(client.legal_form || client.siret) ? '<br>' : ''}
@@ -1375,7 +1388,11 @@ function renderSignaturePage(ctx: {
         <div class="field"><span class="k">Fait à</span><span>${client.city ? safe(client.city) : '_________________________'}</span></div>
         <div class="field"><span class="k">Le</span><span>_____ / _____ / __________</span></div>
       </div>
-      <div class="hint">Signature précédée de la mention manuscrite<br>« Lu et approuvé, bon pour accord » + cachet de l'entreprise :</div>
+      <div class="acceptance-check">
+        <span class="check-box"></span>
+        <span class="check-label">Je reconnais avoir lu et accepté ces conditions.</span>
+      </div>
+      <div class="hint">Signature et, le cas échéant, cachet de l'entreprise :</div>
       <div class="handwritten-zone"></div>
     </div>
   </div>
@@ -1388,7 +1405,7 @@ function renderSignaturePage(ctx: {
     <div class="brand">MAPA Développement</div>
     <div class="legal">
       SIREN 919 461 301 · TVA non applicable, art. 293 B du CGI<br>
-      89 Rue Yves Decugis, 59650 Villeneuve-d'Ascq · contact@mapa-developpement.fr · +33 6 79 62 39 42
+      14 Rue d'Aguesseau, 59800 Lille · contact@mapa-developpement.fr · +33 6 79 62 39 42
     </div>
   </div>
 </section>`
