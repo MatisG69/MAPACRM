@@ -77,6 +77,7 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onUpdateCl
     has_recurring_support: initial?.has_recurring_support ?? false,
     recurring_support_amount: initial?.recurring_support_amount ?? null,
     recurring_support_label: initial?.recurring_support_label ?? null,
+    recurring_support_scope: initial?.recurring_support_scope ?? null,
     prestation_scope: initial?.prestation_scope ?? null,
   });
 
@@ -321,9 +322,9 @@ Documentation & accompagnement à la prise en main`}
         </label>
 
         {form.has_recurring_support && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <div>
-              <label className="form-label">Montant mensuel HT (€)</label>
+          <div className="space-y-3 pt-1">
+            <div className="max-w-[260px]">
+              <label className="form-label">Montant mensuel HT (€) *</label>
               <input
                 type="number"
                 className="input font-mono"
@@ -339,17 +340,35 @@ Documentation & accompagnement à la prise en main`}
                 step={5}
               />
             </div>
-            <div className="sm:col-span-2">
-              <label className="form-label">Libellé du suivi (facultatif)</label>
-              <input
-                type="text"
-                className="input"
-                value={form.recurring_support_label ?? ''}
+            <div>
+              <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                <label className="form-label" htmlFor="recurring-scope">
+                  Périmètre de la prestation du suivi
+                </label>
+                <span className="text-[10px] font-mono text-ws-mist">
+                  apparaît sur le devis abonnement · une ligne = un point
+                </span>
+              </div>
+              <textarea
+                id="recurring-scope"
+                className="input resize-none font-mono text-[13px] leading-[1.6]"
+                rows={6}
+                value={form.recurring_support_scope ?? ''}
                 onChange={(e) =>
-                  set('recurring_support_label', e.target.value || null)
+                  set('recurring_support_scope', e.target.value || null)
                 }
-                placeholder="ex : SEO + statistiques · Supervision automatisations"
+                placeholder={`Une ligne par puce :
+
+Suivi du positionnement SEO mensuel
+Mise à jour des contenus & corrections mineures
+Sauvegardes hebdomadaires & monitoring disponibilité
+Support prioritaire par email - réponse sous 24h
+Reporting mensuel & recommandations`}
               />
+              <p className="text-[10px] font-mono text-ws-mist mt-1 leading-relaxed">
+                Détail de ce que couvre l'abonnement mensuel — visible sur le devis
+                « Suivi mensuel » créé automatiquement à la génération du devis principal.
+              </p>
             </div>
           </div>
         )}

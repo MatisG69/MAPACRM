@@ -90,8 +90,13 @@ export interface Project {
   has_recurring_support?: boolean;
   /** Montant mensuel HT du suivi en euros */
   recurring_support_amount?: number | null;
-  /** Libellé du suivi (ex. "SEO + statistiques", "Supervision automatisations") */
+  /** @deprecated Conservé pour rétrocompatibilité. Utiliser `recurring_support_scope` désormais. */
   recurring_support_label?: string | null;
+  /**
+   * Périmètre détaillé de la prestation de suivi mensuel (texte multi-ligne,
+   * une ligne = un bullet point sur le devis abonnement).
+   */
+  recurring_support_scope?: string | null;
   /**
    * Périmètre de la prestation (texte multi-ligne, une ligne = un bullet point sur le devis).
    * Si null/vide → le générateur de devis utilise la liste catalogue par défaut selon le `type`.

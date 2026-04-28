@@ -98,7 +98,6 @@ export function GenerateDevisModal({
     (s, p) => s + (p.recurring_support_amount ?? 0),
     0,
   )
-  const recurringAnnualTotal = recurringMonthlyTotal * 12
 
   // Reset on close
   useEffect(() => {
@@ -211,19 +210,23 @@ export function GenerateDevisModal({
 
       /* ── 2e devis automatique pour le suivi mensuel ──
          Créé en complément du devis ponctuel quand au moins un projet
-         a un suivi mensuel activé. Engagement annuel = 12 mois × montant mensuel.
-         Devis indépendant : status draft, aucun acompte, références projets dans les notes. */
+         a un suivi mensuel activé.
+         - amount stocké = MONTANT MENSUEL HT (pas annualisé)
+         - status: draft, aucun acompte, pas d'engagement annuel forcé
+         - Périmètre = recurring_support_scope concaténé des projets concernés. */
       if (recurringProjectsAll.length > 0 && recurringMonthlyTotal > 0) {
-        const labels = recurringProjectsAll
-          .map((p) => p.recurring_support_label?.trim() || p.name)
-          .join(' + ')
+        const recurringScopes = recurringProjectsAll
+          .map((p) => (p.recurring_support_scope ?? p.recurring_support_label ?? '').trim())
+          .filter((s) => s.length > 0)
+          .join('\n')
+
         await onCreateQuote({
           client_id: selectedClient.id,
           project_id: null,
           opportunity_id: null,
           title: `Suivi mensuel - ${selectedClient.company || selectedClient.name}`,
           quote_number: `${quoteNumber.trim()}-SUIVI`,
-          amount: recurringAnnualTotal,
+          amount: recurringMonthlyTotal,
           status: 'draft',
           valid_until: validUntilFinal,
           deposit_requested: false,
@@ -233,13 +236,12 @@ export function GenerateDevisModal({
           version: 1,
           parent_quote_id: null,
           notes: [
-            `Devis abonnement mensuel - engagement initial 12 mois renouvelable`,
-            `Montant mensuel : ${recurringMonthlyTotal} € HT/mois × 12 mois = ${recurringAnnualTotal} € HT/an`,
-            `Prestations incluses : ${labels}`,
+            `Devis abonnement mensuel - ${recurringMonthlyTotal} € HT/mois`,
+            recurringScopes ? `Périmètre :\n${recurringScopes}` : null,
             notes.trim() || null,
           ]
             .filter(Boolean)
-            .join('\n'),
+            .join('\n\n'),
           signed_at: null,
         })
       }
@@ -636,10 +638,8 @@ export function GenerateDevisModal({
                 <strong>Devis abonnement créé automatiquement</strong>
                 <br />
                 Un second devis « Suivi mensuel » de{' '}
-                <strong className="tabular-nums">
-                  {recurringMonthlyTotal} € HT/mois × 12 = {recurringAnnualTotal} € HT/an
-                </strong>{' '}
-                sera créé en parallèle (engagement initial 12 mois renouvelable). Numéro :{' '}
+                <strong className="tabular-nums">{recurringMonthlyTotal} € HT/mois</strong> sera
+                créé en parallèle, sans acompte. Numéro :{' '}
                 <strong className="font-mono">{quoteNumber.trim() || '???'}-SUIVI</strong>
               </p>
             </div>
