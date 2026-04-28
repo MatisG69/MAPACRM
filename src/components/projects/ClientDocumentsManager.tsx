@@ -24,7 +24,7 @@ import type {
   Quote,
 } from '../../lib/types';
 import { formatCurrency, formatDate } from '../../lib/utils';
-import { generateDevisHTML } from '../../lib/devisGenerator';
+import { generateDevisHTML, isRecurringQuoteHeuristic } from '../../lib/devisGenerator';
 import { generateInvoiceHTML, MAPA_VENDOR } from '../../lib/invoiceGenerator';
 import { DevisPreviewOverlay } from '../quotes/DevisPreviewOverlay';
 import { InvoicePreviewOverlay } from '../invoices/InvoicePreviewOverlay';
@@ -307,6 +307,11 @@ export function ClientDocumentsManager({
       setUploadError('Impossible de générer le PDF : fiche client manquante.');
       return;
     }
+    const isRecurring = isRecurringQuoteHeuristic({
+      quote_number: q.quote_number,
+      title: q.title,
+      notes: q.notes,
+    });
     const html = generateDevisHTML({
       client,
       project: project ?? null,
@@ -317,7 +322,9 @@ export function ClientDocumentsManager({
         q.deposit_requested && q.deposit_amount && q.amount > 0
           ? Math.round((q.deposit_amount / q.amount) * 100)
           : 30,
-      includeCGV: true,
+      includeCGV: !isRecurring,
+      isRecurring,
+      recurringScope: project?.recurring_support_scope ?? null,
       acompteDateISO: (q as Quote & { expected_acompte_date?: string | null }).expected_acompte_date ?? null,
       deliveryDateISO: (q as Quote & { expected_delivery_date?: string | null }).expected_delivery_date ?? null,
     });

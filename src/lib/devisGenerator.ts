@@ -33,6 +33,30 @@ export interface DevisParams {
    */
   acompteDateISO?: string | null
   deliveryDateISO?: string | null
+  /**
+   * Mode « abonnement mensuel » : génère un devis sans acompte ni solde.
+   * Le `amount` est interprété comme le **prix mensuel HT** ; affiché sous
+   * la forme « X € HT / mois ». Désactive le calendrier acompte/livraison.
+   * Si `recurringScope` est fourni, il prime sur le périmètre du projet.
+   */
+  isRecurring?: boolean
+  /** Périmètre détaillé du suivi (texte multi-ligne, une ligne = une puce). */
+  recurringScope?: string | null
+}
+
+/**
+ * Heuristique : un devis est-il un devis « suivi mensuel » ?
+ * Utilisée par les pages d'aperçu pour activer automatiquement le mode `isRecurring`.
+ */
+export function isRecurringQuoteHeuristic(q: {
+  quote_number?: string | null
+  title?: string | null
+  notes?: string | null
+}): boolean {
+  if (q.quote_number?.endsWith('-SUIVI')) return true
+  if (q.title?.toLowerCase().startsWith('suivi mensuel')) return true
+  if (q.notes?.toLowerCase().startsWith('devis abonnement mensuel')) return true
+  return false
 }
 
 /** Tarifs catalogue par type (utilisés en repli si aucun budget n'est saisi sur le projet) */
@@ -305,11 +329,17 @@ export function generateDevisHTML(params: DevisParams): string {
     validUntilISO,
     depositPercent = 30,
     customNotes,
-    includeCGV = false,
+    includeCGV: includeCGVRaw = false,
     additionalLines = [],
     acompteDateISO,
     deliveryDateISO,
+    isRecurring = false,
+    recurringScope,
   } = params
+
+  // En mode abonnement mensuel : pas de CGV transactionnelles (incompatibles
+  // avec la structure acompte/solde) et pas de calendrier acompte/livraison.
+  const includeCGV = isRecurring ? false : includeCGVRaw
 
   const acompteDateDisplay = formatISODate(acompteDateISO) ?? null
   const deliveryDateDisplay = formatISODate(deliveryDateISO) ?? null
@@ -353,8 +383,10 @@ export function generateDevisHTML(params: DevisParams): string {
 
   const isMulti = allLines.length > 1
   const hostingTypes = new Set(['website', 'redesign', 'webapp', 'ecommerce'])
-  const needsHostingNote = allLines.some((l) => l.project?.type && hostingTypes.has(l.project.type))
-  const missionTitle = isMulti
+  const needsHostingNote = !isRecurring && allLines.some((l) => l.project?.type && hostingTypes.has(l.project.type))
+  const missionTitle = isRecurring
+    ? `Suivi mensuel - ${client.company || formatClientFullName(client)}`
+    : isMulti
     ? `Prestations combinées (${allLines.length} projets)`
     : project
     ? `${projectTypeLabel(project.type)} - ${project.name}`
@@ -889,9 +921,37 @@ export function generateDevisHTML(params: DevisParams): string {
     </div>
   </div>
 
-  <div class="slabel">Périmètre de la prestation</div>
-  ${isMulti
-    ? allLines.map((l) => `
+  <div class="slabel">${isRecurring ? 'Périmètre du suivi mensuel' : 'Périmètre de la prestation'}</div>
+  ${(() => {
+    // Mode abonnement : on utilise prioritairement `recurringScope` passé en
+    // paramètre, sinon `recurring_support_scope` du projet, sinon fallback
+    // sur le périmètre standard (prestationsForType).
+    if (isRecurring) {
+      const scopeRaw =
+        recurringScope?.trim() ||
+        project?.recurring_support_scope?.trim() ||
+        ''
+      if (scopeRaw) {
+        const lines = sanitizeScopeText(scopeRaw)
+          .split(/\r?\n/)
+          .map((l) => l.replace(/^[\s•‣◦⁃\-*·—–]+/, '').trim())
+          .filter((l) => l.length > 0)
+        if (lines.length > 0) {
+          return `<ul class="prest-list">
+    ${lines.map((p) => `<li>${p}</li>`).join('\n    ')}
+  </ul>`
+        }
+      }
+      // Fallback générique pour un abonnement sans scope renseigné
+      return `<ul class="prest-list">
+    <li>Suivi mensuel des prestations livrées</li>
+    <li>Mises à jour de sécurité et corrections d'anomalies</li>
+    <li>Sauvegardes régulières et supervision de la disponibilité</li>
+    <li>Support prioritaire par email - réponse sous 24h ouvrées</li>
+  </ul>`
+    }
+    return isMulti
+      ? allLines.map((l) => `
     <div style="margin-bottom:6px">
       <div style="font-size:7pt;color:#C9A84C;font-weight:600;letter-spacing:.04em;margin-bottom:2px">
         - ${projectTypeLabel(l.project.type)} · ${l.project.name}
@@ -900,25 +960,33 @@ export function generateDevisHTML(params: DevisParams): string {
         ${prestationsForType(l.project).map((p) => `<li>${p}</li>`).join('\n        ')}
       </ul>
     </div>`).join('')
-    : `<ul class="prest-list">
+      : `<ul class="prest-list">
     ${(project ? prestationsForType(project) : prestationsForType(null)).map((p) => `<li>${p}</li>`).join('\n    ')}
-  </ul>`}
+  </ul>`
+  })()}
 
   ${needsHostingNote ? `<p class="hosting-note">L'hébergement et le nom de domaine sont fournis par le Client. À défaut, ces prestations peuvent être souscrites séparément auprès du Prestataire et sont alors facturées annuellement (art. 9.4 CGV).</p>` : ''}
 
   ${customNotes ? `<div class="cond-block" style="margin-top:8px"><strong>Note :</strong> ${customNotes}</div>` : ''}
 
-  <div class="slabel">Tarification</div>
+  <div class="slabel">${isRecurring ? 'Tarification mensuelle' : 'Tarification'}</div>
   <table class="price-table">
     <thead>
       <tr>
         <th>Prestation</th>
         <th>Description</th>
-        <th style="text-align:right">Montant</th>
+        <th style="text-align:right">${isRecurring ? 'Mensuel HT' : 'Montant'}</th>
       </tr>
     </thead>
     <tbody>
-      ${allLines.length > 0
+      ${isRecurring
+        ? `
+      <tr>
+        <td><strong style="color:#E2C97E">Suivi mensuel</strong></td>
+        <td>Abonnement de suivi - ${client.company || formatClientFullName(client)}</td>
+        <td class="amt">${formatEur(totalAmount)} <span style="font-size:6pt;color:#9E9080;font-weight:400">/ mois</span></td>
+      </tr>`
+        : allLines.length > 0
         ? allLines.map((l) => `
       <tr>
         <td><strong style="color:#E2C97E">${projectTypeLabel(l.project.type)}</strong></td>
@@ -934,12 +1002,14 @@ export function generateDevisHTML(params: DevisParams): string {
     </tbody>
   </table>
   <div class="total-block">
-    <div class="tline"><span>Acompte à la commande (${depositPercent}%)${acompteDateDisplay ? ` <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:4px">— ${acompteDateDisplay}</span>` : ''}</span><span class="val">${formatEur(deposit)}</span></div>
-    <div class="tline"><span>Solde à la livraison${deliveryDateDisplay ? ` <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:4px">— ${deliveryDateDisplay}</span>` : ''}</span><span class="val">${formatEur(solde)}</span></div>
-    <div class="tline main"><span>Total HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(totalAmount)}</span></div>
+    ${isRecurring
+      ? `<div class="tline main"><span>Tarif mensuel HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(totalAmount)} <span style="font-size:7pt;color:#9E9080;font-weight:400">/ mois</span></span></div>`
+      : `<div class="tline"><span>Acompte à la commande (${depositPercent}%)${acompteDateDisplay ? ` <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:4px">- ${acompteDateDisplay}</span>` : ''}</span><span class="val">${formatEur(deposit)}</span></div>
+    <div class="tline"><span>Solde à la livraison${deliveryDateDisplay ? ` <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:4px">- ${deliveryDateDisplay}</span>` : ''}</span><span class="val">${formatEur(solde)}</span></div>
+    <div class="tline main"><span>Total HT <span style="font-size:5.5pt;color:#9E9080;font-weight:400;margin-left:6px">(TVA non applicable - art. 293 B du CGI)</span></span><span class="val">${formatEur(totalAmount)}</span></div>`}
   </div>
 
-  ${hasSchedule ? `
+  ${!isRecurring && hasSchedule ? `
   <div class="schedule-block">
     <div class="schedule-label">Calendrier prévisionnel</div>
     <div class="schedule-grid">
@@ -959,7 +1029,7 @@ export function generateDevisHTML(params: DevisParams): string {
   </div>
   ` : ''}
 
-  ${recurringLines.length > 0 ? `
+  ${!isRecurring && recurringLines.length > 0 ? `
   <div class="recurring-strip">
     <span class="r-label">Suivi mensuel HT</span>
     <span class="r-items">${recurringLines.map((l) => `<strong>${projectTypeLabel(l.project.type)}</strong> ${formatEur(l.amount)}/mois`).join(' · ')}</span>
@@ -968,7 +1038,15 @@ export function generateDevisHTML(params: DevisParams): string {
   <p class="recurring-foot">La souscription au suivi mensuel sera confirmée par un bon de commande spécifique signé à la livraison, conformément à l'art. 9.2 des CGV. Engagement initial de 12 mois reconductible.</p>
   ` : ''}
 
-  ${includeCGV
+  ${isRecurring
+    ? `<div class="slabel">Conditions de l'abonnement</div>
+  <div class="cond-block">
+    <strong>Tarif</strong> - ${formatEur(totalAmount)} HT par mois, facturé mensuellement.<br>
+    <strong>Aucun acompte</strong> - le règlement s'effectue mois par mois, à terme échu.<br>
+    <strong>Engagement</strong> - reconductible mensuellement par tacite reconduction. Résiliable à tout moment moyennant un préavis d'un mois.<br>
+    <strong>Validité du devis</strong> - 30 jours à compter de sa date d'émission.
+  </div>`
+    : includeCGV
     ? `<p style="margin-top:8px;text-align:center;font-size:6.5pt;letter-spacing:.18em;text-transform:uppercase;color:#9E9080;">
         Conditions générales de vente détaillées en pages 2 à 4 · Signature en page 5
       </p>`

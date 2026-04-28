@@ -11,7 +11,7 @@ import { Badge } from '../components/ui/Badge';
 import { QuoteForm } from '../components/quotes/QuoteForm';
 import { GenerateDevisModal } from '../components/quotes/GenerateDevisModal';
 import { DevisPreviewOverlay } from '../components/quotes/DevisPreviewOverlay';
-import { generateDevisHTML } from '../lib/devisGenerator';
+import { generateDevisHTML, isRecurringQuoteHeuristic } from '../lib/devisGenerator';
 import type { Client, Invoice, InvoiceStatus, Opportunity, Project, Quote, QuoteStatus } from '../lib/types';
 import { formatCurrency, formatDate, generateInvoiceNumber } from '../lib/utils';
 
@@ -185,6 +185,11 @@ export function QuotesPage({
         ? Math.round((q.deposit_amount / q.amount) * 100)
         : 30
 
+    const isRecurring = isRecurringQuoteHeuristic({
+      quote_number: q.quote_number,
+      title: q.title,
+      notes: q.notes,
+    })
     const html = generateDevisHTML({
       client,
       project,
@@ -194,7 +199,9 @@ export function QuotesPage({
       validUntilISO: q.valid_until,
       depositPercent,
       customNotes: q.notes ?? undefined,
-      includeCGV: true,
+      includeCGV: !isRecurring,
+      isRecurring,
+      recurringScope: project?.recurring_support_scope ?? null,
     })
     setPreviewQuote({ html, filename: `devis-${q.quote_number ?? q.id}.pdf` })
   }
