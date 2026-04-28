@@ -118,7 +118,7 @@ function prestationsForType(project: Project | null): string[] {
     // → l'utilisateur DOIT séparer ses puces avec Entrée (cf. placeholder).
     const cleaned = sanitized
       .split(/\r?\n/)
-      .map((l) => l.replace(/^[\s•‣◦⁃*]+/, '').trim())
+      .map((l) => l.replace(/^[\s•‣◦⁃*\-—–·]+/, '').trim())
       .filter((l) => l.length > 0)
 
     if (cleaned.length > 0) return cleaned
@@ -225,6 +225,20 @@ function upperLastName(fullName: string | null | undefined): string {
 }
 
 /**
+ * Capitalise la 1re lettre de chaque mot (gestion des espaces et tirets).
+ * Ex : « linda » → « Linda » | « marie-claire » → « Marie-Claire ».
+ */
+function capitalizeName(s: string): string {
+  return s
+    .split(/(\s+|-)/)
+    .map((part) => {
+      if (!part || /^\s+$/.test(part) || part === '-') return part
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+    })
+    .join('')
+}
+
+/**
  * Formate le nom du contact selon la convention typographique française
  * pour les devis et factures : « Prénom NOM ».
  *
@@ -233,13 +247,16 @@ function upperLastName(fullName: string | null | undefined): string {
  *   2. `last_name` seul → MAJUSCULES.
  *   3. `first_name` seul → cas mixte.
  *   4. Fallback `name` avec heuristique « dernier mot en MAJ ».
+ *
+ * Le prénom est toujours auto-capitalisé (1re lettre majuscule, reste minuscule)
+ * pour normaliser les saisies inconsistantes (« linda » → « Linda »).
  */
 function formatClientFullName(client: Client): string {
   const fn = client.first_name?.trim() || ''
   const ln = client.last_name?.trim() || ''
-  if (fn && ln) return `${fn} ${ln.toUpperCase()}`
+  if (fn && ln) return `${capitalizeName(fn)} ${ln.toUpperCase()}`
   if (ln) return ln.toUpperCase()
-  if (fn) return fn
+  if (fn) return capitalizeName(fn)
   return upperLastName(client.name)
 }
 
@@ -932,7 +949,7 @@ export function generateDevisHTML(params: DevisParams): string {
         // Split UNIQUEMENT sur \n (idem périmètre principal)
         const lines = sanitizeScopeText(scopeRaw)
           .split(/\r?\n/)
-          .map((l) => l.replace(/^[\s•‣◦⁃*]+/, '').trim())
+          .map((l) => l.replace(/^[\s•‣◦⁃*\-—–·]+/, '').trim())
           .filter((l) => l.length > 0)
         if (lines.length > 0) {
           return `<ul class="prest-list">

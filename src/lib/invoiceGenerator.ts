@@ -170,13 +170,24 @@ function upperLastName(fullName: string | null | undefined): string {
   return parts.join(' ') + ' ' + last
 }
 
+/** Capitalise chaque mot (espaces et tirets). « linda » → « Linda ». */
+function capitalizeName(s: string): string {
+  return s
+    .split(/(\s+|-)/)
+    .map((part) => {
+      if (!part || /^\s+$/.test(part) || part === '-') return part
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+    })
+    .join('')
+}
+
 /** Convention typographique FR : « Prénom NOM ». Cf. devisGenerator pour la doc. */
 function formatClientFullName(client: Client): string {
   const fn = client.first_name?.trim() || ''
   const ln = client.last_name?.trim() || ''
-  if (fn && ln) return `${fn} ${ln.toUpperCase()}`
+  if (fn && ln) return `${capitalizeName(fn)} ${ln.toUpperCase()}`
   if (ln) return ln.toUpperCase()
-  if (fn) return fn
+  if (fn) return capitalizeName(fn)
   return upperLastName(client.name)
 }
 
