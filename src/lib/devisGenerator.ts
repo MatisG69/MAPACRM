@@ -57,6 +57,18 @@ export function getPriceForProject(project: Project | null): number | null {
 }
 
 function prestationsForType(project: Project | null): string[] {
+  // 1) Périmètre custom saisi sur le projet — priorité absolue
+  // (texte multi-ligne ; chaque ligne non vide devient un bullet point).
+  const customScope = project?.prestation_scope?.trim()
+  if (customScope) {
+    const lines = customScope
+      .split(/\r?\n/)
+      .map((l) => l.replace(/^[\s•\-*·]+/, '').trim())
+      .filter((l) => l.length > 0)
+    if (lines.length > 0) return lines
+  }
+
+  // 2) Fallback catalogue selon le `type` du projet
   const type = project?.type ?? 'other'
   switch (type) {
     case 'website':

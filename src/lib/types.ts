@@ -81,6 +81,11 @@ export interface Project {
   recurring_support_amount?: number | null;
   /** Libellé du suivi (ex. "SEO + statistiques", "Supervision automatisations") */
   recurring_support_label?: string | null;
+  /**
+   * Périmètre de la prestation (texte multi-ligne, une ligne = un bullet point sur le devis).
+   * Si null/vide → le générateur de devis utilise la liste catalogue par défaut selon le `type`.
+   */
+  prestation_scope?: string | null;
   created_at: string;
   updated_at: string;
   client?: Client;

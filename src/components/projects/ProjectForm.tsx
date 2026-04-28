@@ -77,6 +77,7 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onUpdateCl
     has_recurring_support: initial?.has_recurring_support ?? false,
     recurring_support_amount: initial?.recurring_support_amount ?? null,
     recurring_support_label: initial?.recurring_support_label ?? null,
+    prestation_scope: initial?.prestation_scope ?? null,
   });
 
   // Récupère le client lié (s'il existe) pour pré-remplir les infos contractuelles
@@ -261,6 +262,35 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onUpdateCl
           <label className="form-label">Description</label>
           <textarea className="input resize-none" rows={3} value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="Description du projet..." />
         </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────
+          Périmètre de la prestation (utilisé sur le PDF de devis)
+          Si vide, le devis utilise la liste catalogue par défaut
+          selon le type du projet.
+          ───────────────────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-ws-line bg-ws-deep/30 px-4 py-4 space-y-2">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <label className="form-label" htmlFor="prestation-scope">
+            Périmètre de la prestation
+          </label>
+          <span className="text-[10px] font-mono text-ws-mist">
+            apparaît tel quel sur le devis · une ligne = un point
+          </span>
+        </div>
+        <textarea
+          id="prestation-scope"
+          className="input resize-none font-mono text-[13px] leading-[1.6]"
+          rows={6}
+          value={form.prestation_scope ?? ''}
+          onChange={(e) => set('prestation_scope', e.target.value || null)}
+          placeholder={`Design sur mesure - maquette validée avant intégration\nIntégration responsive - mobile, tablette, desktop\nRéférencement local SEO de base\nAccompagnement post-livraison inclus - 30 jours`}
+        />
+        <p className="text-[10px] font-mono text-ws-mist leading-relaxed">
+          Listez ici les éléments concrets livrés au client. Si laissé vide, le devis utilise
+          automatiquement la trame standard selon le type de projet
+          {form.type ? ` (« ${form.type} »)` : ''}.
+        </p>
       </div>
 
       {/* ─────────────────────────────────────────────────────────
