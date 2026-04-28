@@ -281,15 +281,22 @@ export function ProjectForm({ initial, clients, tasks = [], onSubmit, onUpdateCl
         <textarea
           id="prestation-scope"
           className="input resize-none font-mono text-[13px] leading-[1.6]"
-          rows={6}
+          rows={7}
           value={form.prestation_scope ?? ''}
           onChange={(e) => set('prestation_scope', e.target.value || null)}
-          placeholder={`Design sur mesure - maquette validée avant intégration\nIntégration responsive - mobile, tablette, desktop\nRéférencement local SEO de base\nAccompagnement post-livraison inclus - 30 jours`}
+          placeholder={`Une ligne par puce — appuyez sur Entrée entre chaque élément :
+
+Audit des processus & cartographie des outils existants
+Centralisation PolyOffice / Outlook 365
+Configuration de Codex en agent IA accessible via chatbox
+Intégration PolyOffice / DocuSign
+Documentation & accompagnement à la prise en main`}
         />
         <p className="text-[10px] font-mono text-ws-mist leading-relaxed">
-          Listez ici les éléments concrets livrés au client. Si laissé vide, le devis utilise
-          automatiquement la trame standard selon le type de projet
-          {form.type ? ` (« ${form.type} »)` : ''}.
+          Listez ici les éléments concrets livrés au client, <strong>une ligne par puce</strong>
+          (appuyez sur <kbd className="px-1 py-0.5 rounded bg-black/30 border border-white/10">Entrée</kbd> entre chaque).
+          Si laissé vide, le devis utilise automatiquement la trame standard
+          selon le type de projet{form.type ? ` (« ${form.type} »)` : ''}.
         </p>
       </div>
 

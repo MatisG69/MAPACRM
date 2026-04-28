@@ -26,6 +26,17 @@ export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 export interface Client {
   id: string;
   name: string;
+  /**
+   * Prénom du contact — utilisé pour la convention typographique française
+   * sur les devis et factures (prénom en cas mixte, NOM en majuscules).
+   * Si null, le générateur retombe sur `name` avec heuristique « dernier mot ».
+   */
+  first_name: string | null;
+  /**
+   * Nom de famille du contact — affiché en MAJUSCULES sur les devis et factures.
+   * Si null, le générateur retombe sur `name` avec heuristique « dernier mot ».
+   */
+  last_name: string | null;
   email: string | null;
   phone: string | null;
   company: string | null;

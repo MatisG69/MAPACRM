@@ -25,6 +25,8 @@ const sourceOptions = ['Site web', 'Référence', 'LinkedIn', 'Appel entrant', '
 export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
   const [form, setForm] = useState<FormData>({
     name: initial?.name || '',
+    first_name: initial?.first_name ?? null,
+    last_name: initial?.last_name ?? null,
     email: initial?.email || '',
     phone: initial?.phone || '',
     company: initial?.company || '',
@@ -38,7 +40,7 @@ export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
     feedback: initial?.feedback ?? null,
     profession: initial?.profession ?? null,
     avatar_color: initial?.avatar_color || getRandomColor(),
-  });
+  } as FormData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,9 +65,37 @@ export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
       {error && <div className="form-error">{error}</div>}
 
       <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="form-label">Prénom</label>
+          <input
+            className="input"
+            value={form.first_name ?? ''}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, first_name: e.target.value.trim() || null }))
+            }
+            placeholder="Jean"
+          />
+        </div>
+        <div>
+          <label className="form-label">Nom de famille</label>
+          <input
+            className="input"
+            value={form.last_name ?? ''}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, last_name: e.target.value.trim() || null }))
+            }
+            placeholder="Dupont"
+          />
+          <p className="text-[10px] font-mono text-ws-mist mt-1 leading-snug">
+            Apparaît en MAJUSCULES sur les devis et factures (convention FR).
+          </p>
+        </div>
         <div className="col-span-2">
-          <label className="form-label">Nom complet *</label>
+          <label className="form-label">Nom complet (affiché dans les listes) *</label>
           <input className="input" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Jean Dupont" required />
+          <p className="text-[10px] font-mono text-ws-mist mt-1 leading-snug">
+            Si « Prénom » et « Nom de famille » sont remplis, ils sont prioritaires sur ce champ pour la mise en forme des devis.
+          </p>
         </div>
         <div>
           <label className="form-label">Entreprise</label>

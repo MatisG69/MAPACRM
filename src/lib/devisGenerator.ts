@@ -56,16 +56,56 @@ export function getPriceForProject(project: Project | null): number | null {
   return PROJECT_PRICES[project.type] ?? null
 }
 
+/**
+ * Sanitize les caractères Unicode "exotiques" qui peuvent ne pas être rendus
+ * par les polices web (Inter / Playfair Display) lors de la conversion HTML→PDF
+ * via Puppeteer headless. Remplacements ASCII équivalents ou typographie FR.
+ */
+function sanitizeScopeText(s: string): string {
+  return s
+    // Flèches doubles / bidirectionnelles → tiret long
+    .replace(/[↔↬↭⇔⟺]/g, '—')
+    // Carrés pleins / barres verticales bizarres → barre simple
+    .replace(/[■▮█▉▊▋▌▍▎▏]/g, '|')
+    // Tabulations / ZWJ / ZWSP → espace simple
+    .replace(/[\t​‌‍﻿]/g, ' ')
+    // Espaces multiples → un seul
+    .replace(/  +/g, ' ')
+}
+
 function prestationsForType(project: Project | null): string[] {
   // 1) Périmètre custom saisi sur le projet — priorité absolue
-  // (texte multi-ligne ; chaque ligne non vide devient un bullet point).
-  const customScope = project?.prestation_scope?.trim()
-  if (customScope) {
-    const lines = customScope
+  const rawScope = project?.prestation_scope?.trim()
+  if (rawScope) {
+    const sanitized = sanitizeScopeText(rawScope)
+
+    // Découpage par sauts de ligne en priorité
+    let lines = sanitized
       .split(/\r?\n/)
-      .map((l) => l.replace(/^[\s•\-*·]+/, '').trim())
+      .map((l) => l.trim())
       .filter((l) => l.length > 0)
-    if (lines.length > 0) return lines
+
+    // Cas où l'utilisateur a tapé tout sur une seule ligne avec des séparateurs
+    // typographiques (— en dash, – em dash, • bullet, · middle dot).
+    // On re-split si on détecte au moins 2 occurrences d'un séparateur.
+    if (lines.length === 1) {
+      const single = lines[0]
+      const candidates = [' — ', ' – ', ' • ', ' · ', ' / ']
+      for (const sep of candidates) {
+        const parts = single.split(sep)
+        if (parts.length >= 2) {
+          lines = parts
+          break
+        }
+      }
+    }
+
+    // Nettoyage final : retire bullets pré-existants en début, trim
+    const cleaned = lines
+      .map((l) => l.replace(/^[\s•‣◦⁃\-*·—–]+/, '').trim())
+      .filter((l) => l.length > 0)
+
+    if (cleaned.length > 0) return cleaned
   }
 
   // 2) Fallback catalogue selon le `type` du projet
@@ -166,6 +206,25 @@ function upperLastName(fullName: string | null | undefined): string {
   if (parts.length === 1) return parts[0].toUpperCase()
   const last = parts.pop()!.toUpperCase()
   return parts.join(' ') + ' ' + last
+}
+
+/**
+ * Formate le nom du contact selon la convention typographique française
+ * pour les devis et factures : « Prénom NOM ».
+ *
+ * Priorité :
+ *   1. `first_name` + `last_name` si tous deux renseignés → cas mixte + MAJ.
+ *   2. `last_name` seul → MAJUSCULES.
+ *   3. `first_name` seul → cas mixte.
+ *   4. Fallback `name` avec heuristique « dernier mot en MAJ ».
+ */
+function formatClientFullName(client: Client): string {
+  const fn = client.first_name?.trim() || ''
+  const ln = client.last_name?.trim() || ''
+  if (fn && ln) return `${fn} ${ln.toUpperCase()}`
+  if (ln) return ln.toUpperCase()
+  if (fn) return fn
+  return upperLastName(client.name)
 }
 
 /** Convertit un entier 0-100 en lettres françaises (orthographe contractuelle) */
@@ -808,13 +867,13 @@ export function generateDevisHTML(params: DevisParams): string {
   <div class="grid2">
     <div class="info-block">
       <div class="key">Client</div>
-      <div class="val">${client.company || upperLastName(client.name)}</div>
+      <div class="val">${client.company || formatClientFullName(client)}</div>
       <div class="line">
         ${client.legal_form ? `${client.legal_form}<br>` : ''}
         ${client.address ? `${client.address}${client.city ? ', ' : '<br>'}` : ''}${client.city ? `${client.city}<br>` : ''}
         ${client.siret ? `SIRET : ${client.siret}<br>` : ''}
         ${client.vat_number ? `TVA : ${client.vat_number}<br>` : ''}
-        ${client.name && client.company && client.name !== client.company ? `<br><strong style="color:#C8BFB0">Contact :</strong> ${upperLastName(client.name)}${client.contact_role ? `, ${client.contact_role}` : ''}<br>` : ''}
+        ${client.name && client.company && client.name !== client.company ? `<br><strong style="color:#C8BFB0">Contact :</strong> ${formatClientFullName(client)}${client.contact_role ? `, ${client.contact_role}` : ''}<br>` : ''}
         ${client.email ? `${client.email}<br>` : ''}
         ${client.phone ? `${client.phone}` : ''}
       </div>
@@ -950,7 +1009,7 @@ ${includeCGV ? renderCGVPage({ quoteNumber, client, depositPercent }) : ''}
    ═══════════════════════════════════════════════════════════ */
 function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercent: number }): string {
   const { quoteNumber, client, depositPercent } = ctx
-  const clientName = client.company || upperLastName(client.name)
+  const clientName = client.company || formatClientFullName(client)
   const updatedAt = today()
   const safe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -1162,8 +1221,8 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
         ${client.vat_number ? `TVA ${safe(client.vat_number)}<br>` : ''}
         ${client.address ? `${safe(client.address)}${client.city ? ', ' : '<br>'}` : ''}${client.city ? `${safe(client.city)}<br>` : ''}
         <br>
-        Représenté par : ${client.name && upperLastName(client.name) !== clientName ? `<strong style="color:#C8BFB0">${safe(upperLastName(client.name))}</strong>` : '_____________________________'}${client.contact_role ? `, ${safe(client.contact_role)}` : ''}<br>
-        ${!client.name || upperLastName(client.name) === clientName ? '_________________________________________<br>' : ''}
+        Représenté par : ${client.name && formatClientFullName(client) !== clientName ? `<strong style="color:#C8BFB0">${safe(formatClientFullName(client))}</strong>` : '_____________________________'}${client.contact_role ? `, ${safe(client.contact_role)}` : ''}<br>
+        ${!client.name || formatClientFullName(client) === clientName ? '_________________________________________<br>' : ''}
         ${client.email ? `<span style="color:#9E9080">${safe(client.email)}</span>` : ''}${client.email && client.phone ? ' · ' : ''}${client.phone ? `<span style="color:#9E9080">${safe(client.phone)}</span>` : ''}
       </div>
       <div class="fields">

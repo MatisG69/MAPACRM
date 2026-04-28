@@ -83,6 +83,23 @@ export function GenerateDevisModal({
   const grandTotal = parsedAmount + additionalTotal
   const canGenerate = !!selectedClient && grandTotal > 0 && !!title.trim() && !!quoteNumber.trim()
 
+  /* ── Détection des projets avec suivi mensuel (récurrent) ──
+     Si présents, un SECOND devis abonnement sera créé automatiquement
+     en complément du devis ponctuel. */
+  const recurringProjectsAll = [selectedProject, ...selectedAdditionalProjects]
+    .filter((p): p is Project => !!p)
+    .filter(
+      (p) =>
+        p.has_recurring_support &&
+        p.recurring_support_amount != null &&
+        p.recurring_support_amount > 0,
+    )
+  const recurringMonthlyTotal = recurringProjectsAll.reduce(
+    (s, p) => s + (p.recurring_support_amount ?? 0),
+    0,
+  )
+  const recurringAnnualTotal = recurringMonthlyTotal * 12
+
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
@@ -191,6 +208,41 @@ export function GenerateDevisModal({
         notes: [notes.trim() || null, combinedNote].filter(Boolean).join('\n') || null,
         signed_at: null,
       })
+
+      /* ── 2e devis automatique pour le suivi mensuel ──
+         Créé en complément du devis ponctuel quand au moins un projet
+         a un suivi mensuel activé. Engagement annuel = 12 mois × montant mensuel.
+         Devis indépendant : status draft, aucun acompte, références projets dans les notes. */
+      if (recurringProjectsAll.length > 0 && recurringMonthlyTotal > 0) {
+        const labels = recurringProjectsAll
+          .map((p) => p.recurring_support_label?.trim() || p.name)
+          .join(' + ')
+        await onCreateQuote({
+          client_id: selectedClient.id,
+          project_id: null,
+          opportunity_id: null,
+          title: `Suivi mensuel - ${selectedClient.company || selectedClient.name}`,
+          quote_number: `${quoteNumber.trim()}-SUIVI`,
+          amount: recurringAnnualTotal,
+          status: 'draft',
+          valid_until: validUntilFinal,
+          deposit_requested: false,
+          deposit_amount: null,
+          expected_acompte_date: null,
+          expected_delivery_date: null,
+          version: 1,
+          parent_quote_id: null,
+          notes: [
+            `Devis abonnement mensuel - engagement initial 12 mois renouvelable`,
+            `Montant mensuel : ${recurringMonthlyTotal} € HT/mois × 12 mois = ${recurringAnnualTotal} € HT/an`,
+            `Prestations incluses : ${labels}`,
+            notes.trim() || null,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          signed_at: null,
+        })
+      }
 
       const depositPercent =
         depositRequested && parsedDeposit && finalAmount
@@ -570,6 +622,29 @@ export function GenerateDevisModal({
             placeholder="Mention spécifique à ajouter au devis…"
           />
         </div>
+
+        {/* Banner info : un 2e devis suivi sera créé automatiquement */}
+        {recurringProjectsAll.length > 0 && recurringMonthlyTotal > 0 && (
+          <div
+            className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 flex items-start gap-3"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="text-emerald-300 text-base leading-none mt-0.5">↻</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-emerald-200 font-mono leading-relaxed">
+                <strong>Devis abonnement créé automatiquement</strong>
+                <br />
+                Un second devis « Suivi mensuel » de{' '}
+                <strong className="tabular-nums">
+                  {recurringMonthlyTotal} € HT/mois × 12 = {recurringAnnualTotal} € HT/an
+                </strong>{' '}
+                sera créé en parallèle (engagement initial 12 mois renouvelable). Numéro :{' '}
+                <strong className="font-mono">{quoteNumber.trim() || '???'}-SUIVI</strong>
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-3 pt-1">
           <Button variant="secondary" className="flex-1 normal-case tracking-normal" onClick={onClose}>
