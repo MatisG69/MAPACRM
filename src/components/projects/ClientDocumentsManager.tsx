@@ -410,16 +410,26 @@ export function ClientDocumentsManager({
       if (match) parentQuoteRef = match[0];
     }
 
+    /* Pour un devis de suivi, on hérite du pourcentage d'acompte du devis
+       parent : la clause (i) de l'art. 3 des CGV doit refléter le contrat
+       forfaitaire principal (le suivi lui-même n'a pas d'acompte). */
+    const parentQuoteForDeposit =
+      isRecurring && q.parent_quote_id
+        ? quotes.find((p) => p.id === q.parent_quote_id) ?? null
+        : null;
+    const sourceQuote = parentQuoteForDeposit ?? q;
+    const depositPercent =
+      sourceQuote.deposit_requested && sourceQuote.deposit_amount && sourceQuote.amount > 0
+        ? Math.round((sourceQuote.deposit_amount / sourceQuote.amount) * 100)
+        : 30;
+
     const html = generateDevisHTML({
       client,
       project: project ?? null,
       amount: q.amount,
       quoteNumber: q.quote_number ?? '',
       validUntilISO: q.valid_until,
-      depositPercent:
-        q.deposit_requested && q.deposit_amount && q.amount > 0
-          ? Math.round((q.deposit_amount / q.amount) * 100)
-          : 30,
+      depositPercent,
       includeCGV: !isRecurring,
       isRecurring,
       recurringScope: project?.recurring_support_scope ?? null,

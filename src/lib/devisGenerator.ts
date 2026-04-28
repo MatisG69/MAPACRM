@@ -294,15 +294,16 @@ function numberToFrenchWords(n: number): string {
 /** Clause unifiée des modalités de paiement (article 3 CGV) — couvre les
  *  prestations forfaitaires (acompte/solde) et les contrats de suivi mensuel
  *  dans une seule formulation, afin qu'une version unique des CGV s'applique
- *  à tous les types de contrat. */
+ *  à tous les types de contrat. Le pourcentage d'acompte est dynamique,
+ *  reflétant celui choisi à l'émission du devis (10, 20, 30, 40 %, etc.). */
 function depositClauseLegal(depositPercent: number): string {
   const p = Math.max(0, Math.min(100, Math.round(depositPercent)))
   const forfaitaire = p === 0
     ? 'pour les <strong>prestations forfaitaires</strong>, paiement intégral à la livraison, sans acompte requis'
     : p === 100
       ? 'pour les <strong>prestations forfaitaires</strong>, paiement intégral à la commande avant démarrage des travaux'
-      : `pour les <strong>prestations forfaitaires</strong>, acompte de <strong>${numberToFrenchWords(p)} pour cent (${p} %)</strong> à la commande, solde à la livraison`
-  return `Sauf stipulation contraire au devis : (i) ${forfaitaire} ; (ii) pour les <strong>contrats de suivi et maintenance</strong>, facturation <strong>mensuelle</strong>, payable par virement à <strong>trente (30) jours</strong> à compter de l'émission de la facture, conformément à l'<em>article L. 441-10 du Code de commerce</em>.`
+      : `pour les <strong>prestations forfaitaires</strong>, un acompte de <strong>${numberToFrenchWords(p)} pour cent (${p} %)</strong> du montant total est dû à la commande, le solde étant exigible à la livraison`
+  return `Sauf stipulation contraire au devis : (i) ${forfaitaire} ; (ii) pour les <strong>contrats de suivi et maintenance</strong>, aucun acompte n'est exigé. La facturation est <strong>mensuelle, à terme à échoir</strong> (en début de mois pour le mois en cours), payable par virement bancaire ou prélèvement SEPA à <strong>trente (30) jours</strong> à compter de l'émission de la facture, conformément à l'<em>article L. 441-10 du Code de commerce</em>.`
 }
 
 /** Libellé par défaut du suivi mensuel selon le type de projet */
@@ -1191,7 +1192,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
 
     <div class="cgv-art">
       <h5>Art. 3 - Prix et modalités de paiement</h5>
-      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. ${depositClauseLegal(depositPercent)} Les paiements sont effectués par virement bancaire sur le compte indiqué sur la facture. Aucun escompte pour paiement anticipé n'est consenti.</p>
+      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. ${depositClauseLegal(depositPercent)} <strong>Aucun escompte</strong> pour paiement anticipé n'est consenti.</p>
     </div>
 
     <div class="cgv-art">

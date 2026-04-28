@@ -180,16 +180,25 @@ export function QuotesPage({
     if (!client) return
 
     const project = projects.find((p) => p.id === q.project_id) ?? null
-    const depositPercent =
-      q.deposit_requested && q.deposit_amount && q.amount
-        ? Math.round((q.deposit_amount / q.amount) * 100)
-        : 30
 
     const isRecurring = isRecurringQuoteHeuristic({
       quote_number: q.quote_number,
       title: q.title,
       notes: q.notes,
     })
+
+    /* Pour un devis de suivi, on hérite du pourcentage d'acompte du devis
+       parent : la clause (i) de l'art. 3 des CGV doit refléter le contrat
+       forfaitaire principal (le suivi lui-même n'a pas d'acompte). */
+    const parentQuoteForDeposit =
+      isRecurring && q.parent_quote_id
+        ? quotes.find((p) => p.id === q.parent_quote_id) ?? null
+        : null
+    const sourceQuote = parentQuoteForDeposit ?? q
+    const depositPercent =
+      sourceQuote.deposit_requested && sourceQuote.deposit_amount && sourceQuote.amount
+        ? Math.round((sourceQuote.deposit_amount / sourceQuote.amount) * 100)
+        : 30
 
     /* Pour le devis suivi, on extrait la référence au devis parent depuis les notes
        (format injecté par GenerateDevisModal : "Suivi de la prestation livrée au titre du devis ..."). */
