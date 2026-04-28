@@ -291,15 +291,18 @@ function numberToFrenchWords(n: number): string {
   return String(i)
 }
 
-/** Phrase légale dynamique pour la modalité de paiement (article 3 CGV) */
-function depositClauseLegal(depositPercent: number, isRecurring: boolean = false): string {
-  if (isRecurring) {
-    return "Pour les <strong>contrats de suivi mensuel</strong>, la facturation est <strong>mensuelle</strong>, payable par virement à <strong>trente (30) jours</strong> à compter de l'émission de la facture, conformément à l'<em>article L. 441-10 du Code de commerce</em>."
-  }
+/** Clause unifiée des modalités de paiement (article 3 CGV) — couvre les
+ *  prestations forfaitaires (acompte/solde) et les contrats de suivi mensuel
+ *  dans une seule formulation, afin qu'une version unique des CGV s'applique
+ *  à tous les types de contrat. */
+function depositClauseLegal(depositPercent: number): string {
   const p = Math.max(0, Math.min(100, Math.round(depositPercent)))
-  if (p === 0) return 'Sauf stipulation contraire au devis : <strong>paiement intégral à la livraison</strong>, sans acompte requis.'
-  if (p === 100) return 'Sauf stipulation contraire au devis : <strong>paiement intégral à la commande</strong> avant démarrage des travaux.'
-  return `Sauf stipulation contraire au devis : acompte de <strong>${numberToFrenchWords(p)} pour cent (${p} %)</strong> à la commande, solde à la livraison.`
+  const forfaitaire = p === 0
+    ? 'pour les <strong>prestations forfaitaires</strong>, paiement intégral à la livraison, sans acompte requis'
+    : p === 100
+      ? 'pour les <strong>prestations forfaitaires</strong>, paiement intégral à la commande avant démarrage des travaux'
+      : `pour les <strong>prestations forfaitaires</strong>, acompte de <strong>${numberToFrenchWords(p)} pour cent (${p} %)</strong> à la commande, solde à la livraison`
+  return `Sauf stipulation contraire au devis : (i) ${forfaitaire} ; (ii) pour les <strong>contrats de suivi et maintenance</strong>, facturation <strong>mensuelle</strong>, payable par virement à <strong>trente (30) jours</strong> à compter de l'émission de la facture, conformément à l'<em>article L. 441-10 du Code de commerce</em>.`
 }
 
 /** Libellé par défaut du suivi mensuel selon le type de projet */
@@ -357,6 +360,16 @@ export function generateDevisHTML(params: DevisParams): string {
   // tacite, préavis 30 jours) que le devis cite. Hors suivi, l'inclusion suit
   // le choix opérateur (case `includeCGV` du formulaire).
   const includeCGV = isRecurring ? true : includeCGVRaw
+
+  // `parentQuoteRef` arrive sous forme de phrase complète en provenance de
+  // GenerateDevisModal — utilisable telle quelle dans le bloc italique du
+  // corps du devis, mais on en extrait le numéro et la date pour la phrase
+  // d'acceptation où elle est reprise après "en lien avec le devis initial".
+  const parentQuoteParts = parentQuoteRef
+    ? parentQuoteRef.match(/devis\s+(\S+?)(?:\s+du\s+([^.]+?))?\.?\s*$/i)
+    : null
+  const parentQuoteNumber = parentQuoteParts?.[1] ?? null
+  const parentQuoteIssuedAt = parentQuoteParts?.[2]?.trim() ?? null
 
   const acompteDateDisplay = formatISODate(acompteDateISO) ?? null
   const deliveryDateDisplay = formatISODate(deliveryDateISO) ?? null
@@ -1115,7 +1128,7 @@ export function generateDevisHTML(params: DevisParams): string {
 </section>
 
 ${includeCGV
-  ? renderCGVPage({ quoteNumber, client, depositPercent, isRecurring })
+  ? renderCGVPage({ quoteNumber, client, depositPercent })
     + renderSignaturePage({
         quoteNumber,
         client,
@@ -1124,8 +1137,8 @@ ${includeCGV
           ? 'Acceptation du devis de suivi mensuel et des Conditions Générales de Vente'
           : 'Acceptation du devis et des Conditions Générales de Vente',
         recap: isRecurring
-          ? `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis de suivi mensuel <strong>${escapeHtml(quoteNumber)}</strong> émis le ${today()} par <strong>MAPA Développement</strong>${parentQuoteRef ? `, en lien avec le devis de prestation initial <strong>${escapeHtml(parentQuoteRef)}</strong>` : ''}, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document, et notamment de l'<strong>article 9.2</strong> (contrat de suivi) et de l'<strong>article 9.3</strong> (engagement initial de douze mois reconductible par tacite reconduction, dénonciation par lettre recommandée avec accusé de réception au moins trente jours avant le terme en cours). Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>`
-          : `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis <strong>${escapeHtml(quoteNumber)}</strong> émis le ${today()} par <strong>MAPA Développement</strong>, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document. Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait en deux exemplaires originaux.</em>`,
+          ? `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis de suivi mensuel <strong>${escapeHtml(quoteNumber)}</strong> émis le ${today()} par <strong>MAPA Développement</strong>${parentQuoteNumber ? `, en lien avec le devis de prestation initial <strong>${escapeHtml(parentQuoteNumber)}</strong>${parentQuoteIssuedAt ? ` du ${escapeHtml(parentQuoteIssuedAt)}` : ''}` : ''}, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document, et notamment de l'<strong>article 9.2</strong> (contrat de suivi) et de l'<strong>article 9.3</strong> (engagement initial de <strong>douze (12) mois</strong> reconductible par tacite reconduction, dénonciation par lettre recommandée avec accusé de réception au moins <strong>trente (30) jours</strong> avant le terme en cours). Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait par voie électronique, conformément à l'article 1366 du Code civil ; un exemplaire numérique signé est mis à disposition de chaque partie.</em>`
+          : `La signature de la présente page vaut, de la part du Client, <strong>acceptation sans réserve</strong> du devis <strong>${escapeHtml(quoteNumber)}</strong> émis le ${today()} par <strong>MAPA Développement</strong>, ainsi que des <strong>Conditions Générales de Vente</strong> figurant en pages 2, 3 et 4 du présent document. Le Client reconnaît en avoir pris connaissance préalablement, les avoir comprises, et s'engage à les respecter dans leur intégralité. <em>Fait par voie électronique, conformément à l'article 1366 du Code civil ; un exemplaire numérique signé est mis à disposition de chaque partie.</em>`,
         mention: `L'acceptation du Client est matérialisée par la case <strong>« Je reconnais avoir lu et accepté ces conditions »</strong>, complétée par sa signature. Conformément à l'<em>article 1366 du Code civil</em>, l'écrit électronique signé a la même force probante que l'écrit sur support papier dès lors que l'identité du signataire et l'intégrité du document sont garanties. Tout exemplaire dépourvu de l'acceptation expresse et de la signature ne saurait engager les parties.`,
       })
   : ''}
@@ -1146,8 +1159,8 @@ function escapeHtml(s: string): string {
    Code de la propriété intellectuelle, Code de la consommation,
    RGPD), structure ordonnée, zéro clause floue.
    ═══════════════════════════════════════════════════════════ */
-function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercent: number; isRecurring?: boolean }): string {
-  const { quoteNumber, client, depositPercent, isRecurring = false } = ctx
+function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercent: number }): string {
+  const { quoteNumber, client, depositPercent } = ctx
   const clientName = client.company || formatClientFullName(client)
   const updatedAt = today()
   const safe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -1178,7 +1191,7 @@ function renderCGVPage(ctx: { quoteNumber: string; client: Client; depositPercen
 
     <div class="cgv-art">
       <h5>Art. 3 - Prix et modalités de paiement</h5>
-      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. ${depositClauseLegal(depositPercent, isRecurring)} Les paiements sont effectués par virement bancaire sur le compte indiqué sur la facture. Aucun escompte pour paiement anticipé n'est consenti.</p>
+      <p>Les prix sont exprimés en euros, <strong>hors taxes</strong>. Conformément à l'<em>article 293 B du Code général des impôts</em>, le Prestataire bénéficie de la franchise en base de TVA : <em>TVA non applicable</em>. ${depositClauseLegal(depositPercent)} Les paiements sont effectués par virement bancaire sur le compte indiqué sur la facture. Aucun escompte pour paiement anticipé n'est consenti.</p>
     </div>
 
     <div class="cgv-art">
