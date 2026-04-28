@@ -293,7 +293,14 @@ export function ProjectDetailPage({
 
       {project.client_id && (
         <div className="px-4 md:px-8 pb-8">
-          <ClientDocumentsManager clientId={project.client_id} projectId={project.id} />
+          <ClientDocumentsManager
+            clientId={project.client_id}
+            projectId={project.id}
+            client={clients.find((c) => c.id === project.client_id) ?? null}
+            project={project}
+            quotes={projectQuotes}
+            invoices={projectInvoices}
+          />
         </div>
       )}
 

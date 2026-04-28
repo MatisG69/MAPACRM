@@ -242,6 +242,7 @@ function App() {
                 projects={projectsForClient}
                 interactions={interactionsForClient}
                 invoices={invoicesForClient}
+                quotes={quotesHook.quotes}
                 allClients={clientsHook.clients}
                 onBack={() => navigate('clients')}
                 onNavigate={navigate}

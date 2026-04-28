@@ -25,7 +25,7 @@ import { InteractionForm } from '../components/interactions/InteractionForm';
 import { ProjectForm } from '../components/projects/ProjectForm';
 import { ClientDocumentsManager } from '../components/projects/ClientDocumentsManager';
 import { ProgressBar } from '../components/ui/ProgressBar';
-import { Client, Interaction, Invoice, Project } from '../lib/types';
+import { Client, Interaction, Invoice, Project, Quote } from '../lib/types';
 import { Page } from '../lib/types';
 import { formatCurrency, formatDate, formatDateTime, getInitials } from '../lib/utils';
 
@@ -42,6 +42,7 @@ interface ClientDetailPageProps {
   projects: Project[];
   interactions: Interaction[];
   invoices: Invoice[];
+  quotes?: Quote[];
   allClients: Client[];
   onBack: () => void;
   onNavigate: (page: Page, id?: string) => void;
@@ -59,6 +60,7 @@ export function ClientDetailPage({
   projects,
   interactions,
   invoices,
+  quotes = [],
   allClients,
   onBack,
   onNavigate,
@@ -380,7 +382,13 @@ export function ClientDetailPage({
 
         <section>
           <h2 className="font-display text-lg font-bold text-ws-paper mb-4">Documents partagés</h2>
-          <ClientDocumentsManager clientId={client.id} compact />
+          <ClientDocumentsManager
+            clientId={client.id}
+            client={client}
+            quotes={quotes.filter((q) => q.client_id === client.id)}
+            invoices={clientInvoices}
+            compact
+          />
         </section>
       </div>
 
