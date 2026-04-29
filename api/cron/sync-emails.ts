@@ -1,34 +1,31 @@
 /**
  * Vercel Cron Function — synchronise les emails entrants Hostinger (IMAP)
- * vers la table Supabase `emails`. Exécutée toutes les 5 min via vercel.json.
+ * vers la table Supabase `emails`. Déclenchée toutes les minutes par
+ * pg_cron Supabase via pg_net.
  *
  * Sécurité :
- * · Mot de passe IMAP en ENV Vercel uniquement (jamais en base, jamais
- *   exposé au client).
- * · Endpoint protégé par CRON_SECRET (header Authorization). Vercel Cron
- *   l'envoie automatiquement quand `CRON_SECRET` est défini.
- * · Service-role Supabase utilisée côté serveur — bypass RLS pour pouvoir
- *   matcher les clients sans contrainte.
+ * · Mot de passe IMAP en ENV Vercel uniquement.
+ * · Endpoint protégé par CRON_SECRET (header Authorization).
+ * · Service-role Supabase utilisée côté serveur — bypass RLS.
  *
  * Idempotence :
- * · Upsert sur `message_id` (RFC 5322) avec ignoreDuplicates → repolls
- *   sans risque, marquage IMAP \Seen seulement après insert OK.
+ * · Upsert sur `message_id` (RFC 5322) avec ignoreDuplicates.
+ * · Marquage IMAP `\Seen` seulement après insert OK.
+ *
+ * Signature Express-style (req, res) — Vercel sert le runtime legacy Node
+ * pour les projets Vite/SPA, et Web API + req.headers.get() ne fonctionne
+ * pas dans ce mode.
  */
 
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { ImapFlow } from 'imapflow'
-// mailparser est CommonJS — passage par le default import pour éviter les
-// soucis d'interop ESM/CJS sur le bundler Vercel ("Named export ... not found").
 import mailparserPkg from 'mailparser'
 import type { AddressObject } from 'mailparser'
 import { createClient } from '@supabase/supabase-js'
 
 const { simpleParser } = mailparserPkg
 
-// Syntaxe Vercel moderne : exports top-level (l'ancien `export const config = {...}`
-// force le runtime legacy Node-Express style avec req/res, incompatible avec
-// le handler Web API ci-dessous). Node.js est le runtime par défaut, on
-// n'a qu'à étendre maxDuration pour permettre l'IMAP fetch (par défaut 10 s
-// sur Hobby — souvent insuffisant).
+// Vercel moderne : maxDuration en export top-level. Hobby max = 60 s.
 export const maxDuration = 60
 
 interface SyncStats {
@@ -50,13 +47,13 @@ function flattenTo(addr: AddressObject | AddressObject[] | undefined): string | 
   return arr.map((a) => a.text).filter(Boolean).join(', ') || null
 }
 
-export default async function handler(request: Request): Promise<Response> {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── 1. Auth ─────────────────────────────────────────────────────────────
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
-    const authHeader = request.headers.get('authorization')
+    const authHeader = req.headers.authorization
     if (authHeader !== `Bearer ${cronSecret}`) {
-      return Response.json({ error: 'unauthorized' }, { status: 401 })
+      return res.status(401).json({ error: 'unauthorized' })
     }
   }
 
@@ -75,7 +72,7 @@ export default async function handler(request: Request): Promise<Response> {
     !supabaseKey && 'SUPABASE_SERVICE_ROLE_KEY',
   ].filter(Boolean)
   if (missing.length > 0) {
-    return Response.json({ error: 'missing_env', missing }, { status: 500 })
+    return res.status(500).json({ error: 'missing_env', missing })
   }
 
   // ── 3. IMAP connect + Supabase admin ────────────────────────────────────
@@ -122,9 +119,9 @@ export default async function handler(request: Request): Promise<Response> {
           continue
         }
 
-        // Idempotence : on calque message_id sur le RFC, sinon on retombe sur
-        // un identifiant UID-stable pour éviter les doublons en cas de
-        // ré-injection.
+        // Idempotence : on calque message_id sur le RFC, sinon on retombe
+        // sur un identifiant UID-stable pour éviter les doublons en cas
+        // de ré-injection.
         const messageId = parsed.messageId ?? `imap-uid-${msg.uid}`
 
         // ── 5. Match client par email ────────────────────────────────────
@@ -173,8 +170,6 @@ export default async function handler(request: Request): Promise<Response> {
         try {
           await imap.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true })
         } catch (e) {
-          // Non-bloquant : si on n'arrive pas à flagger, le prochain poll
-          // re-traitera mais ignoreDuplicates protège l'idempotence.
           stats.errors.push(`flag_uid_${msg.uid}: ${(e as Error).message}`)
         }
       }
@@ -182,10 +177,9 @@ export default async function handler(request: Request): Promise<Response> {
       lock.release()
     }
   } catch (e) {
-    return Response.json(
-      { error: 'imap_failure', message: (e as Error).message, stats },
-      { status: 502 }
-    )
+    return res
+      .status(502)
+      .json({ error: 'imap_failure', message: (e as Error).message, stats })
   } finally {
     try {
       await imap.logout()
@@ -194,5 +188,5 @@ export default async function handler(request: Request): Promise<Response> {
     }
   }
 
-  return Response.json({ ok: true, ...stats })
+  return res.status(200).json({ ok: true, ...stats })
 }
