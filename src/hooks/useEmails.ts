@@ -2,6 +2,21 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase, isSupabaseEnabled } from '../lib/supabase'
 import type { Email } from '../lib/types'
 
+interface SendEmailPayload {
+  to: string | string[]
+  subject: string
+  text?: string
+  html?: string
+  in_reply_to?: string | null
+  client_id?: string | null
+}
+
+interface SendEmailResult {
+  ok: boolean
+  messageId?: string
+  error?: string
+}
+
 interface UseEmailsResult {
   emails: Email[]
   loading: boolean
@@ -11,6 +26,7 @@ interface UseEmailsResult {
   markRead: (id: string, read?: boolean) => Promise<void>
   toggleArchive: (id: string, archived?: boolean) => Promise<void>
   remove: (id: string) => Promise<void>
+  sendEmail: (payload: SendEmailPayload) => Promise<SendEmailResult>
 }
 
 /**
@@ -84,7 +100,33 @@ export function useEmails(): UseEmailsResult {
     }
   }, [fetchEmails])
 
-  const unreadCount = emails.filter((e) => !e.read && !e.archived).length
+  const sendEmail = useCallback(
+    async (payload: SendEmailPayload): Promise<SendEmailResult> => {
+      try {
+        const response = await fetch('/api/emails/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const json = (await response.json()) as Record<string, unknown>
+        if (!response.ok || !json.ok) {
+          const message =
+            (typeof json.error === 'string' ? json.error : null) ??
+            (typeof json.message === 'string' ? json.message : null) ??
+            `HTTP ${response.status}`
+          return { ok: false, error: message }
+        }
+        // Refetch pour récupérer la ligne 'outbound' insérée côté serveur
+        await fetchEmails()
+        return { ok: true, messageId: typeof json.messageId === 'string' ? json.messageId : undefined }
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : 'network_error' }
+      }
+    },
+    [fetchEmails]
+  )
+
+  const unreadCount = emails.filter((e) => !e.read && !e.archived && e.direction === 'inbound').length
 
   return {
     emails,
@@ -95,5 +137,6 @@ export function useEmails(): UseEmailsResult {
     markRead,
     toggleArchive,
     remove,
+    sendEmail,
   }
 }

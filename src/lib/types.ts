@@ -301,7 +301,7 @@ export interface EmailAttachmentMeta {
   contentId: string | null;
 }
 
-/** Email reçu sur la boîte Hostinger, synchronisé via Vercel Cron + IMAP. */
+/** Email reçu sur la boîte Hostinger ou envoyé depuis le CRM. */
 export interface Email {
   id: string;
   /** RFC 5322 Message-ID (unique en base). */
@@ -313,10 +313,13 @@ export interface Email {
   body_text: string | null;
   body_html: string | null;
   received_at: string;
-  /** Auto-matché si l'expéditeur correspond à un client connu. */
+  /** Auto-matché si l'expéditeur (inbound) ou le destinataire (outbound)
+   *  correspond à un client connu. */
   client_id: string | null;
   read: boolean;
   archived: boolean;
+  /** 'inbound' = reçu via IMAP · 'outbound' = envoyé depuis le CRM. */
+  direction: 'inbound' | 'outbound';
   attachments: EmailAttachmentMeta[];
   created_at: string;
   client?: Pick<Client, 'id' | 'name' | 'avatar_color'> | null;

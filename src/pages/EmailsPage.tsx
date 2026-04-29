@@ -7,19 +7,23 @@ import {
   Mail,
   MailOpen,
   Paperclip,
+  Pencil,
+  Reply,
   Search,
+  Send,
   Trash2,
   User as UserIcon,
 } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { useEmails } from '../hooks/useEmails'
+import { ComposeEmailModal } from '../components/emails/ComposeEmailModal'
 import type { Email, Page } from '../lib/types'
 
 interface EmailsPageProps {
   onNavigate: (page: Page, id?: string) => void
 }
 
-type Filter = 'inbox' | 'unread' | 'archived' | 'all'
+type Filter = 'inbox' | 'unread' | 'sent' | 'archived' | 'all'
 
 function formatRelative(iso: string): string {
   const d = new Date(iso)
@@ -45,20 +49,33 @@ function getInitials(name: string | null, email: string): string {
 }
 
 export function EmailsPage({ onNavigate }: EmailsPageProps) {
-  const { emails, loading, error, refetch, unreadCount, markRead, toggleArchive, remove } = useEmails()
+  const { emails, loading, error, refetch, unreadCount, markRead, toggleArchive, remove, sendEmail } =
+    useEmails()
 
   const [filter, setFilter] = useState<Filter>('inbox')
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  const [composerOpen, setComposerOpen] = useState(false)
+  const [composerMode, setComposerMode] = useState<'compose' | 'reply'>('compose')
+  const [composerPrefill, setComposerPrefill] = useState<{
+    to?: string
+    subject?: string
+    quotedBody?: string
+    inReplyTo?: string | null
+    clientId?: string | null
+  } | undefined>(undefined)
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return emails.filter((e) => {
-      if (filter === 'inbox' && e.archived) return false
-      if (filter === 'unread' && (e.read || e.archived)) return false
+      // Filtres par direction + état
+      if (filter === 'inbox' && (e.archived || e.direction === 'outbound')) return false
+      if (filter === 'unread' && (e.read || e.archived || e.direction === 'outbound')) return false
+      if (filter === 'sent' && e.direction !== 'outbound') return false
       if (filter === 'archived' && !e.archived) return false
       if (q) {
-        const blob = `${e.subject ?? ''} ${e.from_email} ${e.from_name ?? ''} ${e.body_text ?? ''}`.toLowerCase()
+        const blob = `${e.subject ?? ''} ${e.from_email} ${e.from_name ?? ''} ${e.to_email ?? ''} ${e.body_text ?? ''}`.toLowerCase()
         if (!blob.includes(q)) return false
       }
       return true
@@ -75,20 +92,59 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
     if (!e.read) void markRead(e.id, true)
   }
 
+  const openCompose = () => {
+    setComposerMode('compose')
+    setComposerPrefill(undefined)
+    setComposerOpen(true)
+  }
+
+  const openReply = (e: Email) => {
+    const subject = e.subject?.trim() ?? ''
+    const replySubject = subject.toLowerCase().startsWith('re:') ? subject : `Re: ${subject}`
+    const quoted = e.body_text
+      ? e.body_text
+          .split('\n')
+          .map((line) => `> ${line}`)
+          .join('\n')
+      : ''
+    const header = `Le ${new Date(e.received_at).toLocaleString('fr-FR')}, ${
+      e.from_name || e.from_email
+    } a écrit :`
+    setComposerMode('reply')
+    setComposerPrefill({
+      to: e.from_email,
+      subject: replySubject,
+      quotedBody: quoted ? `${header}\n${quoted}` : header,
+      inReplyTo: e.message_id,
+      clientId: e.client_id,
+    })
+    setComposerOpen(true)
+  }
+
   return (
     <div>
       <Header
         title="E-mails"
-        subtitle={`Boîte de réception MAPA · sync IMAP toutes les 5 min · ${unreadCount} non-lu${unreadCount !== 1 ? 's' : ''}`}
+        subtitle={`Boîte de réception MAPA · sync IMAP toutes les minutes · ${unreadCount} non-lu${unreadCount !== 1 ? 's' : ''}`}
         actions={
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="px-3 py-1.5 rounded-xl text-xs font-mono uppercase tracking-wider border border-ws-line text-ws-paper hover:bg-white/[0.04] transition-colors flex items-center gap-2"
-          >
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <Inbox size={14} />}
-            Rafraîchir
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="px-3 py-1.5 rounded-xl text-xs font-mono uppercase tracking-wider border border-ws-line text-ws-paper hover:bg-white/[0.04] transition-colors flex items-center gap-2"
+            >
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <Inbox size={14} />}
+              Rafraîchir
+            </button>
+            <button
+              type="button"
+              onClick={openCompose}
+              className="px-3 py-1.5 rounded-xl text-xs font-mono uppercase tracking-wider bg-ws-accent text-ws-void hover:bg-ws-accent/90 transition-colors flex items-center gap-2"
+            >
+              <Pencil size={14} />
+              Nouveau
+            </button>
+          </div>
         }
       />
 
@@ -117,9 +173,15 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
                   className="w-full pl-8 pr-3 py-2 rounded-lg bg-ws-deep border border-ws-line text-sm text-ws-paper placeholder:text-ws-mist focus:outline-none focus:border-ws-accent/40"
                 />
               </div>
-              <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.18em]">
-                {(['inbox', 'unread', 'archived', 'all'] as Filter[]).map((f) => {
-                  const label = { inbox: 'Inbox', unread: 'Non-lus', archived: 'Archives', all: 'Tous' }[f]
+              <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.18em] flex-wrap">
+                {(['inbox', 'unread', 'sent', 'archived', 'all'] as Filter[]).map((f) => {
+                  const label = {
+                    inbox: 'Inbox',
+                    unread: 'Non-lus',
+                    sent: 'Envoyés',
+                    archived: 'Archives',
+                    all: 'Tous',
+                  }[f]
                   return (
                     <button
                       key={f}
@@ -199,6 +261,11 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
                               {e.subject || '(sans objet)'}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
+                              {e.direction === 'outbound' && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-[0.18em] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                                  <Send size={9} /> Envoyé
+                                </span>
+                              )}
                               {e.client_id && e.client && (
                                 <span
                                   className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-[0.18em] border"
@@ -263,6 +330,16 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {selected.direction === 'inbound' && (
+                      <button
+                        type="button"
+                        onClick={() => openReply(selected)}
+                        title="Répondre"
+                        className="px-2.5 py-2 rounded-lg text-xs font-mono uppercase tracking-wider bg-ws-accent/15 text-ws-accent border border-ws-accent/35 hover:bg-ws-accent/25 transition-colors flex items-center gap-1.5"
+                      >
+                        <Reply size={13} /> Répondre
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => markRead(selected.id, !selected.read)}
@@ -349,6 +426,17 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
           </div>
         </div>
       </div>
+
+      <ComposeEmailModal
+        isOpen={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        onSend={async (payload) => {
+          const result = await sendEmail(payload)
+          return { ok: result.ok, error: result.error }
+        }}
+        prefill={composerPrefill}
+        mode={composerMode}
+      />
     </div>
   )
 }
