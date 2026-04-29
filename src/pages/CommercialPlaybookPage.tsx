@@ -1,21 +1,30 @@
-import type { ComponentType, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Header } from '../components/layout/Header';
 import {
   AlertTriangle,
   ArrowRight,
+  BookOpen,
   Briefcase,
+  CalendarDays,
   CheckCircle2,
+  Contact2,
+  FileSignature,
+  FolderKanban,
   Handshake,
   Layers,
   Lightbulb,
   Percent,
+  Receipt,
   Target,
   Users,
+  UsersRound,
+  type LucideIcon,
 } from 'lucide-react';
 
-const TOC: { id: string; label: string }[] = [
+const TOC: { id: string; label: string; group?: string }[] = [
   { id: 'intro', label: 'Introduction' },
-  { id: 'presentation', label: 'Présentation MAPA' },
+  // ── Cadre commercial ──
+  { id: 'presentation', label: 'Présentation MAPA', group: 'Commercial' },
   { id: 'positionnement', label: 'Positionnement' },
   { id: 'offres', label: 'Offres (3 niveaux)' },
   { id: 'funnel', label: 'Logique commerciale' },
@@ -27,6 +36,13 @@ const TOC: { id: string; label: string }[] = [
   { id: 'seo', label: 'SEO' },
   { id: 'remuneration', label: 'Rémunération 50/50' },
   { id: 'argument-suivi', label: 'Argument suivi client' },
+  // ── Opérations CRM ──
+  { id: 'crm-clients', label: 'Clients & contacts', group: 'CRM' },
+  { id: 'crm-projets', label: 'Projets' },
+  { id: 'crm-devis', label: 'Devis & CGV' },
+  { id: 'crm-factures', label: 'Factures' },
+  { id: 'crm-calendrier', label: 'Calendrier' },
+  { id: 'crm-portail', label: 'Espace client' },
 ];
 
 function Section({
@@ -37,7 +53,7 @@ function Section({
 }: {
   id: string;
   title: string;
-  icon: ComponentType<{ className?: string; size?: number }>;
+  icon: LucideIcon;
   children: ReactNode;
 }) {
   return (
@@ -112,8 +128,8 @@ export function CommercialPlaybookPage() {
   return (
     <div className="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-12">
       <Header
-        title="Guide commercial MAPA"
-        subtitle="Cadre opérationnel · offres · cibles · collaboration Matis & Jibril · édition 2026 v1.0"
+        title="Guide MAPA"
+        subtitle="Cadre commercial · opérations CRM · devis & CGV · facturation · calendrier · espace client — édition 2026 v1.1"
       />
 
       <div className="px-4 sm:px-5 md:px-8 py-5 md:py-6 max-w-6xl mx-auto w-full min-w-0">
@@ -142,6 +158,11 @@ export function CommercialPlaybookPage() {
             <ul className="space-y-1">
               {TOC.map((item) => (
                 <li key={item.id}>
+                  {item.group && (
+                    <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-ws-accent-soft/70 mt-3 mb-1.5 px-2">
+                      {item.group}
+                    </p>
+                  )}
                   <a
                     href={`#${item.id}`}
                     className="block py-1.5 px-2 -mx-2 rounded-lg text-xs text-ws-ink hover:text-ws-cream hover:bg-white/[0.04] transition-colors font-mono leading-snug"
@@ -536,9 +557,305 @@ export function CommercialPlaybookPage() {
               </div>
             </Section>
 
+            {/* ════════════════════════════════════════════════════
+                Section II — OPÉRATIONS CRM
+                Référence opérationnelle des modules MAPA CRM.
+                ════════════════════════════════════════════════════ */}
+            <div className="pt-8 mt-8 border-t border-dashed border-ws-accent/30">
+              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-ws-accent-soft text-center mb-2">
+                ── Section II — Opérations CRM ──
+              </p>
+              <p className="text-center text-xs text-ws-mist max-w-md mx-auto">
+                Référence des modules : comment chaque écran fonctionne, ce qu'il produit, où il s'articule
+                avec le reste du système.
+              </p>
+            </div>
+
+            <Section id="crm-clients" title="Clients & contacts" icon={UsersRound}>
+              <p>
+                Le module <strong className="text-ws-paper">Clients</strong> est le référentiel central — chaque
+                fiche tient lieu d'identité juridique pour les devis, factures et l'espace client.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-4 mt-3">
+                <div className="rounded-xl border border-ws-line/60 bg-black/20 p-4">
+                  <p className="font-mono text-[10px] uppercase text-ws-mist mb-2">Champs structurants</p>
+                  <BulletList
+                    items={[
+                      'Nom + prénom + société (le composé alimente devis/factures)',
+                      'SIRET / SIREN, forme juridique, n° TVA intracom (si applicable)',
+                      'Adresse complète, ville (réutilisée dans la page acceptation des devis)',
+                      'Status : prospect · active · dormant',
+                      'Source (Apify scraping, recommandation, manuel…)',
+                    ]}
+                  />
+                </div>
+                <div className="rounded-xl border border-ws-line/60 bg-black/20 p-4">
+                  <p className="font-mono text-[10px] uppercase text-ws-mist mb-2">Fiche client (ClientDetailPage)</p>
+                  <BulletList
+                    items={[
+                      'Vue 360° : projets, devis, factures, échanges, documents',
+                      'Création directe d\'un projet ou devis depuis la fiche',
+                      'Historique d\'interactions (appel, e-mail, démo, note)',
+                      'Lien vers l\'identifiant portail (table portal_users, scope client_id)',
+                    ]}
+                  />
+                </div>
+              </div>
+              <div className="rounded-xl border border-ws-accent/25 bg-ws-accent-dim/15 p-4 mt-3">
+                <p className="font-mono text-[10px] uppercase text-ws-accent-soft mb-2 flex items-center gap-1.5">
+                  <Contact2 size={12} /> Contacts (page séparée)
+                </p>
+                <p className="text-xs">
+                  Réservée aux <strong className="text-ws-paper">interlocuteurs non-clients</strong> — partenaires,
+                  fournisseurs, contacts d'écosystème. Ne génère ni devis ni facture. Convertir en client dès qu'un
+                  projet est en jeu.
+                </p>
+              </div>
+            </Section>
+
+            <Section id="crm-projets" title="Projets" icon={FolderKanban}>
+              <p>
+                Un projet matérialise une <strong className="text-ws-paper">livraison contractée</strong> : type
+                technique, périmètre, dates et statut. Il pivote vers les devis, le suivi mensuel et l'espace client.
+              </p>
+              <div className="rounded-xl border border-ws-line/60 overflow-hidden mt-3 text-xs">
+                <table className="w-full text-left">
+                  <thead className="bg-black/30 font-mono text-ws-mist uppercase text-[10px]">
+                    <tr>
+                      <th className="p-3">Type</th>
+                      <th className="p-3">Tarif de base</th>
+                      <th className="p-3 hidden sm:table-cell">Usage</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-ws-ink divide-y divide-ws-line/40">
+                    <tr>
+                      <td className="p-3 text-ws-paper">website / redesign</td>
+                      <td className="p-3 font-mono tabular-nums">600 €</td>
+                      <td className="p-3 hidden sm:table-cell">Vitrine ou refonte</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 text-ws-paper">webapp / ecommerce</td>
+                      <td className="p-3 font-mono tabular-nums">1 000 €</td>
+                      <td className="p-3 hidden sm:table-cell">Application avec backoffice / paiement</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 text-ws-paper">automation / seo / other</td>
+                      <td className="p-3 font-mono tabular-nums">sur devis</td>
+                      <td className="p-3 hidden sm:table-cell">Sur mesure, négocié au cas par cas</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-3">
+                Sous-modules attachés : <strong className="text-ws-paper">étapes</strong> (timeline visible côté
+                portail), <strong className="text-ws-paper">brief</strong> (contenu structuré), <strong className="text-ws-paper">checklist</strong>,{' '}
+                <strong className="text-ws-paper">documents</strong>, <strong className="text-ws-paper">demandes de
+                ressources</strong>, <strong className="text-ws-paper">échanges</strong>.
+              </p>
+              <div className="rounded-xl border border-ws-highlight/30 bg-gradient-to-br from-ws-accent-dim/15 to-transparent p-4 mt-3">
+                <p className="font-mono text-[10px] uppercase text-ws-cream mb-2">Suivi mensuel attaché au projet</p>
+                <p className="text-xs">
+                  Cocher <strong className="text-ws-paper">has_recurring_support</strong> →{' '}
+                  <strong className="text-ws-paper">recurring_support_amount</strong> +{' '}
+                  <strong className="text-ws-paper">recurring_support_label</strong> +{' '}
+                  <strong className="text-ws-paper">recurring_support_scope</strong>. Lors de la génération de devis,
+                  un second devis « -SUIVI » est créé en parallèle, lié par <code className="text-ws-accent-soft text-[10px]">parent_quote_id</code>.
+                </p>
+              </div>
+            </Section>
+
+            <Section id="crm-devis" title="Devis & CGV" icon={FileSignature}>
+              <p>
+                Pipeline devis :{' '}
+                <strong className="text-ws-paper">draft → sent → signed</strong>. Chaque devis génère un PDF de{' '}
+                <strong className="text-ws-paper">5 pages</strong> auto-portant : devis (page 1) + CGV intégrales art.
+                1 à 20 (pages 2/3/4) + acceptation (page 5).
+              </p>
+
+              <div className="rounded-xl border border-ws-accent/30 bg-ws-accent-dim/15 p-4 mt-3">
+                <p className="font-display text-base text-ws-cream font-semibold mb-2">Structure CGV unifiée</p>
+                <BulletList
+                  items={[
+                    'Art. 1-2 : objet & formation du contrat',
+                    'Art. 3 : prix & modalités — clause unique couvrant (i) prestations forfaitaires (acompte X % à la commande, solde à la livraison) et (ii) contrats de suivi (mensuel à terme à échoir, paiement à 30 jours, art. L. 441-10 C. com.)',
+                    'Art. 4 : pénalités de retard (BCE + 10 pts) + indemnité forfaitaire 40 € (D. 441-5 C. com.)',
+                    'Art. 8 : recette J+7, garantie de conformité 30 jours',
+                    'Art. 9.2 / 9.3 : contrat de suivi, engagement initial 12 mois reconductible par tacite reconduction, préavis 30 jours par LRAR',
+                    'Art. 10 : propriété intellectuelle subordonnée au paiement',
+                    'Art. 13 : RGPD + secret professionnel renforcé (avocats, santé, banque…)',
+                    'Art. 20 : tribunaux compétents de Lille',
+                  ]}
+                />
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                <div className="rounded-xl border border-ws-line/60 bg-black/20 p-4">
+                  <p className="font-mono text-[10px] uppercase text-ws-mist mb-2">Acompte dynamique</p>
+                  <p className="text-xs">
+                    Le pourcentage saisi au formulaire (10 / 20 / 30 / 40 %…) est{' '}
+                    <strong className="text-ws-paper">propagé dans la clause art. 3</strong>. Numérotation française
+                    auto : « quarante pour cent (40 %) ». Pour un devis de suivi, le % est{' '}
+                    <strong className="text-ws-paper">hérité du devis parent</strong> via{' '}
+                    <code className="text-ws-accent-soft text-[10px]">parent_quote_id</code>.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-ws-line/60 bg-black/20 p-4">
+                  <p className="font-mono text-[10px] uppercase text-ws-mist mb-2">Signature électronique (DocuSign-ready)</p>
+                  <p className="text-xs">
+                    Page 5 : case à cocher <em>« Je reconnais avoir lu et accepté ces conditions »</em> + zone
+                    signature en <strong className="text-ws-paper">fond blanc</strong> (lisibilité encre noire). Mention
+                    légale citant l'<strong className="text-ws-paper">art. 1366 C. civ.</strong> (équivalence probante
+                    écrit électronique). Tags DocuSign : <em>Signature</em>, <em>Date Signed</em>, <em>Text</em>{' '}
+                    (Fait à), <em>Checkbox</em>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/10 p-4 mt-3">
+                <p className="font-mono text-[10px] uppercase text-emerald-300/90 mb-2">Devis de suivi (récurrent)</p>
+                <p className="text-xs">
+                  Suffixe <code className="text-ws-accent-soft text-[10px]">-SUIVI</code> sur le numéro. Page 5 cite
+                  <strong className="text-ws-paper"> explicitement art. 9.2 + 9.3</strong> (engagement 12 mois,
+                  reconduction, préavis 30 j). Les CGV sont annexées <strong className="text-ws-paper">comme pour
+                  le devis principal</strong> — un client signataire ne peut plus invoquer un défaut de communication.
+                </p>
+              </div>
+
+              <p className="text-xs text-ws-mist mt-3 font-mono">
+                Source canonique :{' '}
+                <code className="text-ws-accent-soft">src/lib/devisGenerator.ts</code>. Émetteur :{' '}
+                <code className="text-ws-accent-soft">MAPA_VENDOR</code> (14 Rue d'Aguesseau, 59800 Lille · SIREN 919
+                461 301 · SIRET 919 461 301 00021 · TVA non applicable, art. 293 B CGI).
+              </p>
+            </Section>
+
+            <Section id="crm-factures" title="Factures" icon={Receipt}>
+              <p>
+                Pipeline facture : <strong className="text-ws-paper">draft → sent → paid</strong>. Chaque facture est
+                générée à partir d'un devis signé via{' '}
+                <code className="text-ws-accent-soft text-[10px]">src/lib/invoiceGenerator.ts</code>.
+              </p>
+              <div className="grid md:grid-cols-3 gap-3 mt-3">
+                <div className="rounded-xl border border-ws-line/60 bg-black/20 p-4">
+                  <p className="font-mono text-[10px] uppercase text-ws-mist mb-2">Facture d'acompte</p>
+                  <p className="text-xs">
+                    Émise à la commande, montant = <strong className="text-ws-paper">depositPercent ×
+                    montant_devis</strong>. Bloque le démarrage technique tant qu'elle n'est pas réglée.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-ws-line/60 bg-black/20 p-4">
+                  <p className="font-mono text-[10px] uppercase text-ws-mist mb-2">Facture de solde</p>
+                  <p className="text-xs">
+                    Émise à la livraison ; rappelle l'acompte perçu (référence + date). Solde =
+                    montant_devis − acompte.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-ws-line/60 bg-black/20 p-4">
+                  <p className="font-mono text-[10px] uppercase text-ws-mist mb-2">Facture totale (suivi mensuel)</p>
+                  <p className="text-xs">
+                    Émise mensuellement pour les contrats de suivi — pas d'acompte. Mention{' '}
+                    <em>art. L. 441-10 C. com.</em> + paiement à 30 j.
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-ws-mist mt-3">
+                Mentions légales auto-injectées :{' '}
+                <strong className="text-ws-paper">TVA non applicable, art. 293 B CGI</strong> · pénalités de retard
+                BCE + 10 pts · indemnité forfaitaire 40 € (D. 441-5) · escompte refusé.
+              </p>
+            </Section>
+
+            <Section id="crm-calendrier" title="Calendrier" icon={CalendarDays}>
+              <p>
+                Le module <strong className="text-ws-paper">Calendrier</strong> agrège{' '}
+                <strong className="text-ws-paper">7 sources</strong> dans une vue mois unifiée : agenda libre, projets
+                (start/end), tâches, créations clients, échanges, factures à échéance, factures payées. Code couleur
+                fixe par kind (légende en haut de page).
+              </p>
+              <div className="rounded-xl border border-ws-line/60 overflow-hidden mt-3 text-xs">
+                <table className="w-full text-left">
+                  <thead className="bg-black/30 font-mono text-ws-mist uppercase text-[10px]">
+                    <tr>
+                      <th className="p-3">Action</th>
+                      <th className="p-3">Effet</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-ws-ink divide-y divide-ws-line/40">
+                    <tr>
+                      <td className="p-3 text-ws-paper">Clic sur une case jour</td>
+                      <td className="p-3">Ouvre le <strong className="text-ws-paper">DayDetailModal</strong> : liste chronologique enrichie (badges kind, client/projet liés, description, marqueur portail)</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 text-ws-paper">Clic sur une chip d'événement</td>
+                      <td className="p-3">Édition directe (agenda) ou navigation vers la page concernée (projet, tâche, facture…)</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 text-ws-paper">Bouton « Nouvel événement »</td>
+                      <td className="p-3">Création libre (titre, dates, all-day, recurrence, lien client/projet, couleur)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="rounded-xl border border-amber-500/25 bg-amber-950/10 p-4 mt-3">
+                <p className="font-mono text-[10px] uppercase text-amber-300/90 mb-2">RDV bookés depuis l'espace client</p>
+                <p className="text-xs">
+                  Apparaissent automatiquement dans le calendrier en couleur or{' '}
+                  <code className="text-ws-accent-soft text-[10px]">#C9A84C</code> avec un{' '}
+                  <strong className="text-ws-paper">badge ambre « Portail client »</strong> dans la modale d'édition.
+                  Source : table <code className="text-ws-accent-soft text-[10px]">calendar_events</code> avec{' '}
+                  <code className="text-ws-accent-soft text-[10px]">booking_source = 'portal'</code>.
+                </p>
+              </div>
+              <p className="text-xs text-ws-mist mt-3 font-mono">
+                Calendrier Matis (page distincte « calendar-matis ») = agenda perso, hors flux client.
+              </p>
+            </Section>
+
+            <Section id="crm-portail" title="Espace client (portail)" icon={BookOpen}>
+              <p>
+                App séparée (<code className="text-ws-accent-soft text-[10px]">MAPA-Espace-Client</code>) — auth
+                Supabase, scope par <code className="text-ws-accent-soft text-[10px]">portal_users.client_id</code>.
+                Un identifiant portail = un client (et tous ses projets).
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                <div className="rounded-xl border border-ws-line/60 bg-black/20 p-4">
+                  <p className="font-mono text-[10px] uppercase text-ws-mist mb-2">Modules visibles côté client</p>
+                  <BulletList
+                    items={[
+                      'Fiche projet (statut, progression, livrables)',
+                      'Timeline étapes + Checklist',
+                      'Messagerie projet',
+                      'FinanceCard : devis & factures du client',
+                      'Documents transmis (avec catégories)',
+                      'Brief lecture seule',
+                      'Demandes de ressources (RGPD, accès, contenus)',
+                      'Prochains RDV (UpcomingEvents)',
+                      'Réservation de RDV (BookingSection)',
+                    ]}
+                  />
+                </div>
+                <div className="rounded-xl border border-ws-line/60 bg-black/20 p-4">
+                  <p className="font-mono text-[10px] uppercase text-ws-mist mb-2">Système de booking (Calendly-like)</p>
+                  <BulletList
+                    items={[
+                      'Règles de dispo : table availability_rules (Lun-Ven 9-12h + 14-18h, créneaux 30 min par défaut)',
+                      'Vue 14 jours, jours sans dispo masqués',
+                      'Anti-fuite : vue calendar_busy_ranges expose uniquement start_at / end_at',
+                      'INSERT scopé client_id + portal_user_id (RLS Supabase)',
+                      'Annulation portail : DELETE autorisé si > 24 h avant le RDV',
+                    ]}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-ws-mist mt-3 font-mono">
+                Côté CRM, créer un identifiant portail depuis la page « Identifiants » (KeyRound) — invite e-mail
+                générée, le client définit son mot de passe à la 1ʳᵉ connexion.
+              </p>
+            </Section>
+
             <footer className="pt-8 border-t border-ws-line/50 text-center">
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ws-mist">
-                MAPA Développement · Guide intégré CRM · 2026 v1.0
+                MAPA Développement · Guide intégré CRM · 2026 v1.1
               </p>
             </footer>
           </div>
