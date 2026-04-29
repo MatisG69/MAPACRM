@@ -24,9 +24,12 @@ import { createClient } from '@supabase/supabase-js'
 
 const { simpleParser } = mailparserPkg
 
-// Force le runtime Node.js + budget temps suffisant pour l'IMAP fetch
-// (par défaut, Vercel Hobby coupe à 10 s — IMAP + parse peut dépasser).
-export const config = { runtime: 'nodejs', maxDuration: 60 }
+// Syntaxe Vercel moderne : exports top-level (l'ancien `export const config = {...}`
+// force le runtime legacy Node-Express style avec req/res, incompatible avec
+// le handler Web API ci-dessous). Node.js est le runtime par défaut, on
+// n'a qu'à étendre maxDuration pour permettre l'IMAP fetch (par défaut 10 s
+// sur Hobby — souvent insuffisant).
+export const maxDuration = 60
 
 interface SyncStats {
   fetched: number
