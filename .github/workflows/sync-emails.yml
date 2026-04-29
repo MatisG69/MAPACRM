@@ -1,22 +1,13 @@
-name: Sync Hostinger emails
+name: Sync Hostinger emails (manuel)
 
-# Déclenche /api/cron/sync-emails sur Vercel toutes les 5 minutes.
-# Le plan Vercel Hobby limite les crons à 1×/jour : on utilise donc
-# GitHub Actions (gratuit, granularité 5 min) comme planificateur externe.
-#
-# Pré-requis :
-#   · Secret `CRON_SECRET` configuré dans Settings → Secrets and variables
-#     → Actions, identique à la valeur Vercel.
-#   · Domaine de prod : mapacrm.vercel.app (modifier ci-dessous si besoin).
+# Le cron récurrent est désormais géré par pg_cron + pg_net côté Supabase
+# (granularité 1 min). Ce workflow est conservé uniquement comme bouton
+# « Run workflow » dans l'onglet GitHub Actions, pour forcer une sync
+# instantanée en cas de besoin (debug, mail urgent, etc.).
 
 on:
-  schedule:
-    # GitHub Actions cron : minimum 5 min, syntaxe UTC.
-    - cron: '*/5 * * * *'
-  # Déclenchement manuel possible depuis l'onglet Actions.
   workflow_dispatch:
 
-# Évite que deux runs se chevauchent si l'un dépasse 5 min (rare mais possible).
 concurrency:
   group: sync-emails
   cancel-in-progress: false
