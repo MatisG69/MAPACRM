@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Archive,
   ArchiveRestore,
+  Code2,
+  FileText as FileTextIcon,
   Inbox,
   Loader2,
   Mail,
@@ -58,6 +60,8 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
 
   const [composerOpen, setComposerOpen] = useState(false)
   const [composerMode, setComposerMode] = useState<'compose' | 'reply'>('compose')
+  /** Mode de rendu du corps : 'text' (dark, défaut) ou 'html' (iframe blanc). */
+  const [bodyMode, setBodyMode] = useState<'text' | 'html'>('text')
   const [composerPrefill, setComposerPrefill] = useState<{
     to?: string
     subject?: string
@@ -86,6 +90,12 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
     () => filtered.find((e) => e.id === selectedId) ?? filtered[0] ?? null,
     [filtered, selectedId]
   )
+
+  // Reset le mode de rendu à 'text' à chaque changement d'email sélectionné,
+  // pour ne jamais surprendre l'utilisateur avec un fond blanc inattendu.
+  useEffect(() => {
+    setBodyMode('text')
+  }, [selected?.id])
 
   const openEmail = (e: Email) => {
     setSelectedId(e.id)
@@ -405,21 +415,61 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
                   </div>
                 )}
 
+                {/* Toggle texte / HTML — visible seulement si les 2 versions existent */}
+                {selected.body_text && selected.body_html && (
+                  <div className="px-5 pt-3 flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.18em] flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setBodyMode('text')}
+                      className={`px-2.5 py-1 rounded-md border transition-colors flex items-center gap-1.5 ${
+                        bodyMode === 'text'
+                          ? 'bg-ws-accent/15 border-ws-accent/35 text-ws-accent'
+                          : 'border-ws-line text-ws-mist hover:text-ws-paper'
+                      }`}
+                    >
+                      <FileTextIcon size={11} /> Texte
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBodyMode('html')}
+                      className={`px-2.5 py-1 rounded-md border transition-colors flex items-center gap-1.5 ${
+                        bodyMode === 'html'
+                          ? 'bg-ws-accent/15 border-ws-accent/35 text-ws-accent'
+                          : 'border-ws-line text-ws-mist hover:text-ws-paper'
+                      }`}
+                    >
+                      <Code2 size={11} /> HTML
+                    </button>
+                  </div>
+                )}
+
                 {/* Corps du message */}
                 <div className="flex-1 overflow-y-auto px-5 py-5">
-                  {selected.body_html ? (
-                    <iframe
-                      // sandbox interdit JS, navigation, popup. Le HTML email rendu reste sûr.
-                      sandbox=""
-                      title={selected.subject ?? 'Email'}
-                      srcDoc={selected.body_html}
-                      className="w-full min-h-[400px] bg-white rounded-lg"
-                    />
-                  ) : (
-                    <pre className="text-sm text-ws-ink whitespace-pre-wrap font-sans leading-relaxed">
-                      {selected.body_text || '(corps vide)'}
-                    </pre>
-                  )}
+                  {(() => {
+                    const hasText = !!selected.body_text
+                    const hasHtml = !!selected.body_html
+                    const showHtml = bodyMode === 'html' && hasHtml || (!hasText && hasHtml)
+
+                    if (showHtml) {
+                      return (
+                        <iframe
+                          // sandbox interdit JS, navigation, popup.
+                          sandbox=""
+                          title={selected.subject ?? 'Email'}
+                          srcDoc={selected.body_html ?? ''}
+                          className="w-full min-h-[400px] bg-white rounded-lg"
+                        />
+                      )
+                    }
+                    if (hasText) {
+                      return (
+                        <pre className="text-sm text-ws-ink whitespace-pre-wrap font-sans leading-relaxed">
+                          {(selected.body_text ?? '').replace(/\r\n/g, '\n').trim()}
+                        </pre>
+                      )
+                    }
+                    return <p className="text-sm text-ws-mist italic">(corps vide)</p>
+                  })()}
                 </div>
               </>
             )}
