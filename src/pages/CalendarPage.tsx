@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { CalendarEventForm } from '../components/calendar/CalendarEventForm';
+import { DayDetailModal } from '../components/calendar/DayDetailModal';
 import {
   buildUnifiedCalendarOccurrences,
   bucketUnifiedByDay,
@@ -85,6 +86,7 @@ export function CalendarPage({
 
   const [modalCreate, setModalCreate] = useState(false);
   const [createDay, setCreateDay] = useState<Date | undefined>(undefined);
+  const [detailDay, setDetailDay] = useState<Date | null>(null);
   const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -151,6 +153,19 @@ export function CalendarPage({
 
   const handleOccurrenceClick = (e: React.MouseEvent, occ: UnifiedCalendarOccurrence) => {
     e.stopPropagation();
+    if (occ.kind === 'agenda' && occ.calendarEvent) {
+      setEditEvent(occ.calendarEvent);
+      return;
+    }
+    if (occ.navigate) {
+      onNavigate(occ.navigate.page, occ.navigate.id);
+    }
+  };
+
+  /** Sélection d'une occurrence depuis le modal détail : ferme le détail
+   *  puis route vers l'édition (agenda) ou la page concernée (autres kinds). */
+  const handleDetailOccurrenceSelect = (occ: UnifiedCalendarOccurrence) => {
+    setDetailDay(null);
     if (occ.kind === 'agenda' && occ.calendarEvent) {
       setEditEvent(occ.calendarEvent);
       return;
@@ -249,11 +264,11 @@ export function CalendarPage({
                   key={k}
                   role="button"
                   tabIndex={0}
-                  onClick={() => openCreate(date)}
+                  onClick={() => setDetailDay(date)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      openCreate(date);
+                      setDetailDay(date);
                     }
                   }}
                   className={`flex flex-col items-stretch text-left border-b border-r border-ws-line/50 min-h-[4.5rem] md:min-h-[7.5rem] p-1 md:p-2 transition-colors hover:bg-white/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-ws-accent/60 cursor-pointer ${
@@ -310,6 +325,19 @@ export function CalendarPage({
           </div>
         </div>
       </div>
+
+      <DayDetailModal
+        isOpen={!!detailDay}
+        onClose={() => setDetailDay(null)}
+        day={detailDay}
+        occurrences={detailDay ? byDay.get(dayKeyCal(detailDay)) ?? [] : []}
+        onCreate={() => {
+          const d = detailDay;
+          setDetailDay(null);
+          openCreate(d ?? undefined);
+        }}
+        onSelectOccurrence={handleDetailOccurrenceSelect}
+      />
 
       <Modal isOpen={modalCreate} onClose={closeCreate} title="Nouvel événement" size="lg">
         <CalendarEventForm
