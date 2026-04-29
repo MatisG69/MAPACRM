@@ -151,6 +151,13 @@ export function CalendarEventForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <div className="form-error">{error}</div>}
 
+      {initial?.booking_source === 'portal' && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-300 text-xs">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <span className="font-mono uppercase tracking-[0.2em] text-[10px]">Réservé depuis l'espace client</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="sm:col-span-2">
           <label className="form-label">Titre</label>

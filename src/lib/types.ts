@@ -176,6 +176,10 @@ export interface CalendarEvent {
   project_id: string | null;
   /** Couleur d’affichage (#hex), optionnelle */
   color: string | null;
+  /** Provenance : 'admin' = créé depuis le CRM, 'portal' = réservé depuis l'espace client. */
+  booking_source?: 'admin' | 'portal' | null;
+  /** Référence au portal_user qui a réservé (si booking_source = 'portal'). */
+  portal_user_id?: string | null;
   created_at: string;
   updated_at: string;
   client?: Pick<Client, 'id' | 'name' | 'avatar_color'>;
