@@ -796,14 +796,24 @@ export function generateDevisHTML(params: DevisParams): string {
     display:flex;flex-direction:column;gap:10px;margin-bottom:14px;
     font-size:8pt;color:#9E9080;
   }
+  /* Champs remplissables : fond blanc obligatoire pour rester lisibles
+     quand DocuSign (ou un signataire papier) écrit en noir par-dessus. */
   .sign-card .field{
-    display:flex;align-items:baseline;gap:8px;
-    border-bottom:1px dotted rgba(201,168,76,.25);padding:4px 0;
-    min-height:14pt;
+    display:flex;align-items:center;gap:0;
+    min-height:18pt;
   }
   .sign-card .field .k{
     font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;
-    color:#9E9080;min-width:40px;flex-shrink:0;
+    color:#9E9080;min-width:46px;flex-shrink:0;
+    padding:0 10px 0 0;
+  }
+  .sign-card .field .v{
+    flex:1;
+    background:#FFFFFF;color:#1A1A1A;
+    border:1px solid #D6CDB8;border-radius:2px;
+    padding:4px 10px;font-size:8.5pt;
+    min-height:18pt;
+    display:flex;align-items:center;
   }
   .sign-card .hint{
     font-size:7pt;color:#807569;font-style:italic;line-height:1.55;
@@ -811,17 +821,16 @@ export function generateDevisHTML(params: DevisParams): string {
   }
   .sign-card .handwritten-zone{
     flex:1;
-    border:1px dashed rgba(201,168,76,.2);border-radius:2px;
+    background:#FFFFFF;
+    border:1px solid #D6CDB8;border-radius:2px;
     min-height:70mm;
     position:relative;
-    background:
-      linear-gradient(180deg,rgba(201,168,76,.02) 0%,transparent 100%);
   }
   .sign-card .handwritten-zone::after{
     content:'Signature';
     position:absolute;bottom:6px;right:10px;
     font-size:6.5pt;letter-spacing:.22em;text-transform:uppercase;
-    color:#4A453E;
+    color:#B5AC95;
   }
 
   .sign-mention{
@@ -840,10 +849,10 @@ export function generateDevisHTML(params: DevisParams): string {
     font-size:8pt;color:#C8BFB0;line-height:1.45;
   }
   .acceptance-check .check-box{
-    display:inline-block;width:11px;height:11px;
-    border:1.2px solid #C9A84C;border-radius:1px;
+    display:inline-block;width:13px;height:13px;
+    background:#FFFFFF;
+    border:1.4px solid #1A1A1A;border-radius:1px;
     flex-shrink:0;margin-top:1px;
-    background:rgba(201,168,76,.04);
   }
   .acceptance-check .check-label{flex:1;font-style:normal;}
 
@@ -1379,8 +1388,8 @@ function renderSignaturePage(ctx: {
         contact@mapa-developpement.fr · +33 6 79 62 39 42
       </div>
       <div class="fields">
-        <div class="field"><span class="k">Fait à</span><span>Lille</span></div>
-        <div class="field"><span class="k">Le</span><span>${updatedAt}</span></div>
+        <div class="field"><span class="k">Fait à</span><span class="v">Lille</span></div>
+        <div class="field"><span class="k">Le</span><span class="v">${updatedAt}</span></div>
       </div>
       <div class="hint">Signature :</div>
       <div class="handwritten-zone"></div>
@@ -1399,8 +1408,8 @@ function renderSignaturePage(ctx: {
         ${client.email ? `<span style="color:#9E9080">${safe(client.email)}</span>` : ''}${client.email && client.phone ? ' · ' : ''}${client.phone ? `<span style="color:#9E9080">${safe(client.phone)}</span>` : ''}
       </div>
       <div class="fields">
-        <div class="field"><span class="k">Fait à</span><span>${client.city ? safe(client.city) : '_________________________'}</span></div>
-        <div class="field"><span class="k">Le</span><span>_____ / _____ / __________</span></div>
+        <div class="field"><span class="k">Fait à</span><span class="v">${client.city ? safe(client.city) : ''}</span></div>
+        <div class="field"><span class="k">Le</span><span class="v"></span></div>
       </div>
       <div class="acceptance-check">
         <span class="check-box"></span>
