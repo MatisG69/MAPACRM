@@ -50,6 +50,38 @@ function getInitials(name: string | null, email: string): string {
   return (parts[0]?.[0] ?? '').toUpperCase() + (parts[1]?.[0] ?? '').toUpperCase() || '?'
 }
 
+/**
+ * Extrait du texte brut depuis une chaîne HTML d'email — fallback quand
+ * `body_text` est null mais `body_html` existe (cas Gmail mono-version).
+ * Pas de DOM côté serveur, donc on parse léger côté client via DOMParser
+ * pour conserver les sauts de ligne logiques (paragraphes, listes, br).
+ */
+function htmlToPlainText(html: string): string {
+  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    // SSR / fallback : strip naïf
+    return html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<br\s*\/?>(\s*)/gi, '\n')
+      .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  // Retire styles/scripts qui pollueraient innerText
+  doc.querySelectorAll('style, script, head').forEach((el) => el.remove())
+  // innerText respecte les sauts de ligne visuels mieux que textContent
+  const text = (doc.body?.innerText ?? doc.body?.textContent ?? '').replace(/ /g, ' ')
+  return text.replace(/\n{3,}/g, '\n\n').trim()
+}
+
 export function EmailsPage({ onNavigate }: EmailsPageProps) {
   const { emails, loading, error, refetch, unreadCount, markRead, toggleArchive, remove, sendEmail } =
     useEmails()
@@ -415,8 +447,10 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
                   </div>
                 )}
 
-                {/* Toggle texte / HTML — visible seulement si les 2 versions existent */}
-                {selected.body_text && selected.body_html && (
+                {/* Toggle texte / HTML — proposé dès qu'une version HTML existe,
+                    car on peut toujours produire un rendu texte (extrait depuis
+                    body_text si présent, ou par strip HTML sinon). */}
+                {selected.body_html && (
                   <div className="px-5 pt-3 flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.18em] flex-shrink-0">
                     <button
                       type="button"
@@ -443,17 +477,16 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
                   </div>
                 )}
 
-                {/* Corps du message */}
+                {/* Corps du message — par défaut TOUJOURS en texte sombre.
+                    L'iframe blanche n'apparaît que si l'utilisateur clique
+                    explicitement sur le toggle "HTML". */}
                 <div className="flex-1 overflow-y-auto px-5 py-5">
                   {(() => {
-                    const hasText = !!selected.body_text
-                    const hasHtml = !!selected.body_html
-                    const showHtml = bodyMode === 'html' && hasHtml || (!hasText && hasHtml)
+                    const showHtml = bodyMode === 'html' && !!selected.body_html
 
                     if (showHtml) {
                       return (
                         <iframe
-                          // sandbox interdit JS, navigation, popup.
                           sandbox=""
                           title={selected.subject ?? 'Email'}
                           srcDoc={selected.body_html ?? ''}
@@ -461,14 +494,25 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
                         />
                       )
                     }
-                    if (hasText) {
-                      return (
-                        <pre className="text-sm text-ws-ink whitespace-pre-wrap font-sans leading-relaxed">
-                          {(selected.body_text ?? '').replace(/\r\n/g, '\n').trim()}
-                        </pre>
-                      )
+
+                    // Préférence : body_text natif → strip HTML → vide
+                    const rawText = selected.body_text?.trim()
+                      ? selected.body_text
+                      : selected.body_html
+                        ? htmlToPlainText(selected.body_html)
+                        : ''
+
+                    const cleaned = rawText.replace(/\r\n/g, '\n').trim()
+
+                    if (!cleaned) {
+                      return <p className="text-sm text-ws-mist italic">(corps vide)</p>
                     }
-                    return <p className="text-sm text-ws-mist italic">(corps vide)</p>
+
+                    return (
+                      <pre className="text-sm text-ws-ink whitespace-pre-wrap font-sans leading-relaxed">
+                        {cleaned}
+                      </pre>
+                    )
                   })()}
                 </div>
               </>
