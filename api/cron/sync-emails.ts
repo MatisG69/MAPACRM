@@ -16,11 +16,17 @@
  */
 
 import { ImapFlow } from 'imapflow'
-import { simpleParser, type AddressObject } from 'mailparser'
+// mailparser est CommonJS — passage par le default import pour éviter les
+// soucis d'interop ESM/CJS sur le bundler Vercel ("Named export ... not found").
+import mailparserPkg from 'mailparser'
+import type { AddressObject } from 'mailparser'
 import { createClient } from '@supabase/supabase-js'
 
-// Force le runtime Node.js — IMAP nécessite des sockets TCP.
-export const config = { runtime: 'nodejs' }
+const { simpleParser } = mailparserPkg
+
+// Force le runtime Node.js + budget temps suffisant pour l'IMAP fetch
+// (par défaut, Vercel Hobby coupe à 10 s — IMAP + parse peut dépasser).
+export const config = { runtime: 'nodejs', maxDuration: 60 }
 
 interface SyncStats {
   fetched: number
