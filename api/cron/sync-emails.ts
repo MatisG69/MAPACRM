@@ -115,84 +115,119 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       truncated = totalUnseen > MAX_PER_RUN
       const uidsToFetch = allUnseenUids.slice(0, MAX_PER_RUN)
 
-      if (uidsToFetch.length === 0) {
-        // Rien à faire — on sort proprement
-      } else for await (const msg of imap.fetch(
-        uidsToFetch,
-        { source: true, envelope: true, uid: true },
-        { uid: true }
-      )) {
-        stats.fetched++
-        if (!msg.source) continue
+      if (uidsToFetch.length > 0) {
+        // ── 4a. Étape 1 : drainer le fetch dans un buffer mémoire ─────
+        // imapflow ne tolère aucune autre commande IMAP pendant qu'un
+        // generator fetch est ouvert : appeler messageFlagsAdd inside
+        // le for-await casse la session ("Connection not available")
+        // et bloque la boîte sur 1 mail par run. On consomme donc tout
+        // d'abord, puis on traite hors lock-fetch.
+        interface BufferedMessage {
+          uid: number
+          source: Buffer
+        }
+        const buffered: BufferedMessage[] = []
+        for await (const msg of imap.fetch(
+          uidsToFetch,
+          { source: true, uid: true },
+          { uid: true }
+        )) {
+          if (!msg.source || msg.uid == null) continue
+          buffered.push({ uid: msg.uid, source: msg.source })
+        }
+        stats.fetched = buffered.length
 
-        let parsed
-        try {
-          parsed = await simpleParser(msg.source)
-        } catch (e) {
-          stats.errors.push(`parse_uid_${msg.uid}: ${(e as Error).message}`)
-          continue
+        // ── 4b. Étape 2 : parser + upsert + flag, sans fetch en cours ──
+        const seenUidsToFlag: number[] = []
+        for (const msg of buffered) {
+          let parsed
+          try {
+            parsed = await simpleParser(msg.source)
+          } catch (e) {
+            stats.errors.push(`parse_uid_${msg.uid}: ${(e as Error).message}`)
+            continue
+          }
+
+          const from = firstAddress(parsed.from)
+          const fromEmail = from?.address?.toLowerCase().trim()
+          const fromName = from?.name ?? null
+          if (!fromEmail) {
+            stats.skipped++
+            continue
+          }
+
+          // Idempotence : on calque message_id sur le RFC, sinon on retombe
+          // sur un identifiant UID-stable pour éviter les doublons en cas
+          // de ré-injection.
+          const messageId = parsed.messageId ?? `imap-uid-${msg.uid}`
+
+          // ── 5. Match client par email ──────────────────────────────────
+          let clientId: string | null = null
+          const { data: matched } = await supabase
+            .from('clients')
+            .select('id')
+            .ilike('email', fromEmail)
+            .limit(1)
+            .maybeSingle()
+          clientId = matched?.id ?? null
+
+          // ── 6. Upsert ──────────────────────────────────────────────────
+          const attachments = (parsed.attachments ?? []).map((a) => ({
+            filename: a.filename ?? null,
+            contentType: a.contentType ?? null,
+            size: a.size ?? null,
+            contentId: a.contentId ?? null,
+          }))
+
+          // .select() permet de distinguer un vrai insert d'un duplicate
+          // (ignoreDuplicates renvoie [] sur conflit sans erreur).
+          const { data: upserted, error } = await supabase
+            .from('emails')
+            .upsert(
+              {
+                message_id: messageId,
+                from_email: fromEmail,
+                from_name: fromName,
+                to_email: flattenTo(parsed.to),
+                subject: parsed.subject ?? '(sans objet)',
+                body_text: parsed.text ?? null,
+                body_html: typeof parsed.html === 'string' ? parsed.html : null,
+                received_at: parsed.date?.toISOString() ?? new Date().toISOString(),
+                client_id: clientId,
+                attachments,
+              },
+              { onConflict: 'message_id', ignoreDuplicates: true }
+            )
+            .select('id')
+
+          if (error) {
+            stats.errors.push(`insert_uid_${msg.uid}: ${error.message}`)
+            stats.skipped++
+            // Pas de \Seen sur erreur DB — on ré-essaiera au prochain run.
+            continue
+          }
+
+          if ((upserted?.length ?? 0) > 0) {
+            stats.inserted++
+          } else {
+            // Duplicate silencieux — l'email était déjà en base. On marque
+            // quand même \Seen pour ne pas re-traiter à chaque cron.
+            stats.skipped++
+          }
+
+          seenUidsToFlag.push(msg.uid)
         }
 
-        const from = firstAddress(parsed.from)
-        const fromEmail = from?.address?.toLowerCase().trim()
-        const fromName = from?.name ?? null
-        if (!fromEmail) {
-          stats.skipped++
-          continue
-        }
-
-        // Idempotence : on calque message_id sur le RFC, sinon on retombe
-        // sur un identifiant UID-stable pour éviter les doublons en cas
-        // de ré-injection.
-        const messageId = parsed.messageId ?? `imap-uid-${msg.uid}`
-
-        // ── 5. Match client par email ────────────────────────────────────
-        let clientId: string | null = null
-        const { data: matched } = await supabase
-          .from('clients')
-          .select('id')
-          .ilike('email', fromEmail)
-          .limit(1)
-          .maybeSingle()
-        clientId = matched?.id ?? null
-
-        // ── 6. Upsert ────────────────────────────────────────────────────
-        const attachments = (parsed.attachments ?? []).map((a) => ({
-          filename: a.filename ?? null,
-          contentType: a.contentType ?? null,
-          size: a.size ?? null,
-          contentId: a.contentId ?? null,
-        }))
-
-        const { error } = await supabase.from('emails').upsert(
-          {
-            message_id: messageId,
-            from_email: fromEmail,
-            from_name: fromName,
-            to_email: flattenTo(parsed.to),
-            subject: parsed.subject ?? '(sans objet)',
-            body_text: parsed.text ?? null,
-            body_html: typeof parsed.html === 'string' ? parsed.html : null,
-            received_at: parsed.date?.toISOString() ?? new Date().toISOString(),
-            client_id: clientId,
-            attachments,
-          },
-          { onConflict: 'message_id', ignoreDuplicates: true }
-        )
-
-        if (error) {
-          stats.errors.push(`insert_uid_${msg.uid}: ${error.message}`)
-          stats.skipped++
-          continue
-        }
-
-        stats.inserted++
-
-        // ── 7. Marquer \Seen côté IMAP seulement après insert OK ──────────
-        try {
-          await imap.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true })
-        } catch (e) {
-          stats.errors.push(`flag_uid_${msg.uid}: ${(e as Error).message}`)
+        // ── 7. Étape 3 : flag \Seen en batch, fetch terminé ──────────────
+        // Un seul appel IMAP au lieu de N : plus rapide et n'expose pas
+        // la connexion à des allers-retours pendant lesquels Hostinger
+        // peut couper.
+        if (seenUidsToFlag.length > 0) {
+          try {
+            await imap.messageFlagsAdd(seenUidsToFlag, ['\\Seen'], { uid: true })
+          } catch (e) {
+            stats.errors.push(`flag_batch: ${(e as Error).message}`)
+          }
         }
       }
     } finally {
