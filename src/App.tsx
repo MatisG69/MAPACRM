@@ -21,6 +21,7 @@ import { ContactsPage } from './pages/ContactsPage';
 import { DemandesPage } from './pages/DemandesPage';
 import { IdentifiantsPage } from './pages/IdentifiantsPage';
 import { CallsPage } from './pages/CallsPage';
+import { EmailsPage } from './pages/EmailsPage';
 import { useClients } from './hooks/useClients';
 import { useServiceRequests } from './hooks/useServiceRequests';
 import { useProjects } from './hooks/useProjects';
@@ -412,6 +413,7 @@ function App() {
             )}
             {page === 'identifiants' && <IdentifiantsPage />}
             {page === 'calls' && <CallsPage clients={clientsHook.clients} />}
+            {page === 'emails' && <EmailsPage onNavigate={navigate} />}
           </>
         )}
       </main>

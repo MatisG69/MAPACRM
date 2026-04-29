@@ -289,7 +289,38 @@ export type Page =
   /** Calendrier personnel Matis synchronisé depuis Apple Calendar (ICS public) */
   | 'calendar-matis'
   /** Journal d'appels commerciaux (vue tableau) */
-  | 'calls';
+  | 'calls'
+  /** Boîte de réception emails (sync IMAP Hostinger toutes les 5 min) */
+  | 'emails';
+
+/** Pièce jointe email serializable, dérivée de mailparser. */
+export interface EmailAttachmentMeta {
+  filename: string | null;
+  contentType: string | null;
+  size: number | null;
+  contentId: string | null;
+}
+
+/** Email reçu sur la boîte Hostinger, synchronisé via Vercel Cron + IMAP. */
+export interface Email {
+  id: string;
+  /** RFC 5322 Message-ID (unique en base). */
+  message_id: string;
+  from_email: string;
+  from_name: string | null;
+  to_email: string | null;
+  subject: string | null;
+  body_text: string | null;
+  body_html: string | null;
+  received_at: string;
+  /** Auto-matché si l'expéditeur correspond à un client connu. */
+  client_id: string | null;
+  read: boolean;
+  archived: boolean;
+  attachments: EmailAttachmentMeta[];
+  created_at: string;
+  client?: Pick<Client, 'id' | 'name' | 'avatar_color'> | null;
+}
 
 export type ServiceRequestStatus = 'new' | 'read' | 'in_progress' | 'converted' | 'archived';
 
