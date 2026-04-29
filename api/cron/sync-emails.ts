@@ -28,6 +28,12 @@ const { simpleParser } = mailparserPkg
 // Vercel moderne : maxDuration en export top-level. Hobby max = 60 s.
 export const maxDuration = 60
 
+/** Nombre max d'emails traités par invocation. Garantit qu'on rentre dans
+ *  les 60 s de Vercel Hobby même sur une boîte avec des centaines/milliers
+ *  de mails non-lus (premier run). Avec le cron 1 min côté Supabase, une
+ *  boîte de 10 000 mails est rattrapée en ~3.5 h en arrière-plan. */
+const MAX_PER_RUN = 50
+
 interface SyncStats {
   fetched: number
   inserted: number
@@ -86,19 +92,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     secure: true,
     auth: { user: user!, pass: pass! },
     logger: false,
+    // Timeouts courts pour éviter qu'imapflow attende indéfiniment
+    // si Hostinger ne répond plus.
+    socketTimeout: 30_000,
+    greetingTimeout: 10_000,
   })
 
   const stats: SyncStats = { fetched: 0, inserted: 0, skipped: 0, errors: [] }
+  let totalUnseen = 0
+  let truncated = false
 
   try {
     await imap.connect()
     const lock = await imap.getMailboxLock('INBOX')
 
     try {
-      // ── 4. Récupération des messages non-lus ──────────────────────────
-      for await (const msg of imap.fetch(
-        { seen: false },
-        { source: true, envelope: true, uid: true }
+      // ── 4. Récupération limitée des messages non-lus ─────────────────
+      // Search d'abord pour récupérer la liste des UIDs sans télécharger
+      // les sources, puis on borne à MAX_PER_RUN les plus anciens (FIFO).
+      const allUnseenUids = await imap.search({ seen: false }, { uid: true })
+      totalUnseen = allUnseenUids.length
+      truncated = totalUnseen > MAX_PER_RUN
+      const uidsToFetch = allUnseenUids.slice(0, MAX_PER_RUN)
+
+      if (uidsToFetch.length === 0) {
+        // Rien à faire — on sort proprement
+      } else for await (const msg of imap.fetch(
+        uidsToFetch,
+        { source: true, envelope: true, uid: true },
+        { uid: true }
       )) {
         stats.fetched++
         if (!msg.source) continue
@@ -188,5 +210,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  return res.status(200).json({ ok: true, ...stats })
+  return res.status(200).json({
+    ok: true,
+    ...stats,
+    total_unseen: totalUnseen,
+    truncated,
+    remaining: Math.max(0, totalUnseen - stats.inserted),
+  })
 }

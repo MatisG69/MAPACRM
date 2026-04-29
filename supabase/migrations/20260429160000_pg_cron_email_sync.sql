@@ -45,7 +45,9 @@ BEGIN
       'Content-Type', 'application/json'
     ),
     body := '{}'::jsonb,
-    timeout_milliseconds := 60000
+    -- 90 s : marge au-dessus du Vercel maxDuration (60 s) pour qu'on
+    -- collecte toujours la réponse Vercel, jamais un timeout pg_net.
+    timeout_milliseconds := 90000
   ) INTO request_id;
 
   RETURN request_id;
