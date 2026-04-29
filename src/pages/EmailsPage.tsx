@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Archive,
   ArchiveRestore,
+  CheckCircle2,
   Code2,
   FileText as FileTextIcon,
   Inbox,
@@ -19,7 +20,55 @@ import {
 import { Header } from '../components/layout/Header'
 import { useEmails } from '../hooks/useEmails'
 import { ComposeEmailModal } from '../components/emails/ComposeEmailModal'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import type { Email, Page } from '../lib/types'
+
+interface ToastState {
+  id: number
+  message: string
+  tone: 'success' | 'info' | 'error'
+}
+
+function useToast() {
+  const [toasts, setToasts] = useState<ToastState[]>([])
+  const counter = useRef(0)
+
+  const push = (message: string, tone: ToastState['tone'] = 'success') => {
+    const id = ++counter.current
+    setToasts((prev) => [...prev, { id, message, tone }])
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 2400)
+  }
+
+  return { toasts, push }
+}
+
+function ToastViewport({ toasts }: { toasts: ToastState[] }) {
+  return (
+    <div
+      className="fixed top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
+      {toasts.map((t) => {
+        const tone =
+          t.tone === 'error'
+            ? 'bg-red-500/15 border-red-500/40 text-red-200'
+            : t.tone === 'info'
+              ? 'bg-ws-panel/90 border-ws-line text-ws-paper'
+              : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200'
+        return (
+          <div
+            key={t.id}
+            className={`pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-mono uppercase tracking-[0.15em] backdrop-blur-md border shadow-lg animate-emails-toast-in ${tone}`}
+          >
+            <CheckCircle2 size={13} />
+            {t.message}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 interface EmailsPageProps {
   onNavigate: (page: Page, id?: string) => void
@@ -86,6 +135,8 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
   const { emails, loading, error, refetch, unreadCount, markRead, toggleArchive, remove, sendEmail } =
     useEmails()
 
+  const { toasts, push: pushToast } = useToast()
+
   const [filter, setFilter] = useState<Filter>('inbox')
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -101,6 +152,10 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
     inReplyTo?: string | null
     clientId?: string | null
   } | undefined>(undefined)
+
+  /** Email visé par la confirmation de suppression — null = dialog fermé. */
+  const [confirmDeleteEmail, setConfirmDeleteEmail] = useState<Email | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -400,9 +455,7 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm('Supprimer cet email du CRM ?')) void remove(selected.id)
-                      }}
+                      onClick={() => setConfirmDeleteEmail(selected)}
                       title="Supprimer"
                       className="p-2 rounded-lg text-red-400/80 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                     >
@@ -526,11 +579,60 @@ export function EmailsPage({ onNavigate }: EmailsPageProps) {
         onClose={() => setComposerOpen(false)}
         onSend={async (payload) => {
           const result = await sendEmail(payload)
+          if (result.ok) {
+            const recipientPreview = Array.isArray(payload.to)
+              ? payload.to[0]
+              : payload.to.split(/[,;]/)[0]?.trim()
+            pushToast(
+              recipientPreview
+                ? `Email envoyé à ${recipientPreview}`
+                : 'Email envoyé',
+              'success',
+            )
+          }
           return { ok: result.ok, error: result.error }
         }}
         prefill={composerPrefill}
         mode={composerMode}
       />
+
+      <ConfirmDialog
+        isOpen={confirmDeleteEmail !== null}
+        onClose={() => {
+          if (!deleting) setConfirmDeleteEmail(null)
+        }}
+        onConfirm={async () => {
+          if (!confirmDeleteEmail) return
+          setDeleting(true)
+          try {
+            await remove(confirmDeleteEmail.id)
+            pushToast('Email supprimé', 'info')
+            setConfirmDeleteEmail(null)
+          } finally {
+            setDeleting(false)
+          }
+        }}
+        title="Supprimer cet email ?"
+        description={
+          confirmDeleteEmail
+            ? `« ${confirmDeleteEmail.subject || '(sans objet)'} » sera retiré du CRM. Cette action est irréversible — l'email reste néanmoins disponible sur la boîte Hostinger.`
+            : ''
+        }
+        loading={deleting}
+      />
+
+      <ToastViewport toasts={toasts} />
+
+      <style>{`
+        @keyframes emails-toast-in {
+          from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+          to   { opacity: 1; transform: none; }
+        }
+        .animate-emails-toast-in { animation: emails-toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-emails-toast-in { animation: none !important; }
+        }
+      `}</style>
     </div>
   )
 }
