@@ -1,0 +1,54 @@
+name: Sync Hostinger emails
+
+# Déclenche /api/cron/sync-emails sur Vercel toutes les 5 minutes.
+# Le plan Vercel Hobby limite les crons à 1×/jour : on utilise donc
+# GitHub Actions (gratuit, granularité 5 min) comme planificateur externe.
+#
+# Pré-requis :
+#   · Secret `CRON_SECRET` configuré dans Settings → Secrets and variables
+#     → Actions, identique à la valeur Vercel.
+#   · Domaine de prod : mapacrm.vercel.app (modifier ci-dessous si besoin).
+
+on:
+  schedule:
+    # GitHub Actions cron : minimum 5 min, syntaxe UTC.
+    - cron: '*/5 * * * *'
+  # Déclenchement manuel possible depuis l'onglet Actions.
+  workflow_dispatch:
+
+# Évite que deux runs se chevauchent si l'un dépasse 5 min (rare mais possible).
+concurrency:
+  group: sync-emails
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hit Vercel sync endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::CRON_SECRET non configuré dans les secrets GitHub Actions"
+            exit 1
+          fi
+
+          response=$(curl -sS -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            --max-time 240 \
+            "https://mapacrm.vercel.app/api/cron/sync-emails")
+
+          body=$(echo "$response" | head -n -1)
+          status=$(echo "$response" | tail -n 1)
+
+          echo "Status HTTP : $status"
+          echo "Body : $body"
+
+          if [ "$status" != "200" ]; then
+            echo "::error::Sync failed (HTTP $status)"
+            exit 1
+          fi
