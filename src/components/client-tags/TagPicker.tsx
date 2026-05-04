@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Plus, Search, Tag as TagIcon } from 'lucide-react';
+import { Check, Plus, X } from 'lucide-react';
 import type { ClientTag } from '../../lib/types';
-import { ClientTagBadge } from './ClientTagBadge';
 
 /** Palette de couleurs proposée pour la création rapide d'un tag. */
 const TAG_COLORS = [
@@ -11,7 +10,7 @@ const TAG_COLORS = [
 ];
 
 interface TagPickerProps {
-  /** Tous les tags du référentiel (chargés via useClientTags). */
+  /** Tous les tags du référentiel. */
   allTags: ClientTag[];
   /** IDs des tags actuellement sélectionnés. */
   selectedIds: string[];
@@ -21,18 +20,18 @@ interface TagPickerProps {
   onCreateTag: (
     values: Pick<ClientTag, 'label'> & Partial<Pick<ClientTag, 'color'>>
   ) => Promise<ClientTag>;
-  /** Désactive l'édition (lecture seule). */
+  /** Désactive l'édition. */
   disabled?: boolean;
 }
 
 /**
- * Multi-select de tags avec création inline et picker de couleur.
+ * Sélecteur de tags en mode « cloud » : tous les tags du référentiel sont
+ * affichés en pastilles cliquables. Click = toggle (ajoute / retire).
  *
- * UX :
- *   - Pastilles des tags sélectionnés (cliquables pour retirer)
- *   - Champ de recherche → filtre les tags existants
- *   - Si aucune correspondance → bouton "Créer le tag « X »" + picker couleur
- *   - Cliquer un tag suggéré → toggle dans la sélection
+ * Avantages vs autocompletion pure :
+ *   - Découverte immédiate de tous les tags disponibles
+ *   - 0 frappe pour assigner un tag déjà créé
+ *   - Création inline d'un nouveau tag via bouton dédié (pas de mode caché)
  */
 export function TagPicker({
   allTags,
@@ -41,53 +40,31 @@ export function TagPicker({
   onCreateTag,
   disabled = false,
 }: TagPickerProps) {
-  const [query, setQuery] = useState('');
-  const [openSuggestions, setOpenSuggestions] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [createColor, setCreateColor] = useState(TAG_COLORS[0]);
+  const [newLabel, setNewLabel] = useState('');
+  const [newColor, setNewColor] = useState(TAG_COLORS[0]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  const tagsById = useMemo(() => new Map(allTags.map((t) => [t.id, t] as const)), [allTags]);
-  const selectedTags = useMemo(
+  /* Tri stable : par position du référentiel puis label, indépendant de l'ordre
+     dans `selectedIds` (une fois sélectionné, le tag ne saute pas en début). */
+  const sortedTags = useMemo(
     () =>
-      selectedIds
-        .map((id) => tagsById.get(id))
-        .filter((t): t is ClientTag => Boolean(t)),
-    [selectedIds, tagsById]
+      [...allTags].sort(
+        (a, b) => a.position - b.position || a.label.localeCompare(b.label, 'fr')
+      ),
+    [allTags]
   );
 
-  const q = query.trim().toLowerCase();
-  const suggestions = useMemo(() => {
-    return allTags
-      .filter((t) => !selectedIds.includes(t.id))
-      .filter((t) => (q ? t.label.toLowerCase().includes(q) : true))
-      .sort((a, b) => a.position - b.position || a.label.localeCompare(b.label, 'fr'));
-  }, [allTags, selectedIds, q]);
-
-  /* Détecte un label exact (case-insensitive) dans les tags existants pour
-     éviter de proposer "Créer X" si X existe déjà mais n'est pas suggéré
-     (parce que déjà sélectionné). */
-  const exactMatchExists = useMemo(
-    () => q.length > 0 && allTags.some((t) => t.label.toLowerCase() === q),
-    [allTags, q]
-  );
-
-  const canCreate = q.length > 0 && !exactMatchExists;
-
-  /* Fermer la dropdown quand clic à l'extérieur. */
   useEffect(() => {
-    if (!openSuggestions) return;
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpenSuggestions(false);
-      }
-    };
-    setTimeout(() => document.addEventListener('mousedown', handler), 0);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [openSuggestions]);
+    if (creating) {
+      setTimeout(() => inputRef.current?.focus(), 30);
+    }
+  }, [creating]);
 
   const toggle = (tagId: string) => {
+    if (disabled) return;
     if (selectedIds.includes(tagId)) {
       onChange(selectedIds.filter((id) => id !== tagId));
     } else {
@@ -96,147 +73,184 @@ export function TagPicker({
   };
 
   const handleCreate = async () => {
-    const label = query.trim();
+    const label = newLabel.trim();
     if (!label) return;
-    setCreating(true);
+    setBusy(true);
+    setErr(null);
     try {
-      const created = await onCreateTag({ label, color: createColor });
+      const created = await onCreateTag({ label, color: newColor });
       onChange([...selectedIds, created.id]);
-      setQuery('');
-      setCreateColor(TAG_COLORS[0]);
-      // Garde le focus sur l'input pour ajouter d'autres tags rapidement.
-      inputRef.current?.focus();
-    } finally {
+      setNewLabel('');
+      setNewColor(TAG_COLORS[0]);
       setCreating(false);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (suggestions.length > 0) {
-        toggle(suggestions[0].id);
-        setQuery('');
-      } else if (canCreate) {
-        void handleCreate();
-      }
-      return;
-    }
-    if (e.key === 'Backspace' && query === '' && selectedIds.length > 0) {
-      // Backspace dans un champ vide → retire le dernier tag sélectionné
-      onChange(selectedIds.slice(0, -1));
-    }
-    if (e.key === 'Escape') {
-      setOpenSuggestions(false);
-    }
+  const cancelCreate = () => {
+    setCreating(false);
+    setNewLabel('');
+    setNewColor(TAG_COLORS[0]);
+    setErr(null);
   };
 
   return (
-    <div ref={containerRef} className="relative">
-      <div
-        className={`flex flex-wrap items-center gap-1.5 rounded-xl border border-ws-line bg-ws-deep/40 px-2 py-2 min-h-[44px] ${
-          disabled ? 'opacity-60' : 'focus-within:border-ws-accent/50'
-        }`}
-      >
-        {selectedTags.map((tag) => (
-          <ClientTagBadge
-            key={tag.id}
-            tag={tag}
-            size="md"
-            onRemove={disabled ? undefined : () => toggle(tag.id)}
-          />
-        ))}
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          disabled={disabled}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpenSuggestions(true);
-          }}
-          onFocus={() => setOpenSuggestions(true)}
-          onKeyDown={handleKeyDown}
-          placeholder={selectedTags.length === 0 ? 'Ajouter un tag…' : ''}
-          className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm md:text-xs text-ws-paper placeholder:text-ws-mist/60 px-1 py-0.5"
-        />
-      </div>
-
-      {openSuggestions && !disabled && (
-        <div className="absolute left-0 right-0 mt-1.5 z-20 rounded-xl border border-ws-line bg-ws-panel shadow-2xl overflow-hidden">
-          {suggestions.length > 0 && (
-            <div className="max-h-60 overflow-y-auto py-1">
-              {suggestions.slice(0, 12).map((tag) => (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() => {
-                    toggle(tag.id);
-                    setQuery('');
-                    inputRef.current?.focus();
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left hover:bg-ws-raised transition-colors"
-                >
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: tag.color }}
-                    aria-hidden
-                  />
-                  <span className="flex-1 truncate text-ws-paper">{tag.label}</span>
-                  <Check
-                    size={12}
-                    className={selectedIds.includes(tag.id) ? 'text-ws-accent' : 'invisible'}
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-
-          {canCreate && (
-            <div className={`p-2.5 ${suggestions.length > 0 ? 'border-t border-ws-line/60' : ''}`}>
-              <p className="text-[10px] font-mono uppercase tracking-wider text-ws-mist mb-2 px-1">
-                Couleur
-              </p>
-              <div className="flex flex-wrap gap-1.5 mb-2.5 px-1">
-                {TAG_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCreateColor(c)}
-                    className={`w-6 h-6 rounded-md border-2 transition-all ${
-                      createColor === c ? 'border-ws-paper scale-110' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: c }}
-                    aria-label={`Couleur ${c}`}
-                  />
-                ))}
-              </div>
+    <div className="space-y-2.5">
+      {sortedTags.length === 0 && !creating ? (
+        <div className="rounded-xl border border-dashed border-ws-line/70 bg-ws-deep/30 px-4 py-5 text-center">
+          <p className="text-xs text-ws-mist mb-3 font-mono">
+            Aucun tag défini pour l'instant
+          </p>
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            disabled={disabled}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ws-accent/15 hover:bg-ws-accent/25 text-ws-accent text-xs font-semibold transition-colors disabled:opacity-50"
+          >
+            <Plus size={12} />
+            Créer le premier tag
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {sortedTags.map((tag) => {
+            const selected = selectedIds.includes(tag.id);
+            /* Selected : chip plein (bg + border + text en couleur du tag).
+               Unselected : chip outline (juste border + text grisé) — discret. */
+            const baseCls =
+              'inline-flex items-center gap-1.5 rounded-md border text-[11px] font-mono font-semibold uppercase tracking-wide px-2.5 py-1 transition-all touch-manipulation';
+            const selectedStyle: React.CSSProperties = {
+              color: tag.color,
+              borderColor: `${tag.color}80`,
+              backgroundColor: `${tag.color}24`,
+            };
+            const unselectedStyle: React.CSSProperties = {
+              color: '#7d6f62',
+              borderColor: '#2e2620',
+              backgroundColor: 'transparent',
+            };
+            return (
               <button
+                key={tag.id}
                 type="button"
-                onClick={() => void handleCreate()}
-                disabled={creating}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-ws-accent/15 hover:bg-ws-accent/25 text-ws-accent text-xs font-semibold transition-colors disabled:opacity-50"
+                disabled={disabled}
+                onClick={() => toggle(tag.id)}
+                className={`${baseCls} ${
+                  selected
+                    ? 'shadow-glow-sm'
+                    : 'hover:opacity-100 hover:scale-[1.02]'
+                } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                style={selected ? selectedStyle : unselectedStyle}
+                aria-pressed={selected}
               >
-                <Plus size={12} />
-                Créer le tag « {query} »
+                <span
+                  aria-hidden
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: tag.color }}
+                />
+                <span className="truncate max-w-[160px]">{tag.label}</span>
+                {selected && <Check size={11} className="flex-shrink-0" />}
               </button>
-            </div>
-          )}
-
-          {suggestions.length === 0 && !canCreate && (
-            <div className="px-3 py-4 text-center">
-              <TagIcon size={16} className="mx-auto text-ws-mist mb-1.5 opacity-60" />
-              <p className="text-[10px] font-mono text-ws-mist">
-                {q ? 'Ce tag est déjà ajouté' : 'Tape pour rechercher ou créer un tag'}
-              </p>
-            </div>
+            );
+          })}
+          {!creating && (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              disabled={disabled}
+              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-ws-line text-[11px] font-mono font-semibold uppercase tracking-wide px-2.5 py-1 text-ws-mist hover:text-ws-accent hover:border-ws-accent/40 transition-colors touch-manipulation disabled:opacity-50"
+            >
+              <Plus size={12} />
+              Nouveau
+            </button>
           )}
         </div>
       )}
 
-      <p className="text-[10px] font-mono text-ws-mist/70 mt-1.5 px-1 flex items-center gap-1.5">
-        <Search size={10} />
-        Tape pour chercher · Entrée pour valider · Backspace pour retirer le dernier
+      {creating && (
+        <div className="rounded-xl border border-ws-accent/30 bg-ws-accent/5 p-3 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-mono uppercase tracking-wider text-ws-accent">
+              Nouveau tag
+            </p>
+            <button
+              type="button"
+              onClick={cancelCreate}
+              className="w-6 h-6 flex items-center justify-center rounded-md text-ws-mist hover:text-ws-paper hover:bg-white/5 transition-colors"
+              aria-label="Annuler"
+            >
+              <X size={12} />
+            </button>
+          </div>
+
+          <input
+            ref={inputRef}
+            type="text"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void handleCreate();
+              }
+              if (e.key === 'Escape') cancelCreate();
+            }}
+            placeholder="Nom du tag (ex. Décideur, Urgent…)"
+            className="w-full px-3 py-2 rounded-lg bg-ws-deep/60 border border-ws-line text-sm md:text-xs text-ws-paper placeholder:text-ws-mist/60 focus:border-ws-accent focus:outline-none"
+          />
+
+          <div>
+            <p className="text-[10px] font-mono uppercase tracking-wider text-ws-mist mb-1.5">
+              Couleur
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {TAG_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setNewColor(c)}
+                  className={`w-7 h-7 rounded-md border-2 transition-all ${
+                    newColor === c ? 'border-ws-paper scale-110' : 'border-transparent hover:border-ws-line'
+                  }`}
+                  style={{ backgroundColor: c }}
+                  aria-label={`Couleur ${c}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {err && (
+            <p className="text-xs text-ws-bear bg-ws-bear-dim/40 border border-red-500/30 rounded-lg px-3 py-2">
+              {err}
+            </p>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={cancelCreate}
+              disabled={busy}
+              className="flex-1 px-3 py-2 rounded-lg border border-ws-line text-xs text-ws-paper hover:bg-ws-raised transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleCreate()}
+              disabled={busy || !newLabel.trim()}
+              className="flex-1 px-3 py-2 rounded-lg bg-ws-accent/15 hover:bg-ws-accent/25 border border-ws-accent/40 text-xs font-semibold text-ws-accent transition-colors disabled:opacity-50"
+            >
+              {busy ? 'Création…' : 'Créer le tag'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <p className="text-[10px] font-mono text-ws-mist/70 px-1">
+        Clique pour ajouter / retirer · « Nouveau » pour créer un tag personnalisé
       </p>
     </div>
   );

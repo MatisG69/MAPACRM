@@ -85,9 +85,10 @@ CREATE POLICY "anon_delete_client_tag_assignments" ON client_tag_assignments FOR
 INSERT INTO client_tags (label, color, position) VALUES
   ('Pas de site web',  '#e85d5d', 0),
   ('SEO à travailler', '#d4a574', 1),
-  ('VIP',              '#c98a4c', 2),
-  ('Récurrent',        '#7ac28b', 3),
-  ('À relancer',       '#7a98c2', 4),
-  ('Partenaire',       '#a07ac2', 5),
-  ('Apporteur',        '#c27a7a', 6)
+  ('Refonte du site',  '#b8973a', 2),
+  ('VIP',              '#c98a4c', 3),
+  ('Récurrent',        '#7ac28b', 4),
+  ('À relancer',       '#7a98c2', 5),
+  ('Partenaire',       '#a07ac2', 6),
+  ('Apporteur',        '#c27a7a', 7)
 ON CONFLICT DO NOTHING;
