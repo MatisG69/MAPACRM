@@ -1,5 +1,5 @@
 /*
-  Folders — système de classification hiérarchique pour devis et factures.
+  Folders - système de classification hiérarchique pour devis et factures.
 
   Choix d'architecture :
     - Une seule table `folders` partagée entre devis et factures : un dossier
@@ -14,13 +14,17 @@
   précédent s'est interrompu en cours d'exécution.
 */
 
-/* 1. Table folders — colonnes minimales d'abord. */
+/* 1. Table folders - colonnes minimales d'abord. */
 CREATE TABLE IF NOT EXISTS folders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+/* 1bis. Nettoyage : retire d'éventuelles colonnes héritées d'un design
+        antérieur abandonné (le choix 2B = dossiers partagés rend `kind` inutile). */
+ALTER TABLE folders DROP COLUMN IF EXISTS kind;
 
 /* 2. Colonnes optionnelles ajoutées séparément : ALTER ... ADD COLUMN IF NOT
       EXISTS rattrape une table créée partiellement par un run précédent. */
