@@ -44,10 +44,16 @@ interface ClientDetailPageProps {
   invoices: Invoice[];
   quotes?: Quote[];
   allClients: Client[];
+  allTags?: import('../lib/types').ClientTag[];
   onBack: () => void;
   onNavigate: (page: Page, id?: string) => void;
   onUpdateClient: (id: string, data: Partial<Client>) => Promise<Client>;
   onDeleteClient: (id: string) => Promise<void>;
+  onCreateTag?: (
+    values: Pick<import('../lib/types').ClientTag, 'label'> &
+      Partial<Pick<import('../lib/types').ClientTag, 'color'>>
+  ) => Promise<import('../lib/types').ClientTag>;
+  onSetClientTags?: (clientId: string, nextIds: string[], currentIds: string[]) => Promise<void>;
   onCreateInteraction: (
     data: Omit<Interaction, 'id' | 'created_at' | 'client'>
   ) => Promise<Interaction>;
@@ -62,10 +68,13 @@ export function ClientDetailPage({
   invoices,
   quotes = [],
   allClients,
+  allTags = [],
   onBack,
   onNavigate,
   onUpdateClient,
   onDeleteClient,
+  onCreateTag,
+  onSetClientTags,
   onCreateInteraction,
   onDeleteInteraction,
   onCreateProject,
@@ -395,7 +404,14 @@ export function ClientDetailPage({
       <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Modifier le client" size="lg">
         <ClientForm
           initial={client}
-          onSubmit={async (data) => {
+          allTags={allTags}
+          initialTagIds={(client.tags ?? []).map((t) => t.id)}
+          onCreateTag={onCreateTag}
+          onSubmit={async (data, tagIds) => {
+            if (onSetClientTags) {
+              const currentIds = (client.tags ?? []).map((t) => t.id);
+              await onSetClientTags(client.id, tagIds, currentIds);
+            }
             await onUpdateClient(client.id, data);
             setShowEdit(false);
           }}

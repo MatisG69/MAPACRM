@@ -256,10 +256,16 @@ function App() {
                 invoices={invoicesForClient}
                 quotes={quotesHook.quotes}
                 allClients={clientsHook.clients}
+                allTags={clientTagsHook.tags}
                 onBack={() => navigate('clients')}
                 onNavigate={navigate}
                 onUpdateClient={clientsHook.updateClient}
                 onDeleteClient={clientsHook.deleteClient}
+                onCreateTag={clientTagsHook.createTag}
+                onSetClientTags={async (clientId, nextIds, currentIds) => {
+                  await clientTagsHook.setClientTags(clientId, nextIds, currentIds);
+                  await clientsHook.refetch();
+                }}
                 onCreateInteraction={interactionsHook.createInteraction}
                 onDeleteInteraction={interactionsHook.deleteInteraction}
                 onCreateProject={projectsHook.createProject}
