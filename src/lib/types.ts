@@ -152,6 +152,8 @@ export interface Invoice {
   notes: string | null;
   /** Devis d’origine après conversion devis → facture */
   source_quote_id: string | null;
+  /** Dossier de classement (partagé avec les devis). */
+  folder_id: string | null;
   created_at: string;
   updated_at: string;
   client?: Pick<Client, 'id' | 'name' | 'company' | 'avatar_color'>;
@@ -243,11 +245,35 @@ export interface Quote {
   parent_quote_id: string | null;
   notes: string | null;
   signed_at: string | null;
+  /** Dossier de classement (partagé avec les factures). */
+  folder_id: string | null;
   created_at: string;
   updated_at: string;
   client?: Pick<Client, 'id' | 'name' | 'company' | 'avatar_color'>;
   project?: Pick<Project, 'id' | 'name'>;
   opportunity?: Pick<Opportunity, 'id' | 'name'>;
+}
+
+/**
+ * Dossier de classement hiérarchique pour devis & factures.
+ * Un dossier peut contenir simultanément des devis ET des factures.
+ * `parent_id = null` ⇒ dossier racine. Cycles interdits (trigger DB).
+ */
+export interface Folder {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  color: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Nœud arborescent dérivé d'une liste plate de Folder. */
+export interface FolderNode extends Folder {
+  children: FolderNode[];
+  /** Profondeur calculée (0 = racine). */
+  depth: number;
 }
 
 export interface ProjectChecklistItem {

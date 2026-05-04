@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Pencil, Trash2, FileInput, FileText, Eye, Check, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, FileInput, FileText, Eye, Check, Loader2, FolderInput } from 'lucide-react';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { BulkActionBar } from '../components/ui/BulkActionBar';
 import { Header } from '../components/layout/Header';
@@ -11,9 +11,24 @@ import { Badge } from '../components/ui/Badge';
 import { QuoteForm } from '../components/quotes/QuoteForm';
 import { GenerateDevisModal } from '../components/quotes/GenerateDevisModal';
 import { DevisPreviewOverlay } from '../components/quotes/DevisPreviewOverlay';
+import { FolderSidebar } from '../components/folders/FolderSidebar';
+import { FolderBadge } from '../components/folders/FolderBadge';
+import { CreateFolderModal } from '../components/folders/CreateFolderModal';
+import { MoveToFolderMenu } from '../components/folders/MoveToFolderMenu';
 import { generateDevisHTML, isRecurringQuoteHeuristic } from '../lib/devisGenerator';
-import type { Client, Invoice, InvoiceStatus, Opportunity, Project, Quote, QuoteStatus } from '../lib/types';
+import type {
+  Client,
+  Folder,
+  FolderNode,
+  Invoice,
+  InvoiceStatus,
+  Opportunity,
+  Project,
+  Quote,
+  QuoteStatus,
+} from '../lib/types';
 import { formatCurrency, formatDate, generateInvoiceNumber } from '../lib/utils';
+import { getDescendantIds } from '../hooks/useFolders';
 
 function quoteStatusToInvoiceStatus(quoteStatus: QuoteStatus): InvoiceStatus {
   if (quoteStatus === 'signed' || quoteStatus === 'sent') return 'sent';
@@ -25,23 +40,37 @@ interface QuotesPageProps {
   clients: Client[];
   projects: Project[];
   opportunities: Opportunity[];
+  folders: Folder[];
+  folderTree: FolderNode[];
   onCreate: (data: Omit<Quote, 'id' | 'created_at' | 'updated_at' | 'client' | 'project' | 'opportunity'>) => Promise<Quote>;
   onUpdate: (id: string, data: Partial<Quote>) => Promise<Quote>;
   onDelete: (id: string) => Promise<void>;
   onCreateInvoice: (
     data: Omit<Invoice, 'id' | 'created_at' | 'updated_at' | 'client' | 'project'>
   ) => Promise<Invoice>;
+  onCreateFolder: (
+    values: Pick<Folder, 'name'> & Partial<Pick<Folder, 'parent_id' | 'color' | 'position'>>
+  ) => Promise<Folder>;
+  onUpdateFolder: (id: string, values: Partial<Folder>) => Promise<Folder>;
+  onDeleteFolder: (id: string) => Promise<void>;
 }
+
+type SelectedFolder = string | null | '__unfiled__';
 
 export function QuotesPage({
   quotes,
   clients,
   projects,
   opportunities,
+  folders,
+  folderTree,
   onCreate,
   onUpdate,
   onDelete,
   onCreateInvoice,
+  onCreateFolder,
+  onUpdateFolder,
+  onDeleteFolder,
 }: QuotesPageProps) {
   const [modal, setModal] = useState<'edit' | 'convert' | 'devis' | null>(null);
   const [editing, setEditing] = useState<Quote | null>(null);
@@ -53,10 +82,42 @@ export function QuotesPage({
   const [convertLoading, setConvertLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // ─── Folder state ───
+  const [selectedFolder, setSelectedFolder] = useState<SelectedFolder>(null);
+  const [folderModal, setFolderModal] = useState<{
+    mode: 'create' | 'edit';
+    parentId: string | null;
+    folder: Folder | null;
+  } | null>(null);
+  const [moveMenu, setMoveMenu] = useState<
+    | { quoteId: string; anchor: { top: number; left: number } }
+    | null
+  >(null);
+  const [bulkMoveOpen, setBulkMoveOpen] = useState<{ top: number; left: number } | null>(null);
+
+  // Compteurs par dossier (items directs de chaque dossier)
+  const folderCounts = useMemo(() => {
+    const out: Record<string, number> = { __null__: 0, __total__: quotes.length };
+    for (const q of quotes) {
+      const key = q.folder_id ?? '__null__';
+      out[key] = (out[key] ?? 0) + 1;
+    }
+    return out;
+  }, [quotes]);
+
+  // Filtrage : par dossier puis par recherche.
   const filteredQuotes = useMemo(() => {
+    let list = quotes;
+    if (selectedFolder === '__unfiled__') {
+      list = list.filter((q) => !q.folder_id);
+    } else if (typeof selectedFolder === 'string') {
+      // Inclut les sous-dossiers (cumul récursif).
+      const ids = new Set(getDescendantIds(folders, selectedFolder));
+      list = list.filter((q) => q.folder_id && ids.has(q.folder_id));
+    }
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return quotes;
-    return quotes.filter((quote) => {
+    if (!q) return list;
+    return list.filter((quote) => {
       const clientName = clients.find((c) => c.id === quote.client_id)?.name ?? quote.client?.name ?? '';
       return (
         quote.title.toLowerCase().includes(q) ||
@@ -65,10 +126,12 @@ export function QuotesPage({
         (quote.project?.name ?? '').toLowerCase().includes(q)
       );
     });
-  }, [quotes, clients, searchQuery]);
+  }, [quotes, clients, searchQuery, selectedFolder, folders]);
 
   const visibleIds = useMemo(() => filteredQuotes.map((q) => q.id), [filteredQuotes]);
   const selection = useBulkSelection(visibleIds);
+
+  const folderById = useMemo(() => new Map(folders.map((f) => [f.id, f] as const)), [folders]);
 
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
@@ -115,6 +178,37 @@ export function QuotesPage({
     }
   };
 
+  const bulkMoveToFolder = async (folderId: string | null) => {
+    setBulkBusy(true);
+    try {
+      for (const id of selection.selectedIds) {
+        await onUpdate(id, { folder_id: folderId });
+      }
+      selection.clear();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const moveSingleQuote = async (quoteId: string, folderId: string | null) => {
+    await onUpdate(quoteId, { folder_id: folderId });
+  };
+
+  const handleCreateOrEditFolder = async (
+    values: Pick<Folder, 'name' | 'color' | 'parent_id'>
+  ) => {
+    if (folderModal?.mode === 'edit' && folderModal.folder) {
+      await onUpdateFolder(folderModal.folder.id, values);
+    } else {
+      await onCreateFolder(values);
+    }
+  };
+
+  const handleDeleteFolder = async (folder: Folder) => {
+    await onDeleteFolder(folder.id);
+    if (selectedFolder === folder.id) setSelectedFolder(null);
+  };
+
   const notifications = useMemo<AppNotification[]>(() => {
     const today = new Date();
     const result: AppNotification[] = [];
@@ -155,6 +249,8 @@ export function QuotesPage({
       ? {
           id: q.client.id,
           name: q.client.name,
+          first_name: null,
+          last_name: null,
           company: q.client.company ?? null,
           email: null,
           phone: null,
@@ -187,9 +283,6 @@ export function QuotesPage({
       notes: q.notes,
     })
 
-    /* Pour un devis de suivi, on hérite du pourcentage d'acompte du devis
-       parent : la clause (i) de l'art. 3 des CGV doit refléter le contrat
-       forfaitaire principal (le suivi lui-même n'a pas d'acompte). */
     const parentQuoteForDeposit =
       isRecurring && q.parent_quote_id
         ? quotes.find((p) => p.id === q.parent_quote_id) ?? null
@@ -200,8 +293,6 @@ export function QuotesPage({
         ? Math.round((sourceQuote.deposit_amount / sourceQuote.amount) * 100)
         : 30
 
-    /* Pour le devis suivi, on extrait la référence au devis parent depuis les notes
-       (format injecté par GenerateDevisModal : "Suivi de la prestation livrée au titre du devis ..."). */
     let parentQuoteRef: string | null = null
     if (isRecurring && q.notes) {
       const match = q.notes.match(/Suivi de la prestation livrée au titre du devis [^\n]+/)
@@ -247,6 +338,8 @@ export function QuotesPage({
         client_id: convertQuote.client_id,
         project_id: convertQuote.project_id,
         source_quote_id: convertQuote.id,
+        // Hérite du dossier du devis source — UX cohérente : la facture suit le classement.
+        folder_id: convertQuote.folder_id,
         invoice_number: generateInvoiceNumber(),
         amount,
         status: quoteStatusToInvoiceStatus(convertQuote.status),
@@ -288,10 +381,27 @@ export function QuotesPage({
         onSearchChange={setSearchQuery}
         notifications={notifications}
       />
-      <div className="px-4 py-4 md:p-8 space-y-4 bg-ws-deep/20 min-h-[calc(100vh-120px)]">
+      <div className="px-4 py-4 md:p-8 bg-ws-deep/20 min-h-[calc(100vh-120px)]">
+        <div className="md:flex md:gap-4">
+          <FolderSidebar
+            tree={folderTree}
+            counts={folderCounts}
+            selectedFolderId={selectedFolder}
+            onSelect={setSelectedFolder}
+            onCreate={(parentId) => setFolderModal({ mode: 'create', parentId, folder: null })}
+            onEdit={(folder) => setFolderModal({ mode: 'edit', parentId: folder.parent_id, folder })}
+            onDelete={handleDeleteFolder}
+          />
+          <main className="flex-1 min-w-0 mt-4 md:mt-0 space-y-4">
         {filteredQuotes.length === 0 ? (
           <p className="text-sm text-ws-mist font-mono text-center py-16 ws-card rounded-xl">
-            {searchQuery ? `Aucun devis pour « ${searchQuery} »` : 'Aucun devis — créez-en un pour alimenter le pipeline.'}
+            {searchQuery
+              ? `Aucun devis pour « ${searchQuery} »`
+              : selectedFolder === '__unfiled__'
+                ? 'Aucun devis sans dossier.'
+                : selectedFolder
+                  ? 'Aucun devis dans ce dossier.'
+                  : 'Aucun devis — créez-en un pour alimenter le pipeline.'}
           </p>
         ) : (
           <div className="space-y-2">
@@ -331,6 +441,16 @@ export function QuotesPage({
                     {q.version > 1 && (
                       <span className="text-[10px] font-mono text-ws-mist">v{q.version}</span>
                     )}
+                    <FolderBadge
+                      folder={q.folder_id ? folderById.get(q.folder_id) ?? null : null}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setMoveMenu({
+                          quoteId: q.id,
+                          anchor: { top: rect.bottom + 4, left: rect.left },
+                        });
+                      }}
+                    />
                   </div>
                   <p className="text-xs text-ws-mist font-mono truncate">
                     {q.quote_number} · {q.client?.name}
@@ -388,6 +508,8 @@ export function QuotesPage({
             ))}
           </div>
         )}
+          </main>
+        </div>
       </div>
 
       <Modal
@@ -492,6 +614,20 @@ export function QuotesPage({
         itemLabel="devis"
         onClear={() => selection.clear()}
       >
+        <div className="relative">
+          <Button
+            variant="secondary"
+            icon={<FolderInput size={14} />}
+            onClick={(e) => {
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setBulkMoveOpen({ top: rect.bottom + 4, left: rect.left });
+            }}
+            disabled={bulkBusy}
+            className="normal-case tracking-normal text-xs py-1.5"
+          >
+            Déplacer
+          </Button>
+        </div>
         <Button
           variant="secondary"
           icon={bulkBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
@@ -521,6 +657,43 @@ export function QuotesPage({
           Supprimer
         </Button>
       </BulkActionBar>
+
+      <CreateFolderModal
+        isOpen={Boolean(folderModal)}
+        onClose={() => setFolderModal(null)}
+        initial={folderModal?.folder ?? null}
+        tree={folderTree}
+        defaultParentId={folderModal?.parentId ?? null}
+        forbiddenParentIds={
+          folderModal?.mode === 'edit' && folderModal.folder
+            ? getDescendantIds(folders, folderModal.folder.id)
+            : []
+        }
+        onSubmit={handleCreateOrEditFolder}
+      />
+
+      <MoveToFolderMenu
+        isOpen={moveMenu !== null}
+        onClose={() => setMoveMenu(null)}
+        tree={folderTree}
+        currentFolderId={
+          moveMenu ? quotes.find((q) => q.id === moveMenu.quoteId)?.folder_id ?? null : null
+        }
+        anchor={moveMenu?.anchor}
+        onSelect={async (folderId) => {
+          if (moveMenu) await moveSingleQuote(moveMenu.quoteId, folderId);
+        }}
+      />
+
+      <MoveToFolderMenu
+        isOpen={bulkMoveOpen !== null}
+        onClose={() => setBulkMoveOpen(null)}
+        tree={folderTree}
+        anchor={bulkMoveOpen ?? undefined}
+        onSelect={async (folderId) => {
+          await bulkMoveToFolder(folderId);
+        }}
+      />
 
       <GenerateDevisModal
         isOpen={modal === 'devis'}

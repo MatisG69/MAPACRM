@@ -32,6 +32,7 @@ import { useCalendarEvents } from './hooks/useCalendarEvents';
 import { useOpportunities } from './hooks/useOpportunities';
 import { useQuotes } from './hooks/useQuotes';
 import { useChecklistItems } from './hooks/useChecklistItems';
+import { useFolders } from './hooks/useFolders';
 import { Page } from './lib/types';
 import { isSupabaseEnabled } from './lib/supabase';
 import { seedChecklistForProject } from './lib/checklistSeed';
@@ -62,6 +63,7 @@ function App() {
   const calendarHook = useCalendarEvents();
   const opportunitiesHook = useOpportunities();
   const quotesHook = useQuotes();
+  const foldersHook = useFolders();
   const demandesHook = useServiceRequests();
 
   const navigate = useCallback((p: Page, id?: string) => {
@@ -332,10 +334,15 @@ function App() {
                 clients={clientsHook.clients}
                 projects={projectsHook.projects}
                 opportunities={opportunitiesHook.opportunities}
+                folders={foldersHook.folders}
+                folderTree={foldersHook.tree}
                 onCreate={quotesHook.createQuote}
                 onUpdate={quotesHook.updateQuote}
                 onDelete={quotesHook.deleteQuote}
                 onCreateInvoice={invoicesHook.createInvoice}
+                onCreateFolder={foldersHook.createFolder}
+                onUpdateFolder={foldersHook.updateFolder}
+                onDeleteFolder={foldersHook.deleteFolder}
               />
             )}
             {page === 'relances' && (
@@ -393,9 +400,14 @@ function App() {
                 clients={clientsHook.clients}
                 projects={projectsHook.projects}
                 quotes={quotesHook.quotes}
+                folders={foldersHook.folders}
+                folderTree={foldersHook.tree}
                 onCreate={invoicesHook.createInvoice}
                 onUpdate={invoicesHook.updateInvoice}
                 onDelete={invoicesHook.deleteInvoice}
+                onCreateFolder={foldersHook.createFolder}
+                onUpdateFolder={foldersHook.updateFolder}
+                onDeleteFolder={foldersHook.deleteFolder}
               />
             )}
             {page === 'playbook' && <CommercialPlaybookPage />}

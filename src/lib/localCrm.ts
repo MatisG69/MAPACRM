@@ -9,6 +9,7 @@ import type {
   Opportunity,
   Quote,
   ProjectChecklistItem,
+  Folder,
 } from './types';
 import { generateInvoiceNumber } from './utils';
 
@@ -24,6 +25,7 @@ interface CRMData {
   opportunities: Opportunity[];
   quotes: Quote[];
   checklist_items: ProjectChecklistItem[];
+  folders: Folder[];
 }
 
 const empty = (): CRMData => ({
@@ -36,6 +38,7 @@ const empty = (): CRMData => ({
   opportunities: [],
   quotes: [],
   checklist_items: [],
+  folders: [],
 });
 
 function load(): CRMData {
@@ -67,12 +70,16 @@ function load(): CRMData {
         ? p.invoices.map((inv) => ({
             ...inv,
             source_quote_id: (inv as Invoice).source_quote_id ?? null,
+            folder_id: (inv as Invoice).folder_id ?? null,
           }))
         : [],
       calendar_events: Array.isArray(p.calendar_events) ? p.calendar_events : [],
       opportunities: Array.isArray((p as CRMData).opportunities) ? (p as CRMData).opportunities : [],
-      quotes: Array.isArray((p as CRMData).quotes) ? (p as CRMData).quotes : [],
+      quotes: Array.isArray((p as CRMData).quotes)
+        ? (p as CRMData).quotes.map((q) => ({ ...q, folder_id: (q as Quote).folder_id ?? null }))
+        : [],
       checklist_items: Array.isArray((p as CRMData).checklist_items) ? (p as CRMData).checklist_items : [],
+      folders: Array.isArray((p as CRMData).folders) ? (p as CRMData).folders : [],
     };
   } catch {
     return empty();
@@ -421,6 +428,7 @@ export function localCreateInvoice(
   const row: Invoice = {
     ...values,
     source_quote_id: values.source_quote_id ?? null,
+    folder_id: values.folder_id ?? null,
     invoice_number: values.invoice_number || generateInvoiceNumber(),
     id: newId(),
     created_at: now(),
@@ -528,6 +536,7 @@ export function localCreateQuote(
     parent_quote_id: values.parent_quote_id ?? null,
     notes: values.notes ?? null,
     signed_at: values.signed_at ?? null,
+    folder_id: values.folder_id ?? null,
     version: values.version ?? 1,
     deposit_requested: Boolean(values.deposit_requested),
     id: newId(),
@@ -596,4 +605,77 @@ export function localUpdateChecklistItem(id: string, values: Partial<ProjectChec
   data.checklist_items[idx] = merged;
   save(data);
   return merged;
+}
+
+/* ─────────────────────────────────────────────
+ * Folders — classification hiérarchique partagée devis/factures
+ * ───────────────────────────────────────────── */
+
+export function localListFolders(): Folder[] {
+  const data = load();
+  return [...data.folders].sort(
+    (a, b) => a.position - b.position || a.name.localeCompare(b.name, 'fr')
+  );
+}
+
+export function localCreateFolder(
+  values: Pick<Folder, 'name'> & Partial<Pick<Folder, 'parent_id' | 'color' | 'position'>>
+): Folder {
+  const data = load();
+  const row: Folder = {
+    id: newId(),
+    name: values.name.trim(),
+    parent_id: values.parent_id ?? null,
+    color: values.color ?? '#b8973a',
+    position: values.position ?? 0,
+    created_at: now(),
+    updated_at: now(),
+  };
+  data.folders.push(row);
+  save(data);
+  return row;
+}
+
+export function localUpdateFolder(id: string, values: Partial<Folder>): Folder {
+  const data = load();
+  const idx = data.folders.findIndex((f) => f.id === id);
+  if (idx < 0) throw new Error('Dossier introuvable');
+  // Anti-cycle côté local : refuse parent_id = self ou descendant
+  if (values.parent_id) {
+    if (values.parent_id === id) throw new Error('Un dossier ne peut être son propre parent');
+    const descendants = new Set<string>();
+    const stack = [id];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      descendants.add(cur);
+      for (const f of data.folders) if (f.parent_id === cur) stack.push(f.id);
+    }
+    if (descendants.has(values.parent_id)) {
+      throw new Error('Cycle détecté dans la hiérarchie des dossiers');
+    }
+  }
+  const merged = { ...data.folders[idx], ...values, updated_at: now() };
+  data.folders[idx] = merged;
+  save(data);
+  return merged;
+}
+
+export function localDeleteFolder(id: string): void {
+  const data = load();
+  // Cascade : supprime le dossier ET ses descendants ; les items remontent à folder_id null.
+  const toDelete = new Set<string>();
+  const stack = [id];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    toDelete.add(cur);
+    for (const f of data.folders) if (f.parent_id === cur) stack.push(f.id);
+  }
+  data.folders = data.folders.filter((f) => !toDelete.has(f.id));
+  data.quotes = data.quotes.map((q) =>
+    q.folder_id && toDelete.has(q.folder_id) ? { ...q, folder_id: null, updated_at: now() } : q
+  );
+  data.invoices = data.invoices.map((inv) =>
+    inv.folder_id && toDelete.has(inv.folder_id) ? { ...inv, folder_id: null, updated_at: now() } : inv
+  );
+  save(data);
 }

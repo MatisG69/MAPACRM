@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FileText, Pencil, Trash2, FilePlus2, Eye, Check, Loader2 } from 'lucide-react';
+import { FileText, Pencil, Trash2, FilePlus2, Eye, Check, Loader2, FolderInput } from 'lucide-react';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { BulkActionBar } from '../components/ui/BulkActionBar';
 import { Header } from '../components/layout/Header';
@@ -12,8 +12,13 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { InvoiceForm } from '../components/invoices/InvoiceForm';
 import { GenerateInvoiceModal } from '../components/invoices/GenerateInvoiceModal';
 import { InvoicePreviewOverlay } from '../components/invoices/InvoicePreviewOverlay';
+import { FolderSidebar } from '../components/folders/FolderSidebar';
+import { FolderBadge } from '../components/folders/FolderBadge';
+import { CreateFolderModal } from '../components/folders/CreateFolderModal';
+import { MoveToFolderMenu } from '../components/folders/MoveToFolderMenu';
 import { generateInvoiceHTML, MAPA_VENDOR } from '../lib/invoiceGenerator';
-import { Client, Invoice, Project, Quote } from '../lib/types';
+import { Client, Folder, FolderNode, Invoice, Project, Quote } from '../lib/types';
+import { getDescendantIds } from '../hooks/useFolders';
 
 /**
  * RIB MAPA pour règlement — paramétrable via env vars (zéro hardcoding produit).
@@ -32,21 +37,35 @@ interface InvoicesPageProps {
   projects: Project[];
   /** Devis du CRM (pour pré-remplir une facture depuis un devis signé) */
   quotes?: Quote[];
+  folders: Folder[];
+  folderTree: FolderNode[];
   onCreate: (
     data: Omit<Invoice, 'id' | 'created_at' | 'updated_at' | 'client' | 'project'>
   ) => Promise<Invoice>;
   onUpdate: (id: string, data: Partial<Invoice>) => Promise<Invoice>;
   onDelete: (id: string) => Promise<void>;
+  onCreateFolder: (
+    values: Pick<Folder, 'name'> & Partial<Pick<Folder, 'parent_id' | 'color' | 'position'>>
+  ) => Promise<Folder>;
+  onUpdateFolder: (id: string, values: Partial<Folder>) => Promise<Folder>;
+  onDeleteFolder: (id: string) => Promise<void>;
 }
+
+type SelectedFolder = string | null | '__unfiled__';
 
 export function InvoicesPage({
   invoices,
   clients,
   projects,
   quotes = [],
+  folders,
+  folderTree,
   onCreate,
   onUpdate,
   onDelete,
+  onCreateFolder,
+  onUpdateFolder,
+  onDeleteFolder,
 }: InvoicesPageProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
@@ -56,6 +75,28 @@ export function InvoicesPage({
   const [search, setSearch] = useState('');
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewFilename, setPreviewFilename] = useState('');
+
+  const [selectedFolder, setSelectedFolder] = useState<SelectedFolder>(null);
+  const [folderModal, setFolderModal] = useState<{
+    mode: 'create' | 'edit';
+    parentId: string | null;
+    folder: Folder | null;
+  } | null>(null);
+  const [moveMenu, setMoveMenu] = useState<
+    | { invoiceId: string; anchor: { top: number; left: number } }
+    | null
+  >(null);
+  const [bulkMoveOpen, setBulkMoveOpen] = useState<{ top: number; left: number } | null>(null);
+
+  const folderById = useMemo(() => new Map(folders.map((f) => [f.id, f] as const)), [folders]);
+  const folderCounts = useMemo(() => {
+    const out: Record<string, number> = { __null__: 0, __total__: invoices.length };
+    for (const inv of invoices) {
+      const key = inv.folder_id ?? '__null__';
+      out[key] = (out[key] ?? 0) + 1;
+    }
+    return out;
+  }, [invoices]);
 
   const openPreview = (inv: Invoice) => {
     const client =
@@ -126,14 +167,21 @@ export function InvoicesPage({
   }, [invoices]);
 
   const filtered = useMemo(() => {
+    let list = invoices;
+    if (selectedFolder === '__unfiled__') {
+      list = list.filter((inv) => !inv.folder_id);
+    } else if (typeof selectedFolder === 'string') {
+      const ids = new Set(getDescendantIds(folders, selectedFolder));
+      list = list.filter((inv) => inv.folder_id && ids.has(inv.folder_id));
+    }
     const q = search.trim().toLowerCase();
-    if (!q) return invoices;
-    return invoices.filter((inv) =>
+    if (!q) return list;
+    return list.filter((inv) =>
       [inv.invoice_number, inv.client?.name, inv.project?.name, inv.notes].some((f) =>
         f?.toLowerCase().includes(q)
       )
     );
-  }, [invoices, search]);
+  }, [invoices, search, selectedFolder, folders]);
 
   const visibleIds = useMemo(() => filtered.map((i) => i.id), [filtered]);
   const selection = useBulkSelection(visibleIds);
@@ -192,6 +240,33 @@ export function InvoicesPage({
     }
   };
 
+  const bulkMoveToFolder = async (folderId: string | null) => {
+    setBulkBusy(true);
+    try {
+      for (const id of selection.selectedIds) {
+        await onUpdate(id, { folder_id: folderId });
+      }
+      selection.clear();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleCreateOrEditFolder = async (
+    values: Pick<Folder, 'name' | 'color' | 'parent_id'>
+  ) => {
+    if (folderModal?.mode === 'edit' && folderModal.folder) {
+      await onUpdateFolder(folderModal.folder.id, values);
+    } else {
+      await onCreateFolder(values);
+    }
+  };
+
+  const handleDeleteFolder = async (folder: Folder) => {
+    await onDeleteFolder(folder.id);
+    if (selectedFolder === folder.id) setSelectedFolder(null);
+  };
+
   return (
     <div>
       <Header
@@ -216,6 +291,17 @@ export function InvoicesPage({
       />
 
       <div className="px-4 py-4 md:p-8 bg-ws-deep/20 min-h-[calc(100vh-120px)]">
+        <div className="md:flex md:gap-4">
+          <FolderSidebar
+            tree={folderTree}
+            counts={folderCounts}
+            selectedFolderId={selectedFolder}
+            onSelect={setSelectedFolder}
+            onCreate={(parentId) => setFolderModal({ mode: 'create', parentId, folder: null })}
+            onEdit={(folder) => setFolderModal({ mode: 'edit', parentId: folder.parent_id, folder })}
+            onDelete={handleDeleteFolder}
+          />
+          <main className="flex-1 min-w-0 mt-4 md:mt-0">
         {invoices.length === 0 ? (
           <EmptyState
             icon={<FileText size={24} />}
@@ -227,7 +313,13 @@ export function InvoicesPage({
           <EmptyState
             icon={<FileText size={24} />}
             title="Aucun résultat"
-            description={`Aucune facture pour « ${search} »`}
+            description={
+              search
+                ? `Aucune facture pour « ${search} »`
+                : selectedFolder === '__unfiled__'
+                  ? 'Aucune facture sans dossier.'
+                  : 'Aucune facture dans ce dossier.'
+            }
           />
         ) : (
           <>
@@ -260,6 +352,18 @@ export function InvoicesPage({
                   {inv.project?.name && (
                     <p className="text-xs text-ws-mist font-mono">{inv.project.name}</p>
                   )}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <FolderBadge
+                      folder={inv.folder_id ? folderById.get(inv.folder_id) ?? null : null}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setMoveMenu({
+                          invoiceId: inv.id,
+                          anchor: { top: rect.bottom + 4, left: rect.left },
+                        });
+                      }}
+                    />
+                  </div>
                   <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-ws-line/60">
                     <span className="font-mono font-semibold text-ws-bull tabular-nums text-lg">
                       {formatCurrency(inv.amount)}
@@ -343,7 +447,19 @@ export function InvoicesPage({
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-ws-gold/90">{inv.invoice_number || '—'}</td>
                     <td className="px-4 py-3">
-                      <span className="font-medium text-ws-paper">{inv.client?.name || '—'}</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-ws-paper">{inv.client?.name || '—'}</span>
+                        <FolderBadge
+                          folder={inv.folder_id ? folderById.get(inv.folder_id) ?? null : null}
+                          onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setMoveMenu({
+                              invoiceId: inv.id,
+                              anchor: { top: rect.bottom + 4, left: rect.left },
+                            });
+                          }}
+                        />
+                      </div>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell text-ws-mist text-xs font-mono">
                       {inv.project?.name || '—'}
@@ -394,6 +510,8 @@ export function InvoicesPage({
           </div>
           </>
         )}
+          </main>
+        </div>
       </div>
 
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Nouvelle facture" size="lg">
@@ -469,6 +587,18 @@ export function InvoicesPage({
       >
         <Button
           variant="secondary"
+          icon={<FolderInput size={14} />}
+          onClick={(e) => {
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            setBulkMoveOpen({ top: rect.bottom + 4, left: rect.left });
+          }}
+          disabled={bulkBusy}
+          className="normal-case tracking-normal text-xs py-1.5"
+        >
+          Déplacer
+        </Button>
+        <Button
+          variant="secondary"
           icon={
             bulkBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />
           }
@@ -498,6 +628,43 @@ export function InvoicesPage({
           Supprimer
         </Button>
       </BulkActionBar>
+
+      <CreateFolderModal
+        isOpen={Boolean(folderModal)}
+        onClose={() => setFolderModal(null)}
+        initial={folderModal?.folder ?? null}
+        tree={folderTree}
+        defaultParentId={folderModal?.parentId ?? null}
+        forbiddenParentIds={
+          folderModal?.mode === 'edit' && folderModal.folder
+            ? getDescendantIds(folders, folderModal.folder.id)
+            : []
+        }
+        onSubmit={handleCreateOrEditFolder}
+      />
+
+      <MoveToFolderMenu
+        isOpen={moveMenu !== null}
+        onClose={() => setMoveMenu(null)}
+        tree={folderTree}
+        currentFolderId={
+          moveMenu ? invoices.find((i) => i.id === moveMenu.invoiceId)?.folder_id ?? null : null
+        }
+        anchor={moveMenu?.anchor}
+        onSelect={async (folderId) => {
+          if (moveMenu) await onUpdate(moveMenu.invoiceId, { folder_id: folderId });
+        }}
+      />
+
+      <MoveToFolderMenu
+        isOpen={bulkMoveOpen !== null}
+        onClose={() => setBulkMoveOpen(null)}
+        tree={folderTree}
+        anchor={bulkMoveOpen ?? undefined}
+        onSelect={async (folderId) => {
+          await bulkMoveToFolder(folderId);
+        }}
+      />
     </div>
   );
 }
