@@ -417,95 +417,124 @@ export function QuotesPage({
               />
               Tout sélectionner ({filteredQuotes.length})
             </label>
-            {filteredQuotes.map((q) => (
-              <div
-                key={q.id}
-                className={`ws-card rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border transition-colors ${
-                  selection.has(q.id)
-                    ? 'border-ws-accent/50 bg-ws-accent/5'
-                    : 'border-ws-line/80'
-                }`}
-              >
-                <div className="flex items-start gap-3 min-w-0 flex-1">
-                  <input
-                    type="checkbox"
-                    checked={selection.has(q.id)}
-                    onChange={() => selection.toggle(q.id)}
-                    className="mt-1 w-4 h-4 accent-ws-accent flex-shrink-0"
-                    aria-label={`Sélectionner devis ${q.quote_number || q.title}`}
-                  />
-                  <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <p className="font-medium text-ws-paper">{q.title}</p>
-                    <Badge value={q.status} />
-                    {q.version > 1 && (
-                      <span className="text-[10px] font-mono text-ws-mist">v{q.version}</span>
-                    )}
-                    <FolderBadge
-                      folder={q.folder_id ? folderById.get(q.folder_id) ?? null : null}
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setMoveMenu({
-                          quoteId: q.id,
-                          anchor: { top: rect.bottom + 4, left: rect.left },
-                        });
-                      }}
+            {filteredQuotes.map((q) => {
+              const isSelected = selection.has(q.id);
+              const folder = q.folder_id ? folderById.get(q.folder_id) ?? null : null;
+              const meta = [q.quote_number, q.client?.name, q.project?.name]
+                .filter(Boolean)
+                .join(' · ');
+              return (
+                <article
+                  key={q.id}
+                  className={`group ws-card rounded-xl border transition-all ${
+                    isSelected
+                      ? 'border-ws-accent/50 bg-ws-accent/5 shadow-glow-sm'
+                      : 'border-ws-line/80 hover:border-ws-line'
+                  }`}
+                >
+                  {/* En-tête : checkbox · titre · badges */}
+                  <header className="flex items-start gap-3 p-4 sm:p-5 pb-2">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => selection.toggle(q.id)}
+                      className="mt-1 w-4 h-4 accent-ws-accent flex-shrink-0"
+                      aria-label={`Sélectionner devis ${q.quote_number || q.title}`}
                     />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="font-medium text-ws-paper text-sm sm:text-base leading-snug min-w-0 break-words">
+                          {q.title}
+                        </h3>
+                        <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
+                          {q.version > 1 && (
+                            <span className="text-[10px] font-mono text-ws-mist border border-ws-line/60 rounded-md px-1.5 py-0.5">
+                              v{q.version}
+                            </span>
+                          )}
+                          <Badge value={q.status} />
+                        </div>
+                      </div>
+                      {meta && (
+                        <p className="text-xs text-ws-mist font-mono mt-1.5 truncate">{meta}</p>
+                      )}
+                    </div>
+                  </header>
+
+                  {/* Pied : montant + métadonnées + actions */}
+                  <div className="flex items-end justify-between gap-3 flex-wrap px-4 sm:px-5 pb-4 sm:pb-5 pt-2 pl-11 sm:pl-12">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-mono text-base sm:text-lg font-semibold text-ws-bull tabular-nums">
+                          {formatCurrency(q.amount)}
+                        </span>
+                        {q.deposit_requested && q.deposit_amount != null && (
+                          <span className="text-[10px] font-mono text-ws-gold uppercase tracking-wider">
+                            acompte {formatCurrency(q.deposit_amount)}
+                          </span>
+                        )}
+                      </div>
+                      {q.valid_until && (
+                        <span className="text-[10px] text-ws-mist font-mono">
+                          valide jusqu'au {formatDate(q.valid_until)}
+                        </span>
+                      )}
+                      <FolderBadge
+                        folder={folder}
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setMoveMenu({
+                            quoteId: q.id,
+                            anchor: { top: rect.bottom + 4, left: rect.left },
+                          });
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openPreview(q)}
+                        title="Aperçu PDF"
+                        aria-label="Aperçu PDF"
+                        className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-ws-mist hover:text-ws-paper hover:bg-ws-raised transition-colors"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openConvert(q)}
+                        title="Convertir en facture"
+                        aria-label="Convertir en facture"
+                        className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-ws-mist hover:text-ws-accent hover:bg-ws-raised transition-colors"
+                      >
+                        <FileInput size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditing(q);
+                          setModal('edit');
+                        }}
+                        title="Modifier"
+                        aria-label="Modifier"
+                        className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-ws-mist hover:text-ws-paper hover:bg-ws-raised transition-colors"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(q.id)}
+                        title="Supprimer"
+                        aria-label="Supprimer"
+                        className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-ws-mist hover:text-ws-bear hover:bg-ws-bear-dim transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-xs text-ws-mist font-mono truncate">
-                    {q.quote_number} · {q.client?.name}
-                    {q.project?.name ? ` · ${q.project.name}` : ''}
-                  </p>
-                  <p className="text-sm font-mono text-ws-bull mt-2 tabular-nums">{formatCurrency(q.amount)}</p>
-                  {q.valid_until && (
-                    <p className="text-[10px] text-ws-mist mt-1">Valide jusqu'au {formatDate(q.valid_until)}</p>
-                  )}
-                  {q.deposit_requested && q.deposit_amount != null && (
-                    <p className="text-[10px] text-ws-gold mt-1">
-                      Acompte : {formatCurrency(q.deposit_amount)}
-                    </p>
-                  )}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="secondary"
-                    icon={<Eye size={16} />}
-                    className="normal-case tracking-normal text-xs"
-                    onClick={() => openPreview(q)}
-                  >
-                    Aperçu
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    icon={<FileInput size={16} />}
-                    className="normal-case tracking-normal text-xs"
-                    onClick={() => openConvert(q)}
-                  >
-                    Facturer
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    icon={<Pencil size={16} />}
-                    className="normal-case tracking-normal"
-                    onClick={() => {
-                      setEditing(q);
-                      setModal('edit');
-                    }}
-                  >
-                    Modifier
-                  </Button>
-                  <Button
-                    variant="danger"
-                    icon={<Trash2 size={16} />}
-                    className="normal-case tracking-normal"
-                    onClick={() => setDeleteId(q.id)}
-                  >
-                    Supprimer
-                  </Button>
-                </div>
-              </div>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
           </main>
