@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Folder as FolderIcon, FolderX, Search } from 'lucide-react';
 import type { FolderNode } from '../../lib/types';
 
@@ -11,9 +11,15 @@ interface MoveToFolderMenuProps {
   /** IDs interdits (typique : on déplace un dossier, pas ses descendants). */
   forbiddenIds?: ReadonlyArray<string>;
   onSelect: (folderId: string | null) => void | Promise<void>;
-  /** Position d'ancrage : top-right du déclencheur. */
+  /** Position d'ancrage du déclencheur (top-left de son rect).
+   *  Le menu se positionnera dessous par défaut, ou au-dessus si pas assez de place. */
   anchor?: { top: number; left: number };
 }
+
+/** Marge entre le menu et les bords du viewport. */
+const VIEWPORT_MARGIN = 8;
+/** Décalage par rapport au déclencheur. */
+const TRIGGER_OFFSET = 4;
 
 interface FlatRow {
   id: string;
@@ -49,10 +55,13 @@ export function MoveToFolderMenu({
 }: MoveToFolderMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
+  /** Position finale calculée (après mesure du menu pour éviter les débordements). */
+  const [resolvedPos, setResolvedPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
       setSearch('');
+      setResolvedPos(null);
       return;
     }
     const handler = (e: MouseEvent) => {
@@ -69,6 +78,36 @@ export function MoveToFolderMenu({
     };
   }, [isOpen, onClose]);
 
+  /* Repositionne le menu pour qu'il reste dans le viewport.
+     Si pas assez de place sous l'ancre → on bascule au-dessus.
+     Si débordement à droite → on aligne sur le bord droit. */
+  useLayoutEffect(() => {
+    if (!isOpen || !anchor || !ref.current) return;
+    const menu = ref.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    /* anchor.top correspond à la coordonnée transmise par l'appelant
+       (rect.bottom + offset, donc sous le déclencheur).
+       On déduit la hauteur réelle du déclencheur en supposant un offset standard. */
+    const triggerBottom = anchor.top;
+    const estimatedTriggerHeight = 36;
+    const triggerTop = triggerBottom - estimatedTriggerHeight;
+
+    let top = triggerBottom + TRIGGER_OFFSET;
+    if (top + menu.height + VIEWPORT_MARGIN > vh) {
+      /* Pas assez sous le déclencheur : bascule au-dessus. */
+      const above = triggerTop - menu.height - TRIGGER_OFFSET;
+      top = Math.max(VIEWPORT_MARGIN, above);
+    }
+
+    let left = anchor.left;
+    if (left + menu.width + VIEWPORT_MARGIN > vw) {
+      left = Math.max(VIEWPORT_MARGIN, vw - menu.width - VIEWPORT_MARGIN);
+    }
+
+    setResolvedPos({ top, left });
+  }, [isOpen, anchor]);
+
   if (!isOpen) return null;
 
   const allRows = flatten(tree);
@@ -81,8 +120,19 @@ export function MoveToFolderMenu({
     onClose();
   };
 
-  const positionStyle: React.CSSProperties = anchor
-    ? { position: 'fixed', top: anchor.top, left: anchor.left, zIndex: 60 }
+  /* Premier rendu : on utilise la position d'ancrage brute pour mesurer le menu.
+     Le useLayoutEffect ci-dessus calcule alors la position finale corrigée
+     (au-dessus si débordement bas, recadré horizontalement si débordement droit).
+     Pendant ce premier rendu, on masque visuellement pour éviter le flicker. */
+  const finalPos = resolvedPos ?? anchor;
+  const positionStyle: React.CSSProperties = finalPos
+    ? {
+        position: 'fixed',
+        top: finalPos.top,
+        left: finalPos.left,
+        zIndex: 60,
+        visibility: resolvedPos ? 'visible' : 'hidden',
+      }
     : { position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 60 };
 
   return (
