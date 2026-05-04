@@ -188,7 +188,7 @@ export function PipelinePage({
                           <Badge value={o.lost_reason} className="!normal-case" />
                         )}
                         <select
-                          className="input text-xs py-1.5 min-h-0"
+                          className="input text-base md:text-xs min-h-[40px] md:min-h-0 py-2 md:py-1.5"
                           value={o.stage}
                           onChange={(e) => quickStageChange(o, e.target.value as DealStage)}
                           aria-label="Changer l’étape"
@@ -202,7 +202,7 @@ export function PipelinePage({
                         <div className="flex gap-1 pt-1">
                           <button
                             type="button"
-                            className="p-1.5 rounded-lg border border-ws-line text-ws-mist hover:text-ws-paper touch-manipulation"
+                            className="min-w-[40px] min-h-[40px] md:min-w-0 md:min-h-0 md:p-1.5 flex items-center justify-center rounded-lg border border-ws-line text-ws-mist hover:text-ws-paper touch-manipulation"
                             aria-label="Modifier"
                             onClick={() => {
                               setEditing(o);
@@ -213,7 +213,7 @@ export function PipelinePage({
                           </button>
                           <button
                             type="button"
-                            className="p-1.5 rounded-lg border border-ws-bear/30 text-ws-bear hover:bg-ws-bear-dim touch-manipulation"
+                            className="min-w-[40px] min-h-[40px] md:min-w-0 md:min-h-0 md:p-1.5 flex items-center justify-center rounded-lg border border-ws-bear/30 text-ws-bear hover:bg-ws-bear-dim touch-manipulation"
                             aria-label="Supprimer"
                             onClick={() => setDeleteId(o.id)}
                           >

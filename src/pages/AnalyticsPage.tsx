@@ -411,7 +411,7 @@ export function AnalyticsPage({
               <p className="text-sm text-ws-mist font-mono text-center py-10">Aucun encaissement relié à une source</p>
             ) : (
               <div className="overflow-x-auto scrollbar-ws -mx-1 px-1">
-                <table className="w-full min-w-[280px] text-left font-mono text-xs">
+                <table className="w-full min-w-0 text-left font-mono text-xs">
                   <thead>
                     <tr className="border-b border-white/[0.08] text-[9px] uppercase tracking-wider text-ws-mist">
                       <th className="py-2 pr-3 font-semibold">Canal</th>
@@ -447,7 +447,7 @@ export function AnalyticsPage({
               <p className="text-sm text-ws-mist font-mono text-center py-10">Aucune donnée</p>
             ) : (
               <div className="overflow-x-auto scrollbar-ws -mx-1 px-1">
-                <table className="w-full min-w-[260px] text-left font-mono text-xs">
+                <table className="w-full min-w-0 text-left font-mono text-xs">
                   <thead>
                     <tr className="border-b border-white/[0.08] text-[9px] uppercase tracking-wider text-ws-mist">
                       <th className="py-2 pr-2 font-semibold">#</th>

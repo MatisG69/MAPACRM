@@ -477,7 +477,7 @@ export function ContactsPage({
                         {c.company ? `${c.company} · ` : ''}{clientProjects.length} projet{clientProjects.length > 1 ? 's' : ''}
                       </p>
                     </div>
-                    <span className="text-xs text-ws-accent-soft font-mono opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <span className="text-xs text-ws-accent-soft font-mono opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
                       + Ajouter
                     </span>
                   </button>

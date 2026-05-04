@@ -322,193 +322,134 @@ export function InvoicesPage({
             }
           />
         ) : (
-          <>
-            <div className="md:hidden space-y-3">
-              {filtered.map((inv) => (
-                <div
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 px-2 text-xs text-ws-mist font-mono cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={selection.allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = selection.someSelected;
+                }}
+                onChange={() => selection.toggleAll()}
+                className="w-4 h-4 accent-ws-accent"
+              />
+              Tout sélectionner ({filtered.length})
+            </label>
+            {filtered.map((inv) => {
+              const isSelected = selection.has(inv.id);
+              const folder = inv.folder_id ? folderById.get(inv.folder_id) ?? null : null;
+              const isLate =
+                inv.due_date &&
+                inv.status !== 'paid' &&
+                inv.status !== 'cancelled' &&
+                isOverdue(inv.due_date);
+              const meta = [inv.client?.name, inv.project?.name].filter(Boolean).join(' · ');
+              return (
+                <article
                   key={inv.id}
-                  className={`ws-card rounded-2xl p-4 border space-y-3 touch-manipulation transition-colors ${
-                    selection.has(inv.id)
-                      ? 'border-ws-accent/50 bg-ws-accent/5'
-                      : 'border-ws-line'
+                  className={`group ws-card rounded-xl border transition-all ${
+                    isSelected
+                      ? 'border-ws-accent/50 bg-ws-accent/5 shadow-glow-sm'
+                      : 'border-ws-line/80 hover:border-ws-line'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={selection.has(inv.id)}
-                        onChange={() => selection.toggle(inv.id)}
-                        className="mt-1 w-4 h-4 accent-ws-accent flex-shrink-0"
-                        aria-label={`Sélectionner facture ${inv.invoice_number || inv.id}`}
-                      />
-                      <div>
-                        <p className="font-mono text-xs text-ws-gold/90">{inv.invoice_number || '—'}</p>
-                        <p className="font-medium text-ws-paper mt-1">{inv.client?.name || '—'}</p>
-                      </div>
-                    </div>
-                    <Badge value={inv.status} />
-                  </div>
-                  {inv.project?.name && (
-                    <p className="text-xs text-ws-mist font-mono">{inv.project.name}</p>
-                  )}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <FolderBadge
-                      folder={inv.folder_id ? folderById.get(inv.folder_id) ?? null : null}
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setMoveMenu({
-                          invoiceId: inv.id,
-                          anchor: { top: rect.bottom + 4, left: rect.left },
-                        });
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-ws-line/60">
-                    <span className="font-mono font-semibold text-ws-bull tabular-nums text-lg">
-                      {formatCurrency(inv.amount)}
-                    </span>
-                    <span
-                      className={`font-mono text-xs ${inv.due_date && inv.status !== 'paid' && inv.status !== 'cancelled' && isOverdue(inv.due_date) ? 'text-ws-bear font-semibold' : 'text-ws-ink'}`}
-                    >
-                      {formatDate(inv.due_date)}
-                    </span>
-                  </div>
-                  <div className="flex justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => openPreview(inv)}
-                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-ws-panel text-ws-mist hover:text-ws-paper"
-                      aria-label="Aperçu PDF"
-                    >
-                      <Eye size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditInvoice(inv)}
-                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-ws-panel text-ws-mist hover:text-ws-paper"
-                      aria-label="Modifier"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteId(inv.id)}
-                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-ws-bear-dim text-ws-mist hover:text-ws-bear"
-                      aria-label="Supprimer"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="hidden md:block ws-card rounded-lg overflow-hidden border-ws-line overflow-x-auto">
-            <table className="w-full text-sm min-w-[760px]">
-              <thead>
-                <tr className="ws-table-header">
-                  <th className="px-3 py-3 w-10">
+                  {/* En-tête : checkbox · numéro · client · badges */}
+                  <header className="flex items-start gap-3 p-4 sm:p-5 pb-2">
                     <input
                       type="checkbox"
-                      checked={selection.allSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = selection.someSelected;
-                      }}
-                      onChange={() => selection.toggleAll()}
-                      className="w-4 h-4 accent-ws-accent"
-                      aria-label="Tout sélectionner"
+                      checked={isSelected}
+                      onChange={() => selection.toggle(inv.id)}
+                      className="mt-1 w-4 h-4 accent-ws-accent flex-shrink-0"
+                      aria-label={`Sélectionner facture ${inv.invoice_number || inv.id}`}
                     />
-                  </th>
-                  <th className="px-4 py-3">N°</th>
-                  <th className="px-4 py-3">Client</th>
-                  <th className="px-4 py-3 hidden lg:table-cell">Projet</th>
-                  <th className="px-4 py-3 text-right">Montant</th>
-                  <th className="px-4 py-3">Échéance</th>
-                  <th className="px-4 py-3">Statut</th>
-                  <th className="px-4 py-3 w-24 bg-ws-deep/30" />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((inv) => (
-                  <tr
-                    key={inv.id}
-                    className={`border-b border-ws-line/50 hover:bg-ws-raised/40 group transition-colors ${
-                      selection.has(inv.id) ? 'bg-ws-accent/8' : ''
-                    }`}
-                  >
-                    <td className="px-3 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selection.has(inv.id)}
-                        onChange={() => selection.toggle(inv.id)}
-                        className="w-4 h-4 accent-ws-accent"
-                        aria-label={`Sélectionner facture ${inv.invoice_number || inv.id}`}
-                      />
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-ws-gold/90">{inv.invoice_number || '—'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium text-ws-paper">{inv.client?.name || '—'}</span>
-                        <FolderBadge
-                          folder={inv.folder_id ? folderById.get(inv.folder_id) ?? null : null}
-                          onClick={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setMoveMenu({
-                              invoiceId: inv.id,
-                              anchor: { top: rect.bottom + 4, left: rect.left },
-                            });
-                          }}
-                        />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-mono text-[11px] uppercase tracking-wider text-ws-gold/90">
+                            {inv.invoice_number || '—'}
+                          </p>
+                          <h3 className="font-medium text-ws-paper text-sm sm:text-base leading-snug mt-0.5 break-words">
+                            {inv.client?.name || '—'}
+                          </h3>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
+                          <Badge value={inv.status} />
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-ws-mist text-xs font-mono">
-                      {inv.project?.name || '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold text-ws-bull tabular-nums">
-                      {formatCurrency(inv.amount)}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs">
-                      <span
-                        className={inv.due_date && inv.status !== 'paid' && inv.status !== 'cancelled' && isOverdue(inv.due_date) ? 'text-ws-bear font-semibold' : 'text-ws-ink'}
-                      >
-                        {formatDate(inv.due_date)}
+                      {meta && inv.project?.name && (
+                        <p className="text-xs text-ws-mist font-mono mt-1.5 truncate">
+                          {inv.project.name}
+                        </p>
+                      )}
+                    </div>
+                  </header>
+
+                  {/* Pied : montant + échéance + dossier + actions */}
+                  <div className="flex items-end justify-between gap-3 flex-wrap px-4 sm:px-5 pb-4 sm:pb-5 pt-2 pl-11 sm:pl-12">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 min-w-0">
+                      <span className="font-mono text-base sm:text-lg font-semibold text-ws-bull tabular-nums">
+                        {formatCurrency(inv.amount)}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge value={inv.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() => openPreview(inv)}
-                          className="p-1.5 rounded-md hover:bg-ws-panel text-ws-mist hover:text-ws-paper"
-                          title="Aperçu PDF"
+                      {inv.due_date && (
+                        <span
+                          className={`text-[10px] font-mono ${
+                            isLate ? 'text-ws-bear font-semibold uppercase tracking-wider' : 'text-ws-mist'
+                          }`}
                         >
-                          <Eye size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditInvoice(inv)}
-                          className="p-1.5 rounded-md hover:bg-ws-panel text-ws-mist hover:text-ws-paper"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteId(inv.id)}
-                          className="p-1.5 rounded-md hover:bg-ws-bear-dim text-ws-mist hover:text-ws-bear"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          {isLate ? 'en retard · ' : 'échéance '}
+                          {formatDate(inv.due_date)}
+                        </span>
+                      )}
+                      {inv.paid_date && (
+                        <span className="text-[10px] font-mono text-ws-bull/80">
+                          réglée le {formatDate(inv.paid_date)}
+                        </span>
+                      )}
+                      <FolderBadge
+                        folder={folder}
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setMoveMenu({
+                            invoiceId: inv.id,
+                            anchor: { top: rect.bottom + 4, left: rect.left },
+                          });
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openPreview(inv)}
+                        title="Aperçu PDF"
+                        aria-label="Aperçu PDF"
+                        className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-ws-mist hover:text-ws-paper hover:bg-ws-raised transition-colors"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditInvoice(inv)}
+                        title="Modifier"
+                        aria-label="Modifier"
+                        className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-ws-mist hover:text-ws-paper hover:bg-ws-raised transition-colors"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(inv.id)}
+                        title="Supprimer"
+                        aria-label="Supprimer"
+                        className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-ws-mist hover:text-ws-bear hover:bg-ws-bear-dim transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
-          </>
         )}
           </main>
         </div>

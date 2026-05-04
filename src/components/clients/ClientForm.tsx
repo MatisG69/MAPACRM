@@ -1,13 +1,22 @@
 import { useState } from 'react';
-import { Client, ClientStatus } from '../../lib/types';
+import { Client, ClientStatus, ClientTag } from '../../lib/types';
 import { Button } from '../ui/Button';
+import { TagPicker } from '../client-tags/TagPicker';
 import { getRandomColor } from '../../lib/utils';
 
 type FormData = Omit<Client, 'id' | 'created_at' | 'updated_at'>;
 
 interface ClientFormProps {
   initial?: Partial<Client>;
-  onSubmit: (data: FormData) => Promise<void>;
+  /** Tous les tags du référentiel (utilisés par le picker). */
+  allTags?: ClientTag[];
+  /** IDs initialement assignés au client (= initial.tags?.map(t => t.id) en général). */
+  initialTagIds?: string[];
+  /** Crée un nouveau tag dans le référentiel global. */
+  onCreateTag?: (
+    values: Pick<ClientTag, 'label'> & Partial<Pick<ClientTag, 'color'>>
+  ) => Promise<ClientTag>;
+  onSubmit: (data: FormData, selectedTagIds: string[]) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -22,7 +31,14 @@ const statusOptions: { value: ClientStatus; label: string }[] = [
 
 const sourceOptions = ['Site web', 'Référence', 'LinkedIn', 'Appel entrant', 'Réseaux sociaux', 'Salon / Événement', 'Autre'];
 
-export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
+export function ClientForm({
+  initial,
+  allTags = [],
+  initialTagIds = [],
+  onCreateTag,
+  onSubmit,
+  onCancel,
+}: ClientFormProps) {
   const [form, setForm] = useState<FormData>({
     name: initial?.name || '',
     first_name: initial?.first_name ?? null,
@@ -41,6 +57,7 @@ export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
     profession: initial?.profession ?? null,
     avatar_color: initial?.avatar_color || getRandomColor(),
   } as FormData);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialTagIds);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,7 +69,7 @@ export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
     setLoading(true);
     setError('');
     try {
-      await onSubmit(form);
+      await onSubmit(form, selectedTagIds);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -173,6 +190,17 @@ export function ClientForm({ initial, onSubmit, onCancel }: ClientFormProps) {
             placeholder="Citation, avis, retour d’expérience…"
           />
         </div>
+        {onCreateTag && (
+          <div className="col-span-2">
+            <label className="form-label">Tags</label>
+            <TagPicker
+              allTags={allTags}
+              selectedIds={selectedTagIds}
+              onChange={setSelectedTagIds}
+              onCreateTag={onCreateTag}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3 pt-2">

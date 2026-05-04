@@ -101,7 +101,7 @@ function ConvertModal({
             <p className="font-display font-semibold text-ws-paper">Convertir en client</p>
             <p className="text-[11px] font-mono text-ws-mist mt-0.5">Un fiche client sera creee avec ces informations</p>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-ws-raised text-ws-mist hover:text-ws-paper">
+          <button type="button" onClick={onClose} aria-label="Fermer" className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 md:p-1.5 flex items-center justify-center rounded-lg hover:bg-ws-raised text-ws-mist hover:text-ws-paper touch-manipulation">
             <X size={16} />
           </button>
         </div>

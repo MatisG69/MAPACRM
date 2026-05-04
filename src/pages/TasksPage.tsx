@@ -121,7 +121,7 @@ export function TasksPage({ tasks, projects, onCreate, onUpdate, onDelete, onNav
               ))}
             </div>
             <select
-              className="input text-[10px] py-2 max-w-[160px] font-mono uppercase"
+              className="input text-base md:text-[10px] min-h-[44px] md:min-h-0 py-2 max-w-[160px] font-mono md:uppercase"
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | 'all')}
             >

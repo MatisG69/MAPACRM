@@ -2,7 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseEnabled } from '../lib/supabase';
 import * as local from '../lib/localCrm';
 import { normalizeClientStatus } from '../lib/clientStatus';
-import { Client } from '../lib/types';
+import { Client, ClientTag } from '../lib/types';
+
+/* Forme brute renvoyée par Supabase pour la jointure m2m client_tag_assignments → client_tags. */
+interface RawClientTagAssignment {
+  tag: ClientTag;
+}
 
 export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -14,18 +19,33 @@ export function useClients() {
     setError(null);
     try {
       if (isSupabaseEnabled() && supabase) {
+        /* Jointure m2m : on récupère les tags assignés en une seule requête.
+           Format Supabase : `tag_assignments:client_tag_assignments(tag:client_tags(*))`. */
         const { data, error: err } = await supabase
           .from('clients')
-          .select('*')
+          .select('*, tag_assignments:client_tag_assignments(tag:client_tags(*))')
           .order('created_at', { ascending: false });
         if (err) throw err;
         setClients(
-          (data || []).map((c) => ({
-            ...c,
-            status: normalizeClientStatus(c.status),
-            satisfaction_rating: c.satisfaction_rating ?? null,
-            feedback: c.feedback ?? null,
-          }))
+          (data || []).map((c) => {
+            const assignments = (c as { tag_assignments?: RawClientTagAssignment[] }).tag_assignments;
+            const tags: ClientTag[] = Array.isArray(assignments)
+              ? assignments
+                  .map((a) => a.tag)
+                  .filter((t): t is ClientTag => Boolean(t))
+                  .sort((a, b) => a.position - b.position || a.label.localeCompare(b.label, 'fr'))
+              : [];
+            // On retire la clé brute pour éviter qu'elle ne fuie dans les payloads d'update.
+            const cleaned = { ...c };
+            delete (cleaned as { tag_assignments?: unknown }).tag_assignments;
+            return {
+              ...cleaned,
+              status: normalizeClientStatus(cleaned.status),
+              satisfaction_rating: cleaned.satisfaction_rating ?? null,
+              feedback: cleaned.feedback ?? null,
+              tags,
+            } as Client;
+          })
         );
       } else {
         setClients(local.localListClients());
@@ -54,13 +74,29 @@ export function useClients() {
   };
 
   const updateClient = async (id: string, values: Partial<Client>) => {
+    /* `tags` est une vue jointe (jamais persistée dans `clients`).
+       On la retire du payload avant l'UPDATE — sinon Supabase rejette. */
+    const payload = { ...values } as Partial<Client> & { tags?: unknown };
+    delete payload.tags;
     if (isSupabaseEnabled() && supabase) {
-      const { data, error: err } = await supabase.from('clients').update(values).eq('id', id).select().single();
+      const { data, error: err } = await supabase
+        .from('clients')
+        .update(payload)
+        .eq('id', id)
+        .select('*, tag_assignments:client_tag_assignments(tag:client_tags(*))')
+        .single();
       if (err) throw err;
-      setClients((prev) => prev.map((c) => (c.id === id ? data : c)));
-      return data;
+      const assignments = (data as { tag_assignments?: RawClientTagAssignment[] }).tag_assignments;
+      const tags: ClientTag[] = Array.isArray(assignments)
+        ? assignments.map((a) => a.tag).filter((t): t is ClientTag => Boolean(t))
+        : [];
+      const cleaned = { ...data };
+      delete (cleaned as { tag_assignments?: unknown }).tag_assignments;
+      const next = { ...cleaned, tags } as Client;
+      setClients((prev) => prev.map((c) => (c.id === id ? next : c)));
+      return next;
     }
-    const data = local.localUpdateClient(id, values);
+    const data = local.localUpdateClient(id, payload);
     setClients((prev) => prev.map((c) => (c.id === id ? data : c)));
     return data;
   };

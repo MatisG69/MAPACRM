@@ -58,7 +58,7 @@ function NotificationPanel({
   onClose: () => void
 }) {
   return (
-    <div className="absolute right-0 top-full mt-2 w-72 bg-ws-panel border border-ws-line rounded-2xl shadow-2xl z-50 overflow-hidden">
+    <div className="absolute right-0 top-full mt-2 w-[min(18rem,calc(100vw-2rem))] bg-ws-panel border border-ws-line rounded-2xl shadow-2xl z-50 overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-ws-line">
         <span className="text-xs font-semibold uppercase tracking-widest text-ws-accent-soft">Notifications</span>
         <button onClick={onClose} className="text-ws-mist hover:text-ws-paper transition-colors">
@@ -106,7 +106,7 @@ function DbNotificationPanel({
   onMarkAllRead: () => void;
 }) {
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 bg-ws-panel border border-ws-line rounded-2xl shadow-2xl z-50 overflow-hidden">
+    <div className="absolute right-0 top-full mt-2 w-[min(20rem,calc(100vw-2rem))] bg-ws-panel border border-ws-line rounded-2xl shadow-2xl z-50 overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-ws-line">
         <span className="text-xs font-semibold uppercase tracking-widest text-ws-accent-soft">
           Notifications {unreadCount > 0 && `· ${unreadCount}`}

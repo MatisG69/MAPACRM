@@ -10,6 +10,7 @@ import type {
   Quote,
   ProjectChecklistItem,
   Folder,
+  ClientTag,
 } from './types';
 import { generateInvoiceNumber } from './utils';
 
@@ -26,6 +27,9 @@ interface CRMData {
   quotes: Quote[];
   checklist_items: ProjectChecklistItem[];
   folders: Folder[];
+  client_tags: ClientTag[];
+  /** Jonction client ↔ tag (m2m local). */
+  client_tag_assignments: Array<{ client_id: string; tag_id: string }>;
 }
 
 const empty = (): CRMData => ({
@@ -39,6 +43,8 @@ const empty = (): CRMData => ({
   quotes: [],
   checklist_items: [],
   folders: [],
+  client_tags: [],
+  client_tag_assignments: [],
 });
 
 function load(): CRMData {
@@ -80,6 +86,10 @@ function load(): CRMData {
         : [],
       checklist_items: Array.isArray((p as CRMData).checklist_items) ? (p as CRMData).checklist_items : [],
       folders: Array.isArray((p as CRMData).folders) ? (p as CRMData).folders : [],
+      client_tags: Array.isArray((p as CRMData).client_tags) ? (p as CRMData).client_tags : [],
+      client_tag_assignments: Array.isArray((p as CRMData).client_tag_assignments)
+        ? (p as CRMData).client_tag_assignments
+        : [],
     };
   } catch {
     return empty();
@@ -178,9 +188,21 @@ function hydrateQuote(data: CRMData, row: Quote): Quote {
   };
 }
 
+function hydrateClientTags(data: CRMData, clientId: string): ClientTag[] {
+  const tagIds = data.client_tag_assignments
+    .filter((a) => a.client_id === clientId)
+    .map((a) => a.tag_id);
+  if (tagIds.length === 0) return [];
+  return data.client_tags
+    .filter((t) => tagIds.includes(t.id))
+    .sort((a, b) => a.position - b.position || a.label.localeCompare(b.label, 'fr'));
+}
+
 export function localListClients(): Client[] {
   const data = load();
-  return [...data.clients].sort(
+  return [...data.clients]
+    .map((c) => ({ ...c, tags: hydrateClientTags(data, c.id) }))
+    .sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 }
@@ -199,10 +221,12 @@ export function localUpdateClient(id: string, values: Partial<Client>): Client {
   const data = load();
   const idx = data.clients.findIndex((c) => c.id === id);
   if (idx < 0) throw new Error('Client introuvable');
-  const merged = { ...data.clients[idx], ...values, updated_at: now() };
+  /* `tags` est une vue jointe, on ne la stocke jamais en colonne. */
+  const { tags: _t, ...rest } = values as Partial<Client> & { tags?: unknown };
+  const merged = { ...data.clients[idx], ...rest, updated_at: now() };
   data.clients[idx] = merged;
   save(data);
-  return merged;
+  return { ...merged, tags: hydrateClientTags(data, id) };
 }
 
 export function localDeleteClient(id: string): void {
@@ -677,5 +701,79 @@ export function localDeleteFolder(id: string): void {
   data.invoices = data.invoices.map((inv) =>
     inv.folder_id && toDelete.has(inv.folder_id) ? { ...inv, folder_id: null, updated_at: now() } : inv
   );
+  save(data);
+}
+
+/* ─────────────────────────────────────────────
+ * Client Tags — référentiel global + assignations m2m
+ * ───────────────────────────────────────────── */
+
+export function localListClientTags(): ClientTag[] {
+  const data = load();
+  return [...data.client_tags].sort(
+    (a, b) => a.position - b.position || a.label.localeCompare(b.label, 'fr')
+  );
+}
+
+export function localCreateClientTag(
+  values: Pick<ClientTag, 'label'> & Partial<Pick<ClientTag, 'color' | 'position'>>
+): ClientTag {
+  const data = load();
+  const label = values.label.trim();
+  if (!label) throw new Error('Le nom du tag est obligatoire');
+  // Unicité case-insensitive (alignée sur l'index Postgres).
+  if (data.client_tags.some((t) => t.label.toLowerCase() === label.toLowerCase())) {
+    throw new Error(`Un tag « ${label} » existe déjà`);
+  }
+  const row: ClientTag = {
+    id: newId(),
+    label,
+    color: values.color ?? '#b8973a',
+    position: values.position ?? data.client_tags.length,
+    created_at: now(),
+    updated_at: now(),
+  };
+  data.client_tags.push(row);
+  save(data);
+  return row;
+}
+
+export function localUpdateClientTag(id: string, values: Partial<ClientTag>): ClientTag {
+  const data = load();
+  const idx = data.client_tags.findIndex((t) => t.id === id);
+  if (idx < 0) throw new Error('Tag introuvable');
+  const merged = { ...data.client_tags[idx], ...values, updated_at: now() };
+  if (values.label !== undefined) {
+    const newLabel = values.label.trim();
+    if (!newLabel) throw new Error('Le nom du tag est obligatoire');
+    const collision = data.client_tags.find(
+      (t) => t.id !== id && t.label.toLowerCase() === newLabel.toLowerCase()
+    );
+    if (collision) throw new Error(`Un tag « ${newLabel} » existe déjà`);
+    merged.label = newLabel;
+  }
+  data.client_tags[idx] = merged;
+  save(data);
+  return merged;
+}
+
+export function localDeleteClientTag(id: string): void {
+  const data = load();
+  data.client_tags = data.client_tags.filter((t) => t.id !== id);
+  // Cascade : retirer toutes les assignations qui le pointaient.
+  data.client_tag_assignments = data.client_tag_assignments.filter((a) => a.tag_id !== id);
+  save(data);
+}
+
+/**
+ * Remplace l'ensemble des tags d'un client (atomique côté localStorage).
+ */
+export function localSetClientTags(clientId: string, tagIds: string[]): void {
+  const data = load();
+  // Garde toutes les assignations qui ne concernent pas ce client.
+  const keep = data.client_tag_assignments.filter((a) => a.client_id !== clientId);
+  // Recrée la liste pour ce client à partir de la nouvelle sélection.
+  const fresh = tagIds.map((tag_id) => ({ client_id: clientId, tag_id }));
+  data.client_tag_assignments = [...keep, ...fresh];
   save(data);
 }

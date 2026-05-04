@@ -23,6 +23,19 @@ export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type InteractionType = 'call' | 'email' | 'meeting' | 'note' | 'demo';
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 
+/**
+ * Tag de classification manuelle d'un client (ex. « VIP », « Pas de site web »).
+ * Réutilisable d'un client à l'autre — un référentiel global, des assignations m2m.
+ */
+export interface ClientTag {
+  id: string;
+  label: string;
+  color: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -69,6 +82,8 @@ export interface Client {
   website_status?: WebsiteStatus | null;
   digital_score?: number | null;
   scraped_at?: string | null;
+  /** Tags manuels assignés (joined inline depuis client_tag_assignments). */
+  tags?: ClientTag[];
   created_at: string;
   updated_at: string;
 }

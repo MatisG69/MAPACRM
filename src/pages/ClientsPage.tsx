@@ -10,8 +10,9 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ClientForm } from '../components/clients/ClientForm';
 import { ScrapingImportModal } from '../components/scraping/ScrapingImportModal';
 import { CLIENT_CARD_STRIP, clientMatchesStatusFilter } from '../lib/clientStatus';
-import { Client, ClientStatus } from '../lib/types';
+import { Client, ClientStatus, ClientTag } from '../lib/types';
 import { getInitials } from '../lib/utils';
+import { ClientTagBadge } from '../components/client-tags/ClientTagBadge';
 
 type SourceFilter = 'all' | 'scrapping';
 
@@ -27,14 +28,29 @@ const statusFilters: { value: ClientStatus | 'all'; label: string }[] = [
 
 interface ClientsPageProps {
   clients: Client[];
+  allTags: ClientTag[];
   onCreate: (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => Promise<Client>;
   onUpdate: (id: string, data: Partial<Client>) => Promise<Client>;
   onDelete: (id: string) => Promise<void>;
+  onCreateTag: (
+    values: Pick<ClientTag, 'label'> & Partial<Pick<ClientTag, 'color'>>
+  ) => Promise<ClientTag>;
+  onSetClientTags: (clientId: string, nextIds: string[], currentIds: string[]) => Promise<void>;
   onSelect: (id: string) => void;
   onImportSuccess: () => void;
 }
 
-export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, onImportSuccess }: ClientsPageProps) {
+export function ClientsPage({
+  clients,
+  allTags,
+  onCreate,
+  onUpdate,
+  onDelete,
+  onCreateTag,
+  onSetClientTags,
+  onSelect,
+  onImportSuccess,
+}: ClientsPageProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
@@ -74,13 +90,24 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
     return matchStatus && matchSource && matchSearch;
   });
 
-  const handleCreate = async (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
-    await onCreate(data);
+  const handleCreate = async (
+    data: Omit<Client, 'id' | 'created_at' | 'updated_at'>,
+    tagIds: string[]
+  ) => {
+    const created = await onCreate(data);
+    if (tagIds.length > 0) {
+      await onSetClientTags(created.id, tagIds, []);
+    }
     setShowCreate(false);
   };
 
-  const handleUpdate = async (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleUpdate = async (
+    data: Omit<Client, 'id' | 'created_at' | 'updated_at'>,
+    tagIds: string[]
+  ) => {
     if (!editClient) return;
+    const currentIds = (editClient.tags ?? []).map((t) => t.id);
+    await onSetClientTags(editClient.id, tagIds, currentIds);
     await onUpdate(editClient.id, data);
     setEditClient(null);
   };
@@ -203,6 +230,9 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
                       {c.website_status && ['low_visibility','outdated_website'].includes(c.website_status) && (
                         <Badge value="seo_needed" />
                       )}
+                      {(c.tags ?? []).map((tag) => (
+                        <ClientTagBadge key={tag.id} tag={tag} />
+                      ))}
                     </div>
                   </div>
 
@@ -281,12 +311,25 @@ export function ClientsPage({ clients, onCreate, onUpdate, onDelete, onSelect, o
       />
 
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Nouveau client" size="lg">
-        <ClientForm onSubmit={handleCreate} onCancel={() => setShowCreate(false)} />
+        <ClientForm
+          allTags={allTags}
+          initialTagIds={[]}
+          onCreateTag={onCreateTag}
+          onSubmit={handleCreate}
+          onCancel={() => setShowCreate(false)}
+        />
       </Modal>
 
       <Modal isOpen={!!editClient} onClose={() => setEditClient(null)} title="Modifier le client" size="lg">
         {editClient && (
-          <ClientForm initial={editClient} onSubmit={handleUpdate} onCancel={() => setEditClient(null)} />
+          <ClientForm
+            initial={editClient}
+            allTags={allTags}
+            initialTagIds={(editClient.tags ?? []).map((t) => t.id)}
+            onCreateTag={onCreateTag}
+            onSubmit={handleUpdate}
+            onCancel={() => setEditClient(null)}
+          />
         )}
       </Modal>
 

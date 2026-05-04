@@ -33,6 +33,7 @@ import { useOpportunities } from './hooks/useOpportunities';
 import { useQuotes } from './hooks/useQuotes';
 import { useChecklistItems } from './hooks/useChecklistItems';
 import { useFolders } from './hooks/useFolders';
+import { useClientTags } from './hooks/useClientTags';
 import { Page } from './lib/types';
 import { isSupabaseEnabled } from './lib/supabase';
 import { seedChecklistForProject } from './lib/checklistSeed';
@@ -64,6 +65,7 @@ function App() {
   const opportunitiesHook = useOpportunities();
   const quotesHook = useQuotes();
   const foldersHook = useFolders();
+  const clientTagsHook = useClientTags();
   const demandesHook = useServiceRequests();
 
   const navigate = useCallback((p: Page, id?: string) => {
@@ -223,9 +225,16 @@ function App() {
             {page === 'clients' && (
               <ClientsPage
                 clients={clientsHook.clients}
+                allTags={clientTagsHook.tags}
                 onCreate={clientsHook.createClient}
                 onUpdate={clientsHook.updateClient}
                 onDelete={clientsHook.deleteClient}
+                onCreateTag={clientTagsHook.createTag}
+                onSetClientTags={async (clientId, nextIds, currentIds) => {
+                  await clientTagsHook.setClientTags(clientId, nextIds, currentIds);
+                  /* Refetch des clients pour rafraîchir la jointure tags. */
+                  await clientsHook.refetch();
+                }}
                 onSelect={(id) => navigate('client-detail', id)}
                 onImportSuccess={clientsHook.refetch}
               />

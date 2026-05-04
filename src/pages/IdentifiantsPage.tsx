@@ -161,8 +161,9 @@ export function IdentifiantsPage() {
                 return (
                   <li
                     key={u.id}
-                    className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1.4fr_0.8fr_auto_auto_auto] gap-2 md:gap-4 px-4 md:px-5 py-4 md:py-3 items-start md:items-center hover:bg-ws-raised/40 transition-colors"
+                    className="md:grid md:grid-cols-[1.4fr_1fr_1.4fr_0.8fr_auto_auto_auto] flex flex-col gap-3 md:gap-4 px-4 md:px-5 py-4 md:py-3 md:items-center hover:bg-ws-raised/40 transition-colors"
                   >
+                    {/* Email + status */}
                     <div className="flex items-center gap-2 min-w-0">
                       <Mail size={14} className="text-ws-accent flex-shrink-0" />
                       <div className="min-w-0">
@@ -180,16 +181,23 @@ export function IdentifiantsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="text-sm text-ws-ink truncate">
+
+                    {/* Nom (mobile : intégré inline si présent) */}
+                    <div className="text-sm text-ws-ink truncate hidden md:block">
                       {u.name || <span className="text-ws-mist italic">—</span>}
                     </div>
+                    {u.name && (
+                      <div className="text-xs text-ws-ink md:hidden -mt-2 pl-6">{u.name}</div>
+                    )}
+
+                    {/* Client select — text-base mobile pour éviter le zoom iOS */}
                     <div className="min-w-0">
                       <select
                         value={u.client_id ?? ''}
                         onChange={(e) => {
                           void updateClient(u.id, e.target.value || null);
                         }}
-                        className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-ws-deep/40 border border-ws-line hover:border-ws-accent/40 text-ws-paper focus:outline-none focus:ring-2 focus:ring-ws-accent/30"
+                        className="w-full px-3 py-2.5 md:px-2.5 md:py-1.5 text-base md:text-xs min-h-[44px] md:min-h-0 rounded-lg bg-ws-deep/40 border border-ws-line hover:border-ws-accent/40 text-ws-paper focus:outline-none focus:ring-2 focus:ring-ws-accent/30"
                       >
                         <option value="">— Sans client —</option>
                         {sortedClients.map((c) => {
@@ -203,39 +211,44 @@ export function IdentifiantsPage() {
                         })}
                       </select>
                     </div>
-                    <div className="text-xs text-ws-mist font-mono">{formatDate(u.created_at)}</div>
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => void copyAccessInstructions(u.email)}
-                        className="flex h-9 items-center gap-1.5 px-3 rounded-xl border border-ws-line bg-ws-panel/70 text-xs font-mono text-ws-mist transition-all hover:border-ws-accent/40 hover:text-ws-paper touch-manipulation"
-                        aria-label={`Copier les instructions d'accès pour ${u.email}`}
-                        title="Copier le message à transmettre au client (URL portail + email)"
-                      >
-                        <Copy size={14} />
-                        <span className="hidden lg:inline">Copier l'accès</span>
-                      </button>
-                    </div>
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setExpandedUserId(u.id)}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.1] bg-ws-panel/70 text-ws-gold transition-all hover:border-ws-accent/40 hover:bg-ws-accent/15 hover:text-ws-paper touch-manipulation"
-                        aria-label={`Vue plein écran - ${u.email}`}
-                        title="Vue plein écran"
-                      >
-                        <Maximize2 size={16} strokeWidth={2} />
-                      </button>
-                    </div>
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setToDelete(u)}
-                        className="p-2 rounded-lg text-ws-mist hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        aria-label={`Supprimer ${u.email}`}
-                      >
-                        <Trash2 size={16} />
-                      </button>
+
+                    {/* Date — desktop only (mobile : intégré dans le footer ci-dessous) */}
+                    <div className="text-xs text-ws-mist font-mono hidden md:block">{formatDate(u.created_at)}</div>
+
+                    {/* Footer mobile : date + 3 actions sur une ligne. Desktop : 3 cellules grid distinctes. */}
+                    <div className="flex items-center justify-between gap-2 md:contents">
+                      <span className="text-[10px] text-ws-mist font-mono md:hidden">
+                        Créé le {formatDate(u.created_at)}
+                      </span>
+                      <div className="flex items-center gap-1.5 md:contents">
+                        <button
+                          type="button"
+                          onClick={() => void copyAccessInstructions(u.email)}
+                          className="flex h-10 md:h-9 items-center gap-1.5 px-3 rounded-xl border border-ws-line bg-ws-panel/70 text-xs font-mono text-ws-mist transition-all hover:border-ws-accent/40 hover:text-ws-paper touch-manipulation md:justify-self-end"
+                          aria-label={`Copier les instructions d'accès pour ${u.email}`}
+                          title="Copier le message à transmettre au client (URL portail + email)"
+                        >
+                          <Copy size={14} />
+                          <span className="hidden lg:inline">Copier l'accès</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedUserId(u.id)}
+                          className="flex h-10 w-10 md:h-9 md:w-9 items-center justify-center rounded-xl border border-white/[0.1] bg-ws-panel/70 text-ws-gold transition-all hover:border-ws-accent/40 hover:bg-ws-accent/15 hover:text-ws-paper touch-manipulation md:justify-self-end"
+                          aria-label={`Vue plein écran - ${u.email}`}
+                          title="Vue plein écran"
+                        >
+                          <Maximize2 size={16} strokeWidth={2} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setToDelete(u)}
+                          className="flex h-10 w-10 md:h-9 md:w-9 items-center justify-center rounded-lg text-ws-mist hover:text-red-400 hover:bg-red-500/10 transition-colors md:justify-self-end"
+                          aria-label={`Supprimer ${u.email}`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
                   </li>
                 );
