@@ -211,7 +211,14 @@ export function AnalyseSitePage() {
               <Loader2 size={20} className="animate-spin text-ws-accent" />
             </div>
           ) : chartData.length > 1 && chartData.some((v) => v > 0) ? (
-            <LineChart data={chartData} color="#C98A4C" height={110} fill />
+            <LineChart
+              data={chartData}
+              labels={period === '7' ? analytics.viewsLabels7 : analytics.viewsLabels30}
+              unit="vue"
+              color="#C98A4C"
+              height={110}
+              fill
+            />
           ) : (
             <div className="flex items-center justify-center h-24 text-xs font-mono text-ws-mist">
               Aucune donnee pour cette periode

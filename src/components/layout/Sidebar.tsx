@@ -1,6 +1,10 @@
+import { useState } from 'react';
+import { LogOut, KeyRound } from 'lucide-react';
 import { Page } from '../../lib/types';
 import { MAIN_NAV_ITEMS } from '../../lib/navItems';
 import { MapaLogo } from './MapaLogo';
+import { supabase } from '../../lib/supabase';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface SidebarProps {
   currentPage: Page;
@@ -22,6 +26,7 @@ const SECTIONS: { label: string; pages: readonly Page[] }[] = [
 ];
 
 export function Sidebar({ currentPage, onNavigate, badges = {} }: SidebarProps) {
+  const [showPwd, setShowPwd] = useState(false);
   const activePage =
     currentPage === 'client-detail'
       ? 'clients'
@@ -131,8 +136,32 @@ export function Sidebar({ currentPage, onNavigate, badges = {} }: SidebarProps) 
             <p className="truncate text-xs font-semibold text-ws-paper">Espace de travail</p>
             <p className="truncate font-mono text-[10px] text-ws-mist/90">Données synchronisées</p>
           </div>
+          {supabase && (
+            <div className="flex-shrink-0 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowPwd(true)}
+                title="Changer le mot de passe"
+                aria-label="Changer le mot de passe"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-ws-line text-ws-mist hover:text-ws-paper hover:border-ws-accent/40 transition-colors"
+              >
+                <KeyRound size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => supabase!.auth.signOut()}
+                title="Se déconnecter"
+                aria-label="Se déconnecter"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-ws-line text-ws-mist hover:text-ws-paper hover:border-ws-accent/40 transition-colors"
+              >
+                <LogOut size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {showPwd && <ChangePasswordModal onClose={() => setShowPwd(false)} />}
     </aside>
   );
 }
