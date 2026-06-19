@@ -15,7 +15,6 @@ import {
   Inbox,
   LineChart,
   KeyRound,
-  Mail,
   PhoneCall,
   type LucideIcon,
 } from 'lucide-react';
@@ -42,7 +41,6 @@ export const MAIN_NAV_ITEMS: NavItemConfig[] = [
   { id: 'calendar-matis', label: 'Calendrier Matis', shortLabel: 'Matis', icon: CalendarHeart },
   { id: 'analytics', label: 'Analytique', shortLabel: 'Stats', icon: BarChart3 },
   { id: 'invoices', label: 'Facturation', shortLabel: 'Factures', icon: FileText },
-  { id: 'emails', label: 'E-mails', shortLabel: 'Mails', icon: Mail },
   { id: 'playbook', label: 'Guide MAPA', shortLabel: 'Guide', icon: BookOpen },
   { id: 'demandes', label: 'Demandes', shortLabel: 'Demandes', icon: Inbox },
   { id: 'analyse', label: 'Analyse site', shortLabel: 'Analyse', icon: LineChart },
