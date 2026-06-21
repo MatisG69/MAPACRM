@@ -414,35 +414,68 @@ export function AnalyseSitePage() {
           </div>
         </div>
 
-        {/* Top Pages */}
+        {/* Parcours visiteurs (funnel) */}
         <div className="ws-card rounded-2xl p-5 border border-ws-line/60">
-          <h3 className="ws-section-title mb-4">Pages les plus visitees</h3>
-          {analytics.topPages.length === 0 ? (
-            <p className="text-xs font-mono text-ws-mist py-4 text-center">Aucune donnee</p>
-          ) : (
-            <div className="space-y-2">
-              {analytics.topPages.map((p, i) => (
-                <div
-                  key={p.page}
-                  className="flex items-center gap-3 py-2 border-b border-ws-line/30 last:border-0"
-                >
-                  <span className="text-[10px] font-mono text-ws-mist/50 tabular-nums w-4 flex-shrink-0">
-                    {i + 1}
-                  </span>
-                  <span className="text-xs font-mono text-ws-paper flex-1 truncate">{p.page}</span>
-                  <div className="w-24 h-1 rounded-full bg-ws-line/40 flex-shrink-0 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-ws-accent/70"
-                      style={{ width: p.pct + '%', minWidth: p.pct > 0 ? '4px' : '0' }}
-                    />
-                  </div>
-                  <span className="text-[11px] font-mono text-ws-mist tabular-nums w-16 text-right flex-shrink-0">
-                    {p.views} · {p.pct}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="mb-4">
+            <h3 className="ws-section-title">Parcours visiteurs</h3>
+            <p className="text-[11px] font-mono text-ws-mist mt-0.5">
+              Sections atteintes par session · où les visiteurs s'arretent · {period} derniers jours
+            </p>
+          </div>
+          {(() => {
+            const funnel = period === '7' ? analytics.funnel7 : analytics.funnel30;
+            const entry = funnel[0]?.sessions ?? 0;
+            if (entry === 0) {
+              return (
+                <p className="text-xs font-mono text-ws-mist py-4 text-center">
+                  Aucune donnee de parcours pour le moment. Le suivi se remplit des les prochaines visites du site.
+                </p>
+              );
+            }
+            const maxDrop = Math.max(...funnel.slice(1).map((s) => s.dropFromPrev), 0);
+            return (
+              <div className="space-y-1">
+                {funnel.map((s, i) => {
+                  const worst = i > 0 && s.dropFromPrev === maxDrop && s.dropFromPrev > 0;
+                  return (
+                    <div key={s.key}>
+                      {i > 0 && s.dropFromPrev > 0 && (
+                        <div className="flex items-center gap-1.5 pl-1 py-0.5">
+                          <span className="text-ws-mist/40 text-[10px] leading-none">&darr;</span>
+                          <span
+                            className={`text-[10px] font-mono ${worst ? 'text-red-300' : 'text-ws-mist/60'}`}
+                          >
+                            &minus;{s.dropFromPrev}%{worst ? ' · plus gros decrochage' : ''}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-mono text-ws-paper w-24 sm:w-28 flex-shrink-0 truncate">
+                          {s.label}
+                        </span>
+                        <div className="relative flex-1 h-6 rounded-md bg-ws-line/20 overflow-hidden">
+                          <div
+                            className={`h-full rounded-md transition-all ${
+                              s.key === 'conversion'
+                                ? 'bg-gradient-to-r from-emerald-600/80 to-emerald-400/80'
+                                : 'bg-gradient-to-r from-ws-accent/80 to-ws-accent-soft/80'
+                            }`}
+                            style={{ width: Math.max(s.pctOfEntry, s.sessions > 0 ? 4 : 0) + '%' }}
+                          />
+                          <span className="absolute inset-y-0 left-2 flex items-center text-[10px] font-mono text-ws-paper/90 tabular-nums">
+                            {s.pctOfEntry}%
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-mono text-ws-mist tabular-nums w-12 text-right flex-shrink-0">
+                          {s.sessions}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
 

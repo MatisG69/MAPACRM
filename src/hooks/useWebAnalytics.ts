@@ -12,6 +12,17 @@ export interface PageViewRow {
   created_at: string;
 }
 
+export interface FunnelStep {
+  key: string;
+  label: string;
+  /** Sessions uniques ayant atteint cette étape. */
+  sessions: number;
+  /** % par rapport à l'étape d'entrée (Accueil). */
+  pctOfEntry: number;
+  /** % d'abandon par rapport à l'étape précédente. */
+  dropFromPrev: number;
+}
+
 export interface WebAnalytics {
   totalViews30d: number;
   totalViews7d: number;
@@ -25,7 +36,44 @@ export interface WebAnalytics {
   deviceBreakdown: { label: string; value: number; color: string }[];
   topReferrers: { domain: string; count: number; pct: number }[];
   topPages: { page: string; views: number; pct: number }[];
+  funnel30: FunnelStep[];
+  funnel7: FunnelStep[];
   todayViews: number;
+}
+
+/**
+ * Parcours visiteur — sections du site mapa-developpement.fr dans l'ordre de
+ * scroll. Le site envoie un page_view (`page` = clé) à chaque section atteinte
+ * (1× par session) + `conversion` à l'envoi du formulaire.
+ */
+export const FUNNEL_STEPS: { key: string; label: string }[] = [
+  { key: 'accueil', label: 'Accueil' },
+  { key: 'realisations', label: 'Réalisations' },
+  { key: 'services', label: 'Services' },
+  { key: 'offres', label: 'Tarifs' },
+  { key: 'contact', label: 'Contact' },
+  { key: 'rdv', label: 'Rendez-vous' },
+  { key: 'conversion', label: 'Demande envoyée' },
+];
+
+function buildFunnel(rows: PageViewRow[]): FunnelStep[] {
+  const byStep: Record<string, Set<string>> = {};
+  FUNNEL_STEPS.forEach((s) => (byStep[s.key] = new Set()));
+  rows.forEach((r) => {
+    if (r.page in byStep) byStep[r.page].add(r.session_id);
+  });
+  const entry = byStep[FUNNEL_STEPS[0].key].size;
+  return FUNNEL_STEPS.map((s, i) => {
+    const sessions = byStep[s.key].size;
+    const prev = i > 0 ? byStep[FUNNEL_STEPS[i - 1].key].size : sessions;
+    return {
+      key: s.key,
+      label: s.label,
+      sessions,
+      pctOfEntry: entry > 0 ? Math.round((sessions / entry) * 100) : 0,
+      dropFromPrev: prev > 0 ? Math.round((1 - sessions / prev) * 100) : 0,
+    };
+  });
 }
 
 function daysAgo(n: number): Date {
@@ -187,6 +235,8 @@ export function useWebAnalytics() {
       deviceBreakdown,
       topReferrers,
       topPages,
+      funnel30: buildFunnel(rows30),
+      funnel7: buildFunnel(rows7),
       todayViews: rowsToday.length,
     };
   }, [rows]);
