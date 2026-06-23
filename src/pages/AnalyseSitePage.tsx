@@ -20,6 +20,7 @@ import { DonutChart } from '../components/charts/DonutChart';
 import { GaugeChart } from '../components/charts/GaugeChart';
 import { useWebAnalytics } from '../hooks/useWebAnalytics';
 import { usePageSpeed } from '../hooks/usePageSpeed';
+import { LeadJourneys } from '../components/analytics/LeadJourneys';
 import type { VitalScore, PsStrategy } from '../hooks/usePageSpeed';
 
 const VITAL_CONFIG: Record<VitalScore, { label: string; color: string; icon: React.ReactNode }> = {
@@ -478,6 +479,8 @@ export function AnalyseSitePage() {
           })()}
         </div>
 
+        {/* Parcours individuel des prospects emailés (liens /r/<token>) */}
+        <LeadJourneys />
 
       </div>
     </div>
